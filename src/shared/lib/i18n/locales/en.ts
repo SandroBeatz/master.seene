@@ -12,6 +12,8 @@ export default {
   common: {
     dashboardWelcome: "Welcome back to your dashboard. Here's what's happening with your projects today.",
     userAvatarAlt: 'User Avatar',
+    previous: 'Previous',
+    next: 'Next',
   },
   notifications: {
     title: 'Notifications',
@@ -35,6 +37,34 @@ export default {
   },
   about: {
     title: 'This is an about page',
+  },
+  auth: {
+    login: {
+      title: 'Welcome back',
+      subtitle: 'Welcome back! Please enter your details.',
+      email: 'Email',
+      emailPlaceholder: 'Enter your email',
+      password: 'Password',
+      rememberMe: 'Remember for 30 days',
+      forgotPassword: 'Forgot password',
+      signIn: 'Sign in',
+      signInGoogle: 'Sign in with Google',
+      noAccount: "Don't have an account?",
+      signUpFree: 'Sign up for free',
+      successTitle: 'Signed in successfully',
+    },
+    validation: {
+      emailRequired: 'Email is required',
+      emailInvalid: 'Please enter a valid email address',
+      passwordRequired: 'Password is required',
+      passwordMin: 'Password must be at least 8 characters',
+    },
+    testimonial: {
+      quote: "We've been using Untitled to kick start every new project and can't imagine working without it.",
+      name: 'Andi Lane',
+      role: 'Founder, Catalog',
+      company: 'Web Design Agency',
+    },
   },
   settings: {
     title: 'Settings',

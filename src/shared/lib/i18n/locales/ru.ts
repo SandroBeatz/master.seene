@@ -12,6 +12,8 @@ export default {
   common: {
     dashboardWelcome: 'Вот что происходит с вашими проектами сегодня.',
     userAvatarAlt: 'Аватар пользователя',
+    previous: 'Назад',
+    next: 'Вперёд',
   },
   notifications: {
     title: 'Уведомления',
@@ -35,6 +37,34 @@ export default {
   },
   about: {
     title: 'Это страница «О нас»',
+  },
+  auth: {
+    login: {
+      title: 'С возвращением',
+      subtitle: 'Добро пожаловать! Пожалуйста, введите ваши данные.',
+      email: 'Электронная почта',
+      emailPlaceholder: 'Введите email',
+      password: 'Пароль',
+      rememberMe: 'Запомнить на 30 дней',
+      forgotPassword: 'Забыли пароль?',
+      signIn: 'Войти',
+      signInGoogle: 'Войти через Google',
+      noAccount: 'Нет аккаунта?',
+      signUpFree: 'Зарегистрироваться бесплатно',
+      successTitle: 'Вход выполнен успешно',
+    },
+    validation: {
+      emailRequired: 'Введите email',
+      emailInvalid: 'Введите корректный email адрес',
+      passwordRequired: 'Введите пароль',
+      passwordMin: 'Пароль должен содержать минимум 8 символов',
+    },
+    testimonial: {
+      quote: 'Мы используем Untitled для запуска каждого нового проекта и не представляем работу без него.',
+      name: 'Анди Лейн',
+      role: 'Основатель, Catalog',
+      company: 'Веб-дизайн агентство',
+    },
   },
   settings: {
     title: 'Настройки',
