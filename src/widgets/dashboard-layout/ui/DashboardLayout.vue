@@ -1,29 +1,31 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import AppLogo from '@shared/ui/AppLogo.vue'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const showNotifications = ref(false)
 
-const navItems = [
-  { label: 'Home', icon: 'i-lucide-home', to: '/' },
-  { label: 'Calendar', icon: 'i-lucide-calendar', to: '/calendar' },
-  { label: 'Clients', icon: 'i-lucide-users', to: '/clients' },
-  { label: 'Services', icon: 'i-lucide-grid-2x2-plus', to: '/services' },
-]
+const navItems = computed(() => [
+  { label: t('nav.home'), icon: 'i-lucide-home', to: '/' },
+  { label: t('nav.calendar'), icon: 'i-lucide-calendar', to: '/calendar' },
+  { label: t('nav.clients'), icon: 'i-lucide-users', to: '/clients' },
+  { label: t('nav.services'), icon: 'i-lucide-grid-2x2-plus', to: '/services' },
+])
 
-const addItems = [
+const addItems = computed(() => [
   {
-    label: 'Notifications',
+    label: t('nav.notifications'),
     icon: 'i-lucide-bell',
     onSelect: () => (showNotifications.value = true),
   },
-  { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' },
-]
+  { label: t('nav.settings'), icon: 'i-lucide-settings', to: '/settings' },
+])
 
-const footerItems = [
+const footerItems = computed(() => [
   {
-    label: 'Logout',
+    label: t('nav.logout'),
     icon: 'i-lucide-log-out',
     onSelect: () => {
       // Handle logout logic here
@@ -31,14 +33,14 @@ const footerItems = [
     },
   },
   {
-    label: 'Profile',
+    label: t('nav.profile'),
     avatar: {
       src: 'https://i.pravatar.cc/200?img=47',
-      alt: 'User Avatar',
+      alt: t('common.userAvatarAlt'),
     },
     to: '/profile',
   },
-]
+])
 
 const navigationUI = {
   root: 'bg-white dark:bg-zinc-800 rounded-4xl w-14 shadow-md',
@@ -98,7 +100,7 @@ const notifications = ref([
     <USlideover
       v-model:open="showNotifications"
       direction="right"
-      title="Notifications"
+      :title="t('notifications.title')"
       :ui="{ content: 'min-w-md rounded-none' }"
     >
       <template #body>
@@ -128,7 +130,7 @@ const notifications = ref([
                 </div>
               </div>
               <div class="flex flex-col">
-                <div class="text-sm text-muted">20 min ago</div>
+                <div class="text-sm text-muted">{{ t('notifications.timeAgo') }}</div>
               </div>
             </div>
           </UPageCard>

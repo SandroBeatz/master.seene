@@ -10,8 +10,8 @@ const { data, status } = useQuery({
 <template>
   <UPage :ui="{ root: 'px-12 max-w-7xl mx-auto' }" as="main">
     <UPageHeader
-      title="Hi, Anna!"
-      description="Welcome back to your dashboard. Here’s what’s happening with your projects today."
+      :title="$t('home.title')"
+      :description="$t('home.description')"
       :ui="{root: 'border-none'}"
     />
     <UPageBody>
@@ -38,7 +38,6 @@ const { data, status } = useQuery({
         </div>
       </div>
 
-      <UColorModeSwitch />
       <UButton class="mt-4">Nuxt UI works</UButton>
       <pre class="mt-4 text-sm">{{ status }} {{ data }}</pre>
     </UPageBody>

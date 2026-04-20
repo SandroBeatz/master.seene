@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -14,8 +17,8 @@
   >
     <UPage as="main">
       <UPageHeader
-        title="Services"
-        description="Welcome back to your dashboard. Here’s what’s happening with your projects today."
+        :title="t('services.title')"
+        :description="t('services.description')"
       />
       <UPageBody>
         <UPageCard variant="soft">

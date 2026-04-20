@@ -26,7 +26,15 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
+      redirect: '/settings/general',
       component: async () => (await import('@pages/settings')).SettingsPage,
+      children: [
+        {
+          path: 'general',
+          name: 'settings-general',
+          component: async () => (await import('@pages/settings')).SettingsGeneralPage,
+        },
+      ],
     },
   ],
 })
