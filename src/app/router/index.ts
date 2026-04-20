@@ -10,9 +10,24 @@ const router = createRouter({
       component: HomePage,
     },
     {
-      path: '/about',
-      name: 'about',
+      path: '/calendar',
+      name: 'calendar',
       component: () => import('@pages/about/ui/AboutPage.vue'),
+    },
+    {
+      path: '/clients',
+      name: 'clients',
+      component: () => import('@pages/about/ui/AboutPage.vue'),
+    },
+    {
+      path: '/services',
+      name: 'services',
+      component: () => import('@pages/about/ui/AboutPage.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: async () => (await import('@pages/settings')).SettingsPage,
     },
   ],
 })

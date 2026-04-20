@@ -75,6 +75,8 @@ const navigationUI = {
       </template>
     </UDashboardSidebar>
 
-    <RouterView />
+    <UDashboardPanel :ui="{ root: 'items-center' }">
+      <RouterView />
+    </UDashboardPanel>
   </UDashboardGroup>
 </template>
