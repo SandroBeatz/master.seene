@@ -11,8 +11,22 @@ export default defineConfig({
     ui({
       ui: {
         colors: {
-          primary: 'blue',
-          neutral: 'slate',
+          primary: 'amber',
+          neutral: 'zinc',
+        },
+
+        pageCard: {
+          slots: {
+            root: 'rounded-3xl shadow-md',
+          },
+          variants: {
+            variant: {
+              soft: {
+                root: 'bg-white dark:bg-zinc-800/80',
+                description: 'text-toned',
+              },
+            },
+          },
         },
       },
     }),

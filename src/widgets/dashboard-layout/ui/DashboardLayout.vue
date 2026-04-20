@@ -34,7 +34,7 @@ const footerItems = [
 ]
 
 const navigationUI = {
-  root: 'bg-white dark:bg-gray-800 rounded-4xl w-14',
+  root: 'bg-white dark:bg-zinc-800 rounded-4xl w-14 shadow-md',
   link: 'rounded-4xl justify-center size-14 text-zinc-400 hover:text-zinc-600 before:rounded-4xl aria-[current=page]:before:bg-zinc-900',
   linkLeadingIcon: 'group-aria-[current=page]:text-amber-400',
 }
@@ -42,9 +42,9 @@ const navigationUI = {
 
 <template>
   <UDashboardGroup storage="local" storage-key="dashboard">
-    <UDashboardSidebar collapsed :ui="{ root: 'min-w-24 w-(--width)' }">
+    <UDashboardSidebar collapsed :ui="{ root: 'min-w-24 w-(--width) border-none items-center' }">
       <template #header>
-        <AppLogo />
+        <AppLogo class="size-10" />
       </template>
 
       <template #default="{ collapsed }">

@@ -26,5 +26,6 @@ declare module 'vue' {
     UPageBody: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageBody.vue')['default']
     UPageCard: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageCard.vue')['default']
     UPageHeader: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageHeader.vue')['default']
+    UTheme: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Theme.vue')['default']
   }
 }
