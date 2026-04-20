@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useColorMode } from '@vueuse/core'
-import { useLocaleStore } from '@/stores/locale'
+import { useLocaleStore } from '@shared/lib/locale'
 
 const { t } = useI18n()
 const localeStore = useLocaleStore()
