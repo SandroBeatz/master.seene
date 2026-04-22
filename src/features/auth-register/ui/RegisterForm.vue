@@ -11,6 +11,13 @@ const router = useRouter()
 const toast = useToast()
 
 const schema = Joi.object({
+  name: Joi.string()
+    .min(2)
+    .required()
+    .messages({
+      'string.empty': t('auth.validation.nameRequired'),
+      'string.min': t('auth.validation.nameRequired'),
+    }),
   email: Joi.string()
     .email({ tlds: { allow: false } })
     .required()
@@ -25,59 +32,75 @@ const schema = Joi.object({
       'string.empty': t('auth.validation.passwordRequired'),
       'string.min': t('auth.validation.passwordMin'),
     }),
-  remember: Joi.boolean().optional(),
+  confirmPassword: Joi.string()
+    .valid(Joi.ref('password'))
+    .required()
+    .messages({
+      'string.empty': t('auth.validation.confirmPasswordRequired'),
+      'any.only': t('auth.validation.confirmPasswordMatch'),
+    }),
 })
 
 const fields = computed<AuthFormField[]>(() => [
   {
+    name: 'name',
+    type: 'text',
+    label: t('auth.register.name'),
+    placeholder: t('auth.register.namePlaceholder'),
+    required: true,
+  },
+  {
     name: 'email',
     type: 'email',
-    label: t('auth.login.email'),
-    placeholder: t('auth.login.emailPlaceholder'),
+    label: t('auth.register.email'),
+    placeholder: t('auth.register.emailPlaceholder'),
     required: true,
   },
   {
     name: 'password',
-    label: t('auth.login.password'),
     type: 'password',
-    placeholder: t('auth.login.passwordPlaceholder'),
+    label: t('auth.register.password'),
+    placeholder: t('auth.register.passwordPlaceholder'),
     required: true,
   },
   {
-    name: 'remember',
-    label: t('auth.login.rememberMe'),
-    type: 'checkbox',
+    name: 'confirmPassword',
+    type: 'password',
+    label: t('auth.register.confirmPassword'),
+    placeholder: t('auth.register.confirmPasswordPlaceholder'),
+    required: true,
   },
 ])
 
 const providers = computed(() => [
   {
-    label: t('auth.login.signInGoogle'),
+    label: t('auth.register.signUpGoogle'),
     icon: 'i-logos-google-icon',
     variant: 'soft',
     onClick: () => {
-      toast.add({ title: 'Google', description: t('auth.login.signInGoogle') })
+      toast.add({ title: 'Google', description: t('auth.register.signUpGoogle') })
     },
   },
   {
-    label: t('auth.login.signInApple'),
+    label: t('auth.register.signUpApple'),
     icon: 'i-logos-apple',
     variant: 'soft',
     onClick: () => {
-      toast.add({ title: 'Apple', description: t('auth.login.signInApple') })
+      toast.add({ title: 'Apple', description: t('auth.register.signUpApple') })
     },
   },
 ])
 
-interface LoginFormData {
+interface RegisterFormData {
+  name: string
   email: string
   password: string
-  remember?: boolean
+  confirmPassword: string
 }
 
-async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
-  toast.add({ title: t('auth.login.successTitle'), color: 'success' })
-  console.log('Sign in:', event.data)
+async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
+  toast.add({ title: t('auth.register.successTitle'), color: 'success' })
+  console.log('Sign up:', event.data)
 }
 </script>
 
@@ -87,6 +110,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
       :schema="schema"
       :fields="fields"
       :providers="providers"
+      :submit="{ label: t('auth.register.signUp') }"
       @submit="onSubmit"
     >
       <template #header>
@@ -96,19 +120,19 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
           </div>
 
           <h1 class="text-2xl font-bold text-primary">
-            {{ $t('auth.login.title') }}
+            {{ $t('auth.register.title') }}
           </h1>
           <p class="text-sm text-zinc-500 dark:text-zinc-400">
-            {{ $t('auth.login.subtitle') }}
+            {{ $t('auth.register.subtitle') }}
           </p>
         </div>
       </template>
     </UAuthForm>
 
     <p class="text-center text-sm text-muted pt-4">
-      {{ $t('auth.login.noAccount') }}
-      <UButton variant="link" color="primary" size="sm" type="button" @click="router.push('/register')">
-        {{ $t('auth.login.signUpFree') }}
+      {{ $t('auth.register.haveAccount') }}
+      <UButton variant="link" color="primary" size="sm" type="button" @click="router.push('/login')">
+        {{ $t('auth.register.signIn') }}
       </UButton>
     </p>
   </div>

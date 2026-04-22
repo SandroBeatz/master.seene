@@ -20,7 +20,7 @@
     "@pinia/colada": "^1.2.0",
     "joi": "^18.1.2",
     "pinia": "^3.0.4",
-    "tailwindcss": "^4.2.2",
+    "tailwindcss": "4.2.4",
     "vue": "beta",
     "vue-i18n": "^11.3.2",
     "vue-router": "^5.0.4"

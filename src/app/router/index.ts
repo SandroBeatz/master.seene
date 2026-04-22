@@ -10,6 +10,12 @@ const router = createRouter({
       component: async () => (await import('@pages/login')).LoginPage,
     },
     {
+      path: '/register',
+      name: 'register',
+      meta: { layout: 'auth' },
+      component: async () => (await import('@pages/register')).RegisterPage,
+    },
+    {
       path: '/',
       name: 'dashboard',
       redirect: '/home',
