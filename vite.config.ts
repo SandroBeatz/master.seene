@@ -15,6 +15,12 @@ export default defineConfig({
           neutral: 'zinc',
         },
 
+        button: {
+          slots: {
+            root: 'cursor-pointer',
+          }
+        },
+
         pageCard: {
           slots: {
             root: 'rounded-3xl shadow-md',

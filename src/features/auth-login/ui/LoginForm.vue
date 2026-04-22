@@ -3,6 +3,7 @@ import { reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import { AppFullLogo } from '@shared/ui'
 
 const { t } = useI18n()
 
@@ -40,14 +41,20 @@ async function onSubmit(event: FormSubmitEvent<typeof state>) {
 
 <template>
   <div class="w-full max-w-sm">
-    <h1 class="text-3xl font-bold text-zinc-900 dark:text-white mb-2">
-      {{ $t('auth.login.title') }}
-    </h1>
-    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-      {{ $t('auth.login.subtitle') }}
-    </p>
+    <div class="flex flex-col items-center text-center gap-2 pb-8">
+      <div class="pb-10">
+        <AppFullLogo class="w-52 h-10" />
+      </div>
 
-    <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <h1 class="text-2xl font-bold text-primary">
+        {{ $t('auth.login.title') }}
+      </h1>
+      <p class="text-sm text-zinc-500 dark:text-zinc-400">
+        {{ $t('auth.login.subtitle') }}
+      </p>
+    </div>
+
+    <UForm :schema="schema" :state="state" class="flex flex-col gap-4" @submit="onSubmit">
       <UFormField :label="$t('auth.login.email')" name="email">
         <UInput
           v-model="state.email"
@@ -58,12 +65,7 @@ async function onSubmit(event: FormSubmitEvent<typeof state>) {
       </UFormField>
 
       <UFormField :label="$t('auth.login.password')" name="password">
-        <UInput
-          v-model="state.password"
-          type="password"
-          placeholder="••••••••"
-          class="w-full"
-        />
+        <UInput v-model="state.password" type="password" placeholder="••••••••" class="w-full" />
       </UFormField>
 
       <div class="flex items-center justify-between">
@@ -88,7 +90,7 @@ async function onSubmit(event: FormSubmitEvent<typeof state>) {
       </UButton>
     </UForm>
 
-    <p class="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-6">
+    <p class="text-center text-sm text-zinc-500 dark:text-zinc-400 pt-6">
       {{ $t('auth.login.noAccount') }}
       <UButton variant="link" color="primary" size="sm" type="button">
         {{ $t('auth.login.signUpFree') }}

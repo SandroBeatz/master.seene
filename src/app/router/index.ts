@@ -11,34 +11,42 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'home',
-      component: async () => (await import('@pages/home')).HomePage,
-    },
-    {
-      path: '/calendar',
-      name: 'calendar',
-      component: async () => (await import('@pages/calendar')).CalendarPage,
-    },
-    {
-      path: '/clients',
-      name: 'clients',
-      component: async () => (await import('@pages/clients')).ClientsPage,
-    },
-    {
-      path: '/services',
-      name: 'services',
-      component: async () => (await import('@pages/services')).ServicesPage,
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      redirect: '/settings/general',
-      component: async () => (await import('@pages/settings')).SettingsPage,
+      name: 'dashboard',
+      redirect: '/home',
+      component: async () => (await import('@widgets/dashboard-layout')).DashboardLayout,
       children: [
         {
-          path: 'general',
-          name: 'settings-general',
-          component: async () => (await import('@pages/settings')).SettingsGeneralPage,
+          path: 'home',
+          name: 'home',
+          component: async () => (await import('@pages/home')).HomePage,
+        },
+        {
+          path: 'calendar',
+          name: 'calendar',
+          component: async () => (await import('@pages/calendar')).CalendarPage,
+        },
+        {
+          path: 'clients',
+          name: 'clients',
+          component: async () => (await import('@pages/clients')).ClientsPage,
+        },
+        {
+          path: 'services',
+          name: 'services',
+          component: async () => (await import('@pages/services')).ServicesPage,
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          redirect: '/settings/general',
+          component: async () => (await import('@pages/settings')).SettingsPage,
+          children: [
+            {
+              path: 'general',
+              name: 'settings-general',
+              component: async () => (await import('@pages/settings')).SettingsGeneralPage,
+            },
+          ],
         },
       ],
     },
