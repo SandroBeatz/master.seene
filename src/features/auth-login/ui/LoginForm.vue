@@ -25,7 +25,6 @@ const schema = Joi.object({
       'string.empty': t('auth.validation.passwordRequired'),
       'string.min': t('auth.validation.passwordMin'),
     }),
-  remember: Joi.boolean().optional(),
 })
 
 const fields = computed<AuthFormField[]>(() => [
@@ -42,11 +41,6 @@ const fields = computed<AuthFormField[]>(() => [
     type: 'password',
     placeholder: t('auth.login.passwordPlaceholder'),
     required: true,
-  },
-  {
-    name: 'remember',
-    label: t('auth.login.rememberMe'),
-    type: 'checkbox',
   },
 ])
 
@@ -72,7 +66,6 @@ const providers = computed(() => [
 interface LoginFormData {
   email: string
   password: string
-  remember?: boolean
 }
 
 async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
@@ -89,6 +82,14 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
       :providers="providers"
       @submit="onSubmit"
     >
+      <template #footer>
+        <div class="text-center">
+          <UButton variant="link" color="primary" size="sm" type="button" @click="router.push('/forgot-password')">
+            {{ $t('auth.login.forgotPassword') }}
+          </UButton>
+        </div>
+      </template>
+
       <template #header>
         <div class="flex flex-col items-center text-center gap-2 pb-8">
           <div class="pb-10">
