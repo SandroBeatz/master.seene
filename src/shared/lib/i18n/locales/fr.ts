@@ -54,6 +54,7 @@ export default {
       noAccount: 'Pas encore de compte\u00a0?',
       signUpFree: "S'inscrire gratuitement",
       successTitle: 'Connexion réussie',
+      errorTitle: 'Échec de la connexion',
     },
     register: {
       title: 'Créer un compte',
@@ -72,6 +73,7 @@ export default {
       haveAccount: 'Vous avez déjà un compte\u00a0?',
       signIn: 'Se connecter',
       successTitle: 'Compte créé avec succès',
+      errorTitle: "Échec de l'inscription",
     },
     validation: {
       emailRequired: "L'adresse e-mail est requise",
@@ -87,6 +89,27 @@ export default {
       name: 'Andi Lane',
       role: 'Fondatrice, Catalog',
       company: 'Agence de design web',
+    },
+  },
+  onboarding: {
+    step1: {
+      title: 'Parlez-nous de vous',
+      subtitle: 'Remplissez votre profil pour que vos clients puissent vous trouver.',
+      name: 'Votre nom',
+      namePlaceholder: 'ex. Anna Dupont',
+      phone: 'Numéro de téléphone',
+      phonePlaceholder: 'ex. +33 6 12 34 56 78',
+      specialty: 'Spécialité',
+      specialtyPlaceholder: 'ex. Manucure, Coiffure, Massage…',
+      submit: 'Continuer',
+      successTitle: 'Profil enregistré',
+      errorTitle: "Une erreur s'est produite",
+    },
+    validation: {
+      nameRequired: 'Veuillez entrer votre nom',
+      nameMin: 'Le nom doit contenir au moins 2 caractères',
+      phoneRequired: 'Veuillez entrer votre numéro de téléphone',
+      specialtyRequired: 'Veuillez entrer votre spécialité',
     },
   },
   settings: {

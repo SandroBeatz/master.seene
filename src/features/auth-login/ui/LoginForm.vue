@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { AppFullLogo } from '@shared/ui'
+import { supabase } from '@shared/lib/supabase'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -69,8 +70,15 @@ interface LoginFormData {
 }
 
 async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
-  toast.add({ title: t('auth.login.successTitle'), color: 'success' })
-  console.log('Sign in:', event.data)
+  const { error } = await supabase.auth.signInWithPassword({
+    email: event.data.email,
+    password: event.data.password,
+  })
+  if (error) {
+    toast.add({ title: t('auth.login.errorTitle'), description: error.message, color: 'error' })
+    return
+  }
+  router.push('/home')
 }
 </script>
 

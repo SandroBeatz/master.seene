@@ -54,6 +54,7 @@ export default {
       noAccount: 'Нет аккаунта?',
       signUpFree: 'Зарегистрироваться бесплатно',
       successTitle: 'Вход выполнен успешно',
+      errorTitle: 'Ошибка входа',
     },
     register: {
       title: 'Создать аккаунт',
@@ -72,6 +73,7 @@ export default {
       haveAccount: 'Уже есть аккаунт?',
       signIn: 'Войти',
       successTitle: 'Аккаунт успешно создан',
+      errorTitle: 'Ошибка регистрации',
     },
     validation: {
       emailRequired: 'Введите email',
@@ -87,6 +89,27 @@ export default {
       name: 'Анди Лейн',
       role: 'Основатель, Catalog',
       company: 'Веб-дизайн агентство',
+    },
+  },
+  onboarding: {
+    step1: {
+      title: 'Расскажите о себе',
+      subtitle: 'Заполните профиль, чтобы клиенты могли вас найти.',
+      name: 'Ваше имя',
+      namePlaceholder: 'например, Анна Смирнова',
+      phone: 'Номер телефона',
+      phonePlaceholder: 'например, +7 999 123 45 67',
+      specialty: 'Направление',
+      specialtyPlaceholder: 'например, Маникюр, Стрижка, Массаж…',
+      submit: 'Продолжить',
+      successTitle: 'Профиль сохранён',
+      errorTitle: 'Что-то пошло не так',
+    },
+    validation: {
+      nameRequired: 'Введите ваше имя',
+      nameMin: 'Имя должно содержать минимум 2 символа',
+      phoneRequired: 'Введите номер телефона',
+      specialtyRequired: 'Введите ваше направление',
     },
   },
   settings: {

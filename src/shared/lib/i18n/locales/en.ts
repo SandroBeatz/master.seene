@@ -54,6 +54,7 @@ export default {
       noAccount: "Don't have an account?",
       signUpFree: 'Sign up for free',
       successTitle: 'Signed in successfully',
+      errorTitle: 'Sign in failed',
     },
     register: {
       title: 'Create an account',
@@ -72,6 +73,7 @@ export default {
       haveAccount: 'Already have an account?',
       signIn: 'Sign in',
       successTitle: 'Account created successfully',
+      errorTitle: 'Registration failed',
     },
     validation: {
       emailRequired: 'Email is required',
@@ -87,6 +89,27 @@ export default {
       name: 'Andi Lane',
       role: 'Founder, Catalog',
       company: 'Web Design Agency',
+    },
+  },
+  onboarding: {
+    step1: {
+      title: 'Tell us about yourself',
+      subtitle: 'Help your clients find you by filling in your profile details.',
+      name: 'Your name',
+      namePlaceholder: 'e.g. Anna Smith',
+      phone: 'Phone number',
+      phonePlaceholder: 'e.g. +7 999 123 45 67',
+      specialty: 'Specialty',
+      specialtyPlaceholder: 'e.g. Manicure, Haircut, Massage…',
+      submit: 'Continue',
+      successTitle: 'Profile saved',
+      errorTitle: 'Something went wrong',
+    },
+    validation: {
+      nameRequired: 'Please enter your name',
+      nameMin: 'Name must be at least 2 characters',
+      phoneRequired: 'Please enter your phone number',
+      specialtyRequired: 'Please enter your specialty',
     },
   },
   settings: {
