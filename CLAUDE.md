@@ -17,9 +17,11 @@ bun format           # Prettier format src/
 ## Stack
 
 - **Vue 3 beta (Vapor)** — uses `<script setup lang="ts">` SFCs throughout
-- **Vue Router 5** — file-based routing in `src/router/index.ts`; lazy-load non-home views
-- **Pinia** — stores live in `src/stores/`
-- **@nuxt/ui v4 + Tailwind CSS v4** — UI component library; prefer Nuxt UI components over hand-rolling. CSS entry (`src/app/styles/main.css`) must have `@import "tailwindcss"` before `@import "@nuxt/ui"`. Theme colors are configured via `ui({ ui: { colors: {...} } })` in `vite.config.ts` (no `app.config.ts` in Vue non-Nuxt projects).
+- **Vue Router 5** — router in `src/app/router/index.ts`; all routes lazy-load via `(await import('@pages/login')).LoginPage` pattern
+- **Pinia + @pinia/colada** — stores live in `src/stores/` (to be migrated into FSD slices); colada handles async data fetching
+- **@nuxt/ui v4 + Tailwind CSS v4** — prefer Nuxt UI components over hand-rolling. CSS entry (`src/app/styles/main.css`) must have `@import "tailwindcss"` before `@import "@nuxt/ui"`. Theme colors (primary: amber, neutral: zinc) and component overrides are in `vite.config.ts` via `ui({...})` (no `app.config.ts` in Vue non-Nuxt projects).
+- **vue-i18n** — locales in `src/shared/lib/i18n/locales/{en,fr,ru}.ts`; locale persisted to localStorage; switch via `useLocaleStore` from `@shared/lib/locale`
+- **Icons** — Lucide via iconify pattern: `i-lucide-<name>` in Nuxt UI's `icon` props
 - **Vite 8** with `@` alias pointing to `src/`
 - **Vitest + jsdom** — tests colocated in `__tests__/` next to components; environment is jsdom
 - **Linting**: oxlint runs first (fast), then eslint; config in `.oxlintrc.json` and `eslint.config.ts`
@@ -41,4 +43,8 @@ src/
 
 **Aliases** (both Vite and TypeScript): `@app`, `@pages`, `@widgets`, `@features`, `@entities`, `@shared`, `@` (→ src/).
 
-Router is in `src/app/router/index.ts`; `AboutPage` is lazy-loaded. Tests live next to code in `__tests__/` subdirectories.
+**Layouts**: Two layouts controlled by `meta.layout` on routes. Auth pages (`/login`, `/register`) render standalone with `meta: { layout: 'auth' }`. Dashboard pages (`/`, `/home`, `/calendar`, etc.) are nested under `DashboardLayout` widget which provides the sidebar nav. `App.vue` wraps everything in `<UApp><RouterView /></UApp>`.
+
+**Slice exports**: Each FSD slice has a barrel `index.ts` that re-exports its public API. Router imports pages as `(await import('@pages/login')).LoginPage`.
+
+Tests live next to code in `__tests__/` subdirectories.
