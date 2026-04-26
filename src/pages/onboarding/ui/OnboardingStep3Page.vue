@@ -144,6 +144,7 @@ interface Step3Data {
   houseNumber: string
   zipCode: string
   city: string
+  placeId: string
   worksAtPlace: boolean
   canTravel: boolean
 }
@@ -154,6 +155,7 @@ const state = reactive<Step3Data>({
   houseNumber: store.location.houseNumber,
   zipCode: store.location.zipCode,
   city: store.location.city,
+  placeId: store.location.placeId,
   worksAtPlace: store.location.worksAtPlace,
   canTravel: store.location.canTravel,
 })
@@ -175,6 +177,7 @@ const schema = Joi.object({
   houseNumber: Joi.string().allow('').optional(),
   zipCode: Joi.string().allow('').optional(),
   city: Joi.string().allow('').optional(),
+  placeId: Joi.string().allow('').optional(),
   worksAtPlace: Joi.boolean(),
   canTravel: Joi.boolean(),
 })
@@ -202,6 +205,7 @@ function handleAddressField(payload: IGoogleAutocompleteItem) {
   state.houseNumber = streetNumber?.long_name ?? ''
   state.city = city?.long_name ?? ''
   state.zipCode = postalCode?.long_name ?? ''
+  state.placeId = payload.place_id
 }
 
 function onSubmit(event: FormSubmitEvent<Step3Data>) {
@@ -211,6 +215,7 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
     houseNumber: event.data.houseNumber,
     zipCode: event.data.zipCode,
     city: event.data.city,
+    placeId: event.data.placeId,
     worksAtPlace: event.data.worksAtPlace,
     canTravel: event.data.canTravel,
   })

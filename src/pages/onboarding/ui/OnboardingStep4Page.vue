@@ -5,11 +5,13 @@ import { useI18n } from 'vue-i18n'
 import { Time } from '@internationalized/date'
 import { useOnboardingStore } from '@features/onboarding'
 import type { DayKey, ScheduleData } from '@features/onboarding'
+import { useFormats } from '@shared/lib/formats'
 
 const { t } = useI18n()
 const router = useRouter()
 const toast = useToast()
 const store = useOnboardingStore()
+const $f = useFormats()
 
 const DAY_KEYS: DayKey[] = [
   'monday',
@@ -51,7 +53,7 @@ function fromTime(t: { hour: number; minute: number }): string {
 function displayTime(day: DayKey): string {
   const d = localSchedule.days[day]
   if (!d.start || !d.end) return '—'
-  return `${d.start} — ${d.end}`
+  return `${$f.time(d.start)} — ${$f.time(d.end)}`
 }
 
 // --- Day dialog ---
@@ -152,9 +154,19 @@ const editingDayLabel = computed(() =>
         <USelectMenu v-model="localSchedule.timezone" :items="timezones" class="w-full" />
       </div>
 
-      <UFieldGroup orientation="horizontal">
-        <UButton color="neutral" variant="subtle" label="12HR" />
-        <UButton color="neutral" variant="outline" label="24HR" />
+      <UFieldGroup>
+        <UButton
+          :color="store.timeFormat === 12 ? 'primary' : 'neutral'"
+          :variant="store.timeFormat === 12 ? 'solid' : 'outline'"
+          label="12HR"
+          @click="store.setTimeFormat(12)"
+        />
+        <UButton
+          :color="store.timeFormat === 24 ? 'primary' : 'neutral'"
+          :variant="store.timeFormat === 24 ? 'solid' : 'outline'"
+          label="24HR"
+          @click="store.setTimeFormat(24)"
+        />
       </UFieldGroup>
 
       <USeparator />
@@ -196,11 +208,11 @@ const editingDayLabel = computed(() =>
                   </div>
                   <div class="flex items-center gap-1">
                     <span class="block text-xs text-muted">
-                      {{ brk.start }}
+                      {{ $f.time(brk.start) }}
                     </span>
                     <div>-</div>
                     <span class="block text-xs text-muted">
-                      {{ brk.end }}
+                      {{ $f.time(brk.end) }}
                     </span>
                   </div>
                 </div>

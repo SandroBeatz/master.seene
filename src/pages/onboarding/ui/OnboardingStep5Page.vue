@@ -88,6 +88,11 @@ async function createProfile() {
       return
     }
 
+    const { error: settingsError } = await supabase
+      .from('master_settings')
+      .upsert({ user_id: user.id, time_format: store.timeFormat }, { onConflict: 'user_id' })
+    if (settingsError) console.error('Failed to save settings:', settingsError)
+
     void router.push('/home')
   } finally {
     isSubmitting.value = false
@@ -231,10 +236,10 @@ async function createProfile() {
         <div v-for="day in enabledDays" :key="day" class="text-sm flex flex-wrap gap-x-3 gap-y-0.5">
           <span class="font-medium capitalize w-24">{{ $t(`onboarding.step4.days.${day}`) }}</span>
           <span class="text-muted"
-            >{{ store.schedule.days[day].start }} — {{ store.schedule.days[day].end }}</span
+            >{{ $f.time(store.schedule.days[day].start) }} — {{ $f.time(store.schedule.days[day].end) }}</span
           >
           <span v-for="(brk, i) in store.schedule.days[day].breaks" :key="i" class="text-muted">
-            · {{ $t('onboarding.step5.schedule.break') }}: {{ brk.start }}–{{ brk.end }}
+            · {{ $t('onboarding.step5.schedule.break') }}: {{ $f.time(brk.start) }}–{{ $f.time(brk.end) }}
           </span>
         </div>
       </div>

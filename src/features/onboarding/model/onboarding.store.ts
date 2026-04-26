@@ -84,6 +84,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     houseNumber: '',
     zipCode: '',
     city: '',
+    placeId: '',
     worksAtPlace: true,
     canTravel: false,
   })
@@ -105,6 +106,10 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     if (data.country) timeFormat.value = detectTimeFormat(data.country)
   }
 
+  function setTimeFormat(format: 12 | 24) {
+    timeFormat.value = format
+  }
+
   function setSchedule(data: ScheduleData) {
     Object.assign(schedule, data)
   }
@@ -121,6 +126,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       house_number: location.houseNumber || null,
       zip_code: location.zipCode || null,
       city: location.city || null,
+      place_id: location.placeId || null,
       works_at_place: location.worksAtPlace,
       can_travel: location.canTravel,
       schedule: {
@@ -139,6 +145,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     setSpecializations,
     setPersonal,
     setLocation,
+    setTimeFormat,
     setSchedule,
     toMasterProfile,
   }

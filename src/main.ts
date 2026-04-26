@@ -11,6 +11,7 @@ import 'vue-tel-input/vue-tel-input.css'
 import App from './App.vue'
 import router from './app/router'
 import { i18n } from '@shared/lib/i18n'
+import { formatsPlugin } from '@shared/lib/formats'
 
 const app = createApp(App)
 
@@ -20,5 +21,6 @@ app.use(router)
 app.use(ui)
 app.use(i18n)
 app.use(VueTelInput)
+app.use(formatsPlugin)
 
 app.mount('#app')
