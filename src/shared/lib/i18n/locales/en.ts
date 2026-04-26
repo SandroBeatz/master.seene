@@ -46,7 +46,7 @@ export default {
       emailPlaceholder: 'Enter your email',
       password: 'Password',
       rememberMe: 'Remember for 30 days',
-      forgotPassword: 'Forgot password',
+      forgotPassword: 'Forgot password?',
       signIn: 'Sign in',
       passwordPlaceholder: 'Enter your password',
       signInGoogle: 'Sign in with Google',

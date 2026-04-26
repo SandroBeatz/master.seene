@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
-import { AppFullLogo } from '@shared/ui'
 import { supabase } from '@shared/lib/supabase'
 
 const { t } = useI18n()
@@ -113,7 +112,7 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
 </script>
 
 <template>
-  <div class="w-full max-w-sm">
+  <div class="w-full max-w-sm py-8">
     <UAuthForm
       :schema="schema"
       :fields="fields"
@@ -122,11 +121,7 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
       @submit="onSubmit"
     >
       <template #header>
-        <div class="flex flex-col items-center text-center gap-2 pb-8">
-          <div class="pb-10">
-            <AppFullLogo class="w-52 h-10" />
-          </div>
-
+        <div class="flex flex-col items-center text-center gap-2 pb-2">
           <h1 class="text-2xl font-bold text-primary">
             {{ $t('auth.register.title') }}
           </h1>

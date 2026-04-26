@@ -46,7 +46,7 @@ export default {
       emailPlaceholder: 'Entrez votre e-mail',
       password: 'Mot de passe',
       rememberMe: 'Se souvenir de moi 30 jours',
-      forgotPassword: 'Mot de passe oublié',
+      forgotPassword: 'Mot de passe oublié?',
       signIn: 'Se connecter',
       passwordPlaceholder: 'Entrez votre mot de passe',
       signInGoogle: 'Se connecter avec Google',

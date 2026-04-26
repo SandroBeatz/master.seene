@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
-import { AppFullLogo } from '@shared/ui'
 import { supabase } from '@shared/lib/supabase'
 
 const { t } = useI18n()
@@ -83,27 +82,24 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
 </script>
 
 <template>
-  <div class="w-full max-w-sm">
-    <UAuthForm
-      :schema="schema"
-      :fields="fields"
-      :providers="providers"
-      @submit="onSubmit"
-    >
+  <div class="w-full max-w-sm py-8">
+    <UAuthForm :schema="schema" :fields="fields" :providers="providers" @submit="onSubmit">
       <template #footer>
         <div class="text-center">
-          <UButton variant="link" color="primary" size="sm" type="button" @click="router.push('/forgot-password')">
+          <UButton
+            variant="link"
+            color="primary"
+            size="sm"
+            type="button"
+            @click="router.push('/forgot-password')"
+          >
             {{ $t('auth.login.forgotPassword') }}
           </UButton>
         </div>
       </template>
 
       <template #header>
-        <div class="flex flex-col items-center text-center gap-2 pb-8">
-          <div class="pb-10">
-            <AppFullLogo class="w-52 h-10" />
-          </div>
-
+        <div class="flex flex-col items-center text-center gap-2 pb-2">
           <h1 class="text-2xl font-bold text-primary">
             {{ $t('auth.login.title') }}
           </h1>
@@ -116,7 +112,13 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
 
     <p class="text-center text-sm text-muted pt-4">
       {{ $t('auth.login.noAccount') }}
-      <UButton variant="link" color="primary" size="sm" type="button" @click="router.push('/register')">
+      <UButton
+        variant="link"
+        color="primary"
+        size="sm"
+        type="button"
+        @click="router.push('/register')"
+      >
         {{ $t('auth.login.signUpFree') }}
       </UButton>
     </p>
