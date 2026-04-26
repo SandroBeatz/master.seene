@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 export interface Break {
   start: string
@@ -37,11 +37,27 @@ const DAY_KEYS: DayKey[] = [
   'sunday',
 ]
 
+const WORKDAYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+
+const TWELVE_HOUR_COUNTRIES = new Set([
+  'US', 'CA', 'AU', 'NZ', 'PH', 'MY', 'EG', 'SA', 'PK', 'IN', 'BD', 'GH', 'NG', 'KE',
+])
+
+function detectTimeFormat(country: string): 12 | 24 {
+  return TWELVE_HOUR_COUNTRIES.has(country.toUpperCase()) ? 12 : 24
+}
+
 function defaultSchedule(): ScheduleData {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const days = DAY_KEYS.reduce(
     (acc, day) => {
-      acc[day] = { enabled: false, start: null, end: null, breaks: [] }
+      const isWorkday = WORKDAYS.includes(day)
+      acc[day] = {
+        enabled: isWorkday,
+        start: isWorkday ? '09:00' : null,
+        end: isWorkday ? '18:00' : null,
+        breaks: [],
+      }
       return acc
     },
     {} as Record<DayKey, DaySchedule>,
@@ -63,18 +79,18 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
   // Step 3
   const location = reactive({
-    city: '',
+    country: '',
     address: '',
+    houseNumber: '',
     zipCode: '',
-    floor: '',
-    apartment: '',
-    entranceCode: '',
+    city: '',
     worksAtPlace: true,
     canTravel: false,
   })
 
   // Step 4
   const schedule = reactive<ScheduleData>(defaultSchedule())
+  const timeFormat = ref<12 | 24>(24)
 
   function setSpecializations(value: string[]) {
     specializations.splice(0, specializations.length, ...value)
@@ -86,6 +102,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
   function setLocation(data: Partial<typeof location>) {
     Object.assign(location, data)
+    if (data.country) timeFormat.value = detectTimeFormat(data.country)
   }
 
   function setSchedule(data: ScheduleData) {
@@ -99,12 +116,11 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       phone: personal.phone,
       username: personal.username,
       specializations: [...specializations],
-      city: location.city,
-      address: location.address,
-      zip_code: location.zipCode,
-      floor: location.floor || null,
-      apartment: location.apartment || null,
-      entrance_code: location.entranceCode || null,
+      country: location.country,
+      address: location.address || null,
+      house_number: location.houseNumber || null,
+      zip_code: location.zipCode || null,
+      city: location.city || null,
       works_at_place: location.worksAtPlace,
       can_travel: location.canTravel,
       schedule: {
@@ -119,6 +135,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     personal,
     location,
     schedule,
+    timeFormat,
     setSpecializations,
     setPersonal,
     setLocation,

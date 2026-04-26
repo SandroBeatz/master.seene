@@ -252,4 +252,5 @@ On "Create profile" button click:
 
 ## Cross-references
 
-No related docs yet.
+- [Data Model](./data-model.md) — full `master_profile` schema, column definitions, constraints, and migration history
+- [Supabase Integration](../integrations/supabase.md) — how the Supabase client is set up, how to apply schema changes, RLS details

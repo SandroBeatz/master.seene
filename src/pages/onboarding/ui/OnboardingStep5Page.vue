@@ -156,7 +156,7 @@ async function createProfile() {
       <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         <span class="text-muted">{{ $t('onboarding.step5.location.address') }}</span>
         <span>
-          {{ [store.location.address, store.location.city, store.location.zipCode].filter(Boolean).join(', ') || '—' }}
+          {{ [store.location.address, store.location.houseNumber, store.location.city, store.location.zipCode, store.location.country].filter(Boolean).join(', ') || '—' }}
         </span>
         <span class="text-muted">{{ $t('onboarding.step5.location.worksAtPlace') }}</span>
         <span>{{ store.location.worksAtPlace ? $t('onboarding.step5.location.yes') : $t('onboarding.step5.location.no') }}</span>
@@ -203,7 +203,7 @@ async function createProfile() {
     </div>
 
     <!-- Actions -->
-    <div class="flex gap-3 pt-2">
+    <div class="flex justify-end gap-3 pt-2">
       <UButton
         type="button"
         color="neutral"
@@ -215,7 +215,6 @@ async function createProfile() {
       <UButton
         color="primary"
         :loading="isSubmitting"
-        class="flex-1"
         @click="createProfile"
       >
         {{ $t('onboarding.step5.createProfile') }}

@@ -48,3 +48,31 @@ src/
 **Slice exports**: Each FSD slice has a barrel `index.ts` that re-exports its public API. Router imports pages as `(await import('@pages/login')).LoginPage`.
 
 Tests live next to code in `__tests__/` subdirectories.
+
+## Database
+
+Supabase project: `foxqkomqtpbxyeqqwzpm` (ap-southeast-1, Singapore)
+
+### Workflow
+
+Schema changes are tracked in `supabase/migrations/` — SQL files named `YYYYMMDDHHMMSS_description.sql`.
+
+**Applying changes:**
+1. Write SQL in a new file `supabase/migrations/YYYYMMDDHHMMSS_description.sql`
+2. Apply via Supabase MCP `execute_sql` (project_id: `foxqkomqtpbxyeqqwzpm`)
+3. Commit the migration file together with the code that depends on it
+
+**Rules:**
+- DDL changes (ALTER TABLE, CREATE TABLE) — use `execute_sql` MCP tool only
+- Do **not** use `apply_migration` MCP tool — it requires a running local DB (`supabase start`) which is not used in this project
+- All schema changes go directly to production via MCP
+- One schema change = one SQL file in `supabase/migrations/`
+- File names: UTC timestamp + snake_case description (e.g. `20260426120000_add_user_preferences.sql`)
+
+**Inspect current schema:**
+```sql
+SELECT table_name, column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+```

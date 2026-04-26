@@ -89,9 +89,11 @@ function onSubmit(event: FormSubmitEvent<Step1Data>) {
         </div>
       </UFormField>
 
-      <UButton type="submit" color="primary" block>
-        {{ $t('onboarding.step1.submit') }}
-      </UButton>
+      <div class="flex justify-end pt-2">
+        <UButton type="submit" color="primary">
+          {{ $t('onboarding.step1.submit') }}
+        </UButton>
+      </div>
     </UForm>
   </div>
 </template>

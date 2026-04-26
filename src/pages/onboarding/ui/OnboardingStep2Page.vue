@@ -15,16 +15,21 @@ const store = useOnboardingStore()
 interface Step2Data {
   firstName: string
   lastName: string
-  phone: string
   username: string
 }
 
 const state = reactive<Step2Data>({
   firstName: store.personal.firstName,
   lastName: store.personal.lastName,
-  phone: store.personal.phone,
   username: store.personal.username,
 })
+
+const phone = ref(store.personal.phone)
+const phoneValid = ref(store.personal.phone.length > 0)
+
+function onPhoneValidate(obj: { valid: boolean }) {
+  phoneValid.value = obj.valid
+}
 
 const schema = Joi.object({
   firstName: Joi.string().required().messages({
@@ -32,9 +37,6 @@ const schema = Joi.object({
   }),
   lastName: Joi.string().required().messages({
     'string.empty': t('onboarding.step2.validation.lastNameRequired'),
-  }),
-  phone: Joi.string().required().messages({
-    'string.empty': t('onboarding.step2.validation.phoneRequired'),
   }),
   username: Joi.string()
     .pattern(/^[a-z0-9_-]+$/)
@@ -48,6 +50,14 @@ const schema = Joi.object({
 const isSubmitting = ref(false)
 
 async function onSubmit(event: FormSubmitEvent<Step2Data>) {
+  if (!phoneValid.value) {
+    toast.add({
+      title: t('onboarding.step2.validation.phoneInvalid'),
+      color: 'error',
+    })
+    return
+  }
+
   isSubmitting.value = true
   try {
     const { data: existing } = await supabase
@@ -67,7 +77,7 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
     store.setPersonal({
       firstName: event.data.firstName,
       lastName: event.data.lastName,
-      phone: event.data.phone,
+      phone: phone.value,
       username: event.data.username,
     })
     router.push('/onboarding/step3')
@@ -106,14 +116,17 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
         </UFormField>
       </div>
 
-      <UFormField :label="$t('onboarding.step2.phone')" name="phone">
-        <UInput
-          v-model="state.phone"
-          type="tel"
-          :placeholder="$t('onboarding.step2.phonePlaceholder')"
-          class="w-full"
+      <div>
+        <label class="block text-sm font-medium text-default mb-1.5">
+          {{ $t('onboarding.step2.phone') }}
+        </label>
+        <vue-tel-input
+          v-model="phone"
+          mode="international"
+          :input-options="{ placeholder: $t('onboarding.step2.phonePlaceholder') }"
+          @validate="onPhoneValidate"
         />
-      </UFormField>
+      </div>
 
       <UFormField
         :label="$t('onboarding.step2.username')"
@@ -127,7 +140,7 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
         />
       </UFormField>
 
-      <div class="flex gap-3 pt-2">
+      <div class="flex justify-end gap-3 pt-2">
         <UButton
           type="button"
           color="neutral"
@@ -136,7 +149,7 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
         >
           {{ $t('onboarding.step2.back') }}
         </UButton>
-        <UButton type="submit" color="primary" :loading="isSubmitting" class="flex-1">
+        <UButton type="submit" color="primary" :loading="isSubmitting">
           {{ $t('onboarding.step2.submit') }}
         </UButton>
       </div>
