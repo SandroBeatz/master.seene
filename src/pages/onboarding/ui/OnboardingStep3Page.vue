@@ -5,6 +5,11 @@ import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useOnboardingStore } from '@features/onboarding'
+import { AddressAutocomplete } from '@shared/ui/address-autocomplete'
+import type {
+  IGoogleAutocompleteItem,
+  IGoogleAddressComponent,
+} from '@shared/ui/address-autocomplete'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -174,6 +179,31 @@ const schema = Joi.object({
   canTravel: Joi.boolean(),
 })
 
+function handleAddressField(payload: IGoogleAutocompleteItem) {
+  if (!payload.name && !payload.address_components?.length) {
+    state.address = ''
+    return
+  }
+
+  const city = payload.address_components.find(
+    (i: IGoogleAddressComponent) => i.types.includes('postal_town') || i.types.includes('locality'),
+  )
+  const street = payload.address_components.find((i: IGoogleAddressComponent) =>
+    i.types.includes('route'),
+  )
+  const streetNumber = payload.address_components.find((i: IGoogleAddressComponent) =>
+    i.types.includes('street_number'),
+  )
+  const postalCode = payload.address_components.find((i: IGoogleAddressComponent) =>
+    i.types.includes('postal_code'),
+  )
+
+  state.address = street?.long_name ?? state.address
+  state.houseNumber = streetNumber?.long_name ?? ''
+  state.city = city?.long_name ?? ''
+  state.zipCode = postalCode?.long_name ?? ''
+}
+
 function onSubmit(event: FormSubmitEvent<Step3Data>) {
   store.setLocation({
     country: event.data.country,
@@ -213,10 +243,14 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
 
       <div class="grid grid-cols-3 gap-3">
         <UFormField :label="$t('onboarding.step3.address')" name="address" class="col-span-2">
-          <UInput
+          <AddressAutocomplete
             v-model="state.address"
             :placeholder="$t('onboarding.step3.addressPlaceholder')"
+            :component-restrictions="
+              state.country ? { country: state.country.toLowerCase() } : undefined
+            "
             class="w-full"
+            @place-changed="handleAddressField"
           />
         </UFormField>
         <UFormField :label="$t('onboarding.step3.houseNumber')" name="houseNumber">

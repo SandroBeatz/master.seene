@@ -17,6 +17,7 @@
       },
       "devDependencies": {
         "@tsconfig/node24": "^24.0.4",
+        "@types/google.maps": "^3.64.0",
         "@types/joi": "^17.2.3",
         "@types/jsdom": "^28.0.1",
         "@types/node": "^24.12.2",
@@ -529,6 +530,8 @@
     "@types/esrecurse": ["@types/esrecurse@4.3.1", "", {}, "sha512-xJBAbDifo5hpffDBuHl0Y8ywswbiAp/Wi7Y/GtAgSlZyIABppyurxVueOPE8LUQOxdlgi6Zqce7uoEpqNTeiUw=="],
 
     "@types/estree": ["@types/estree@1.0.8", "", {}, "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w=="],
+
+    "@types/google.maps": ["@types/google.maps@3.64.0", "", {}, "sha512-dN0H6tB4lgLQLovcbPXFYYOEV41TpyyJghzb5jrzjB96FZmjeOghevVdC+BMGd6YqyCqXaggyEtqRXLRjzCBZA=="],
 
     "@types/joi": ["@types/joi@17.2.3", "", { "dependencies": { "joi": "*" } }, "sha512-dGjs/lhrWOa+eO0HwgxCSnDm5eMGCsXuvLglMghJq32F6q5LyyNuXb41DHzrg501CKNOSSAHmfB7FDGeUnDmzw=="],
 
