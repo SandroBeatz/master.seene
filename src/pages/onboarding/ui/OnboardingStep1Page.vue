@@ -1,90 +1,97 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { AppFullLogo } from '@shared/ui'
+import { useOnboardingStore } from '@features/onboarding'
 
 const { t } = useI18n()
 const router = useRouter()
-const toast = useToast()
+const store = useOnboardingStore()
+
+const CATEGORIES = [
+  'makeup',
+  'hair',
+  'nails',
+  'barber',
+  'massage',
+  'tattoo_piercing',
+  'depilation',
+  'cosmetology',
+  'brows_lashes',
+] as const
+
+interface Step1Data {
+  specializations: string[]
+}
+
+const state = reactive<Step1Data>({
+  specializations: [...store.specializations],
+})
 
 const schema = Joi.object({
-  name: Joi.string()
-    .min(2)
+  specializations: Joi.array()
+    .items(Joi.string())
+    .min(1)
     .required()
     .messages({
-      'string.empty': t('onboarding.validation.nameRequired'),
-      'string.min': t('onboarding.validation.nameMin'),
-    }),
-  phone: Joi.string()
-    .required()
-    .messages({
-      'string.empty': t('onboarding.validation.phoneRequired'),
-    }),
-  specialty: Joi.string()
-    .required()
-    .messages({
-      'string.empty': t('onboarding.validation.specialtyRequired'),
+      'array.min': t('onboarding.step1.validation.minOne'),
+      'array.base': t('onboarding.step1.validation.minOne'),
     }),
 })
 
-const fields = computed(() => [
-  {
-    name: 'name',
-    type: 'text' as const,
-    label: t('onboarding.step1.name'),
-    placeholder: t('onboarding.step1.namePlaceholder'),
-    required: true,
-  },
-  {
-    name: 'phone',
-    type: 'text' as const,
-    label: t('onboarding.step1.phone'),
-    placeholder: t('onboarding.step1.phonePlaceholder'),
-    required: true,
-  },
-  {
-    name: 'specialty',
-    type: 'text' as const,
-    label: t('onboarding.step1.specialty'),
-    placeholder: t('onboarding.step1.specialtyPlaceholder'),
-    required: true,
-  },
-])
-
-interface OnboardingStep1Data {
-  name: string
-  phone: string
-  specialty: string
+function toggle(key: string) {
+  const idx = state.specializations.indexOf(key)
+  if (idx >= 0) {
+    state.specializations.splice(idx, 1)
+  } else {
+    state.specializations.push(key)
+  }
 }
 
-async function onSubmit(event: FormSubmitEvent<OnboardingStep1Data>) {
-  console.log('Onboarding step 1:', event.data)
-  toast.add({ title: t('onboarding.step1.successTitle'), color: 'success' })
-  router.push('/home')
+function isSelected(key: string) {
+  return state.specializations.includes(key)
+}
+
+function onSubmit(event: FormSubmitEvent<Step1Data>) {
+  store.setSpecializations(event.data.specializations)
+  router.push('/onboarding/step2')
 }
 </script>
 
 <template>
-  <div class="py-8">
-    <UAuthForm
-      :schema="schema"
-      :fields="fields"
-      :submit="{ label: t('onboarding.step1.submit') }"
-      @submit="onSubmit"
-    >
-      <template #header>
-        <div class="flex flex-col items-center text-center gap-2 pb-2">
-          <h1 class="text-2xl font-bold text-primary">
-            {{ $t('onboarding.step1.title') }}
-          </h1>
-          <p class="text-sm text-zinc-500 dark:text-zinc-400">
-            {{ $t('onboarding.step1.subtitle') }}
-          </p>
+  <div class="py-8 w-full">
+    <div class="flex flex-col items-center text-center gap-2 mb-6">
+      <h1 class="text-2xl font-bold text-primary">
+        {{ $t('onboarding.step1.title') }}
+      </h1>
+      <p class="text-sm text-muted">
+        {{ $t('onboarding.step1.subtitle') }}
+      </p>
+    </div>
+
+    <UForm :schema="schema" :state="state" @submit="onSubmit">
+      <UFormField name="specializations" class="mb-6">
+        <div class="grid grid-cols-3 gap-2">
+          <UButton
+            v-for="key in CATEGORIES"
+            :key="key"
+            type="button"
+            :variant="isSelected(key) ? 'solid' : 'soft'"
+            color="primary"
+            size="sm"
+            class="justify-center"
+            @click="toggle(key)"
+          >
+            {{ $t(`onboarding.step1.categories.${key}`) }}
+          </UButton>
         </div>
-      </template>
-    </UAuthForm>
+      </UFormField>
+
+      <UButton type="submit" color="primary" block>
+        {{ $t('onboarding.step1.submit') }}
+      </UButton>
+    </UForm>
   </div>
 </template>
