@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useOnboardingStore } from '@features/onboarding'
+import { IconMakeUp, IconHair, IconNails } from '@shared/ui'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -61,8 +62,8 @@ function onSubmit(event: FormSubmitEvent<Step1Data>) {
 </script>
 
 <template>
-  <div class="py-8 w-full">
-    <div class="flex flex-col items-center text-center gap-2 mb-6">
+  <div class="w-full">
+    <div class="flex flex-col items-center text-center gap-2 pt-4 mb-6">
       <h1 class="text-2xl font-bold text-primary">
         {{ $t('onboarding.step1.title') }}
       </h1>
@@ -73,19 +74,22 @@ function onSubmit(event: FormSubmitEvent<Step1Data>) {
 
     <UForm :schema="schema" :state="state" @submit="onSubmit">
       <UFormField name="specializations" class="mb-6">
-        <div class="grid grid-cols-3 gap-2">
-          <UButton
+        <div class="grid grid-cols-2 gap-4">
+          <UPageCard
             v-for="key in CATEGORIES"
             :key="key"
-            type="button"
-            :variant="isSelected(key) ? 'solid' : 'soft'"
-            color="primary"
-            size="sm"
-            class="justify-center"
+            :title="$t(`onboarding.step1.categories.${key}`)"
+            variant="subtle"
+            :highlight="isSelected(key)"
+            :ui="{ root: 'cursor-pointer' }"
             @click="toggle(key)"
           >
-            {{ $t(`onboarding.step1.categories.${key}`) }}
-          </UButton>
+            <template #leading>
+              <IconMakeUp v-if="key === 'makeup'" class="size-12" />
+              <IconHair v-if="key === 'hair'" class="size-12" />
+              <IconNails v-if="key === 'nails'" class="size-12" />
+            </template>
+          </UPageCard>
         </div>
       </UFormField>
 

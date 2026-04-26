@@ -122,6 +122,7 @@ function detectCountry(): string {
   try {
     const locale = navigator.language || navigator.languages?.[0] || ''
     const parts = locale.split('-')
+
     if (parts.length >= 2) {
       const code = (parts[parts.length - 1] ?? '').toUpperCase()
       if (COUNTRIES.find((c) => c.value === code)) return code
@@ -159,10 +160,12 @@ onMounted(() => {
 })
 
 const schema = Joi.object({
-  country: Joi.string().required().messages({
-    'string.empty': t('onboarding.step3.validation.countryRequired'),
-    'any.required': t('onboarding.step3.validation.countryRequired'),
-  }),
+  country: Joi.string()
+    .required()
+    .messages({
+      'string.empty': t('onboarding.step3.validation.countryRequired'),
+      'any.required': t('onboarding.step3.validation.countryRequired'),
+    }),
   address: Joi.string().allow('').optional(),
   houseNumber: Joi.string().allow('').optional(),
   zipCode: Joi.string().allow('').optional(),
@@ -186,8 +189,8 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
 </script>
 
 <template>
-  <div class="py-8 w-full">
-    <div class="flex flex-col items-center text-center gap-2 mb-6">
+  <div class="w-full">
+    <div class="flex flex-col items-center text-center gap-2 pt-4 mb-6">
       <h1 class="text-2xl font-bold text-primary">
         {{ $t('onboarding.step3.title') }}
       </h1>
@@ -225,7 +228,7 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
         </UFormField>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-3 gap-3">
         <UFormField :label="$t('onboarding.step3.zipCode')" name="zipCode">
           <UInput
             v-model="state.zipCode"
@@ -233,7 +236,7 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
             class="w-full"
           />
         </UFormField>
-        <UFormField :label="$t('onboarding.step3.city')" name="city">
+        <UFormField :label="$t('onboarding.step3.city')" name="city" class="col-span-2">
           <UInput
             v-model="state.city"
             :placeholder="$t('onboarding.step3.cityPlaceholder')"
@@ -247,11 +250,11 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
         <USwitch v-model="state.canTravel" :label="$t('onboarding.step3.canTravel')" />
       </div>
 
-      <div class="flex justify-end gap-3 pt-2">
+      <div class="flex justify-between gap-3 pt-2">
         <UButton
           type="button"
           color="neutral"
-          variant="soft"
+          variant="subtle"
           @click="router.push('/onboarding/step2')"
         >
           {{ $t('onboarding.step3.back') }}

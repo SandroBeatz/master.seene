@@ -133,8 +133,8 @@ const editingDayLabel = computed(() =>
 </script>
 
 <template>
-  <div class="py-8 w-full">
-    <div class="flex flex-col items-center text-center gap-2 mb-6">
+  <div class="w-full">
+    <div class="flex flex-col items-center text-center gap-2 pt-4 mb-6">
       <h1 class="text-2xl font-bold text-primary">
         {{ $t('onboarding.step4.title') }}
       </h1>
@@ -149,40 +149,64 @@ const editingDayLabel = computed(() =>
         <label class="text-sm font-medium text-default block mb-1.5">
           {{ $t('onboarding.step4.timezone') }}
         </label>
-        <USelectMenu
-          v-model="localSchedule.timezone"
-          :items="timezones"
-          class="w-full"
-        />
+        <USelectMenu v-model="localSchedule.timezone" :items="timezones" class="w-full" />
       </div>
+
+      <UFieldGroup orientation="horizontal">
+        <UButton color="neutral" variant="subtle" label="12HR" />
+        <UButton color="neutral" variant="outline" label="24HR" />
+      </UFieldGroup>
 
       <USeparator />
 
       <!-- Week schedule -->
       <div class="space-y-2">
-        <div
-          v-for="day in DAY_KEYS"
-          :key="day"
-          class="flex items-center gap-3 py-1"
-        >
+        <div v-for="day in DAY_KEYS" :key="day" class="flex items-center gap-3 py-1">
           <!-- Toggle -->
           <USwitch
             v-model="localSchedule.days[day].enabled"
             @update:model-value="onDayToggle(day)"
           />
 
-          <!-- Day name -->
-          <span
-            class="text-sm font-medium w-28 shrink-0"
-            :class="localSchedule.days[day].enabled ? 'text-default' : 'text-muted'"
-          >
-            {{ $t(`onboarding.step4.days.${day}`) }}
-          </span>
+          <div class="flex flex-col flex-1">
+            <div class="flex items-baseline">
+              <!-- Day name -->
+              <span
+                class="text-sm font-medium w-32 shrink-0"
+                :class="localSchedule.days[day].enabled ? 'text-default' : 'text-muted'"
+              >
+                {{ $t(`onboarding.step4.days.${day}`) }}
+              </span>
 
-          <!-- Time summary or day-off -->
-          <span class="text-sm flex-1" :class="localSchedule.days[day].enabled ? 'text-default' : 'text-muted'">
-            {{ localSchedule.days[day].enabled ? displayTime(day) : $t('onboarding.step4.dayOff') }}
-          </span>
+              <!-- Time summary or day-off -->
+              <span
+                class="text-sm flex-1"
+                :class="localSchedule.days[day].enabled ? 'text-default' : 'text-muted'"
+              >
+                {{
+                  localSchedule.days[day].enabled ? displayTime(day) : $t('onboarding.step4.dayOff')
+                }}
+              </span>
+            </div>
+            <div class="flex flex-col">
+              <div v-for="(brk, idx) in localSchedule.days[day].breaks" :key="idx">
+                <div class="flex items-center gap-2">
+                  <div class="text-xs text-muted">
+                    {{ $t('onboarding.step4.breakLabel') }}
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="block text-xs text-muted">
+                      {{ brk.start }}
+                    </span>
+                    <div>-</div>
+                    <span class="block text-xs text-muted">
+                      {{ brk.end }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Edit button -->
           <UButton
@@ -198,11 +222,11 @@ const editingDayLabel = computed(() =>
       </div>
 
       <!-- Actions -->
-      <div class="flex justify-end gap-3 pt-2">
+      <div class="flex justify-between gap-3 pt-2">
         <UButton
           type="button"
           color="neutral"
-          variant="soft"
+          variant="subtle"
           @click="router.push('/onboarding/step3')"
         >
           {{ $t('onboarding.step4.back') }}
@@ -215,23 +239,20 @@ const editingDayLabel = computed(() =>
   </div>
 
   <!-- Day edit dialog -->
-  <UModal
-    v-model:open="dialogOpen"
-    :title="editingDayLabel"
-    :ui="{ footer: 'justify-end' }"
-  >
+  <UModal v-model:open="dialogOpen" :title="editingDayLabel" :ui="{ footer: 'justify-end' }">
     <template #body>
       <div class="space-y-4">
         <!-- Working hours -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-default mb-1.5">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <label class="block text-xs font-medium text-muted">
               {{ $t('onboarding.step4.from') }}
             </label>
             <UInputTime v-model="editStart" :hour-cycle="store.timeFormat" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-default mb-1.5">
+          <div>-</div>
+          <div class="flex items-center gap-2">
+            <label class="block text-xs font-medium text-muted">
               {{ $t('onboarding.step4.to') }}
             </label>
             <UInputTime v-model="editEnd" :hour-cycle="store.timeFormat" />
@@ -242,31 +263,34 @@ const editingDayLabel = computed(() =>
         <template v-if="editBreaks.length > 0">
           <USeparator />
           <div class="space-y-2">
-            <div
-              v-for="(brk, idx) in editBreaks"
-              :key="idx"
-              class="flex items-end gap-2"
-            >
-              <div class="flex-1">
-                <label class="block text-xs text-muted mb-1">
-                  {{ $t('onboarding.step4.breakLabel') }} {{ idx + 1 }} — {{ $t('onboarding.step4.from') }}
-                </label>
-                <UInputTime v-model="brk.start" :hour-cycle="store.timeFormat" />
+            <div v-for="(brk, idx) in editBreaks" :key="idx">
+              <div class="text-xs text-muted mb-1.5">
+                {{ $t('onboarding.step4.breakLabel') }} {{ idx + 1 }}
               </div>
-              <div class="flex-1">
-                <label class="block text-xs text-muted mb-1">
-                  {{ $t('onboarding.step4.to') }}
-                </label>
-                <UInputTime v-model="brk.end" :hour-cycle="store.timeFormat" />
+
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                  <label class="block text-xs text-muted">
+                    {{ $t('onboarding.step4.from') }}
+                  </label>
+                  <UInputTime v-model="brk.start" :hour-cycle="store.timeFormat" />
+                </div>
+                <div>-</div>
+                <div class="flex items-center gap-2">
+                  <label class="block text-xs text-muted">
+                    {{ $t('onboarding.step4.to') }}
+                  </label>
+                  <UInputTime v-model="brk.end" :hour-cycle="store.timeFormat" />
+                </div>
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="sm"
+                  class="mb-0.5 self-end"
+                  @click="removeBreakEdit(idx)"
+                />
               </div>
-              <UButton
-                icon="i-lucide-trash-2"
-                color="error"
-                variant="ghost"
-                size="sm"
-                class="mb-0.5"
-                @click="removeBreakEdit(idx)"
-              />
             </div>
           </div>
         </template>
@@ -285,7 +309,15 @@ const editingDayLabel = computed(() =>
     </template>
 
     <template #footer="{ close }">
-      <UButton color="primary" @click="saveDay(); close()">
+      <UButton
+        color="primary"
+        @click="
+          () => {
+            saveDay()
+            close()
+          }
+        "
+      >
         {{ $t('onboarding.step4.done') }}
       </UButton>
     </template>

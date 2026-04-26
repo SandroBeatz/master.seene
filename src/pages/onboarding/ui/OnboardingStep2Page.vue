@@ -32,12 +32,16 @@ function onPhoneValidate(obj: { valid: boolean }) {
 }
 
 const schema = Joi.object({
-  firstName: Joi.string().required().messages({
-    'string.empty': t('onboarding.step2.validation.firstNameRequired'),
-  }),
-  lastName: Joi.string().required().messages({
-    'string.empty': t('onboarding.step2.validation.lastNameRequired'),
-  }),
+  firstName: Joi.string()
+    .required()
+    .messages({
+      'string.empty': t('onboarding.step2.validation.firstNameRequired'),
+    }),
+  lastName: Joi.string()
+    .required()
+    .messages({
+      'string.empty': t('onboarding.step2.validation.lastNameRequired'),
+    }),
   username: Joi.string()
     .pattern(/^[a-z0-9_-]+$/)
     .required()
@@ -88,8 +92,8 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
 </script>
 
 <template>
-  <div class="py-8 w-full">
-    <div class="flex flex-col items-center text-center gap-2 mb-6">
+  <div class="w-full">
+    <div class="flex flex-col items-center text-center gap-2 pt-4 mb-6">
       <h1 class="text-2xl font-bold text-primary">
         {{ $t('onboarding.step2.title') }}
       </h1>
@@ -116,17 +120,17 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
         </UFormField>
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-default mb-1.5">
-          {{ $t('onboarding.step2.phone') }}
-        </label>
+      <UFormField :label="$t('onboarding.step2.phone')" name="phone">
         <vue-tel-input
           v-model="phone"
           mode="international"
-          :input-options="{ placeholder: $t('onboarding.step2.phonePlaceholder') }"
+          :input-options="{
+            placeholder: $t('onboarding.step2.phonePlaceholder'),
+            showDialCode: true,
+          }"
           @validate="onPhoneValidate"
         />
-      </div>
+      </UFormField>
 
       <UFormField
         :label="$t('onboarding.step2.username')"
@@ -140,11 +144,11 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
         />
       </UFormField>
 
-      <div class="flex justify-end gap-3 pt-2">
+      <div class="flex justify-between gap-3 pt-2">
         <UButton
           type="button"
           color="neutral"
-          variant="soft"
+          variant="subtle"
           @click="router.push('/onboarding/step1')"
         >
           {{ $t('onboarding.step2.back') }}

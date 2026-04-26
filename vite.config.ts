@@ -17,7 +17,7 @@ export default defineConfig({
 
         button: {
           slots: {
-            root: 'cursor-pointer',
+            base: 'cursor-pointer',
           }
         },
 
