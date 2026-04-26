@@ -40,7 +40,20 @@ const DAY_KEYS: DayKey[] = [
 const WORKDAYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
 
 const TWELVE_HOUR_COUNTRIES = new Set([
-  'US', 'CA', 'AU', 'NZ', 'PH', 'MY', 'EG', 'SA', 'PK', 'IN', 'BD', 'GH', 'NG', 'KE',
+  'US',
+  'CA',
+  'AU',
+  'NZ',
+  'PH',
+  'MY',
+  'EG',
+  'SA',
+  'PK',
+  'IN',
+  'BD',
+  'GH',
+  'NG',
+  'KE',
 ])
 
 function detectTimeFormat(country: string): 12 | 24 {

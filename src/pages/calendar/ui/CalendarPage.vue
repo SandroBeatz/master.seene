@@ -16,10 +16,7 @@ const { t } = useI18n()
     }"
   >
     <UPage as="main">
-      <UPageHeader
-        :title="t('calendar.title')"
-        :description="t('calendar.description')"
-      />
+      <UPageHeader :title="t('calendar.title')" :description="t('calendar.description')" />
       <UPageBody>
         <UPageCard variant="soft">
           Lorem ipsum dolor sit amet, consectetur adipisicing elit. Accusantium commodi, delectus

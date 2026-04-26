@@ -2,7 +2,12 @@
 /// <reference types="@types/google.maps" />
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { IGoogleAddressComponent, IGoogleAutocompleteItem, AddressAutocompleteProps, AddressAutocompleteEmits } from './types'
+import type {
+  IGoogleAddressComponent,
+  IGoogleAutocompleteItem,
+  AddressAutocompleteProps,
+  AddressAutocompleteEmits,
+} from './types'
 
 const props = defineProps<AddressAutocompleteProps>()
 const emit = defineEmits<AddressAutocompleteEmits>()
@@ -139,7 +144,7 @@ const selectPrediction = async (prediction: google.maps.places.AutocompletePredi
       if (status === google.maps.places.PlacesServiceStatus.OK && place) {
         sessionToken = new google.maps.places.AutocompleteSessionToken()
 
-        const addressComponents = place.address_components?.map(component => ({
+        const addressComponents = place.address_components?.map((component) => ({
           long_name: component.long_name,
           short_name: component.short_name,
           types: component.types,
@@ -163,7 +168,7 @@ const selectPrediction = async (prediction: google.maps.places.AutocompletePredi
         isOpen.value = false
         predictions.value = []
       }
-    }
+    },
   )
 }
 
@@ -194,7 +199,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 }
 
-watch(selectedIndex, newIndex => {
+watch(selectedIndex, (newIndex) => {
   if (newIndex >= 0 && scrollContainerRef.value) {
     const items = scrollContainerRef.value.querySelectorAll('[data-prediction-item]')
     const selectedItem = items[newIndex] as HTMLElement

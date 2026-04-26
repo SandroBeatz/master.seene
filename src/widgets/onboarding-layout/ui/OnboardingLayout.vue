@@ -11,9 +11,7 @@ const currentStep = computed(() => {
   return match ? Number(match[1]) : 1
 })
 
-const stepValues = computed(() =>
-  [1, 2, 3, 4, 5].map((n) => (n <= currentStep.value ? 100 : 0)),
-)
+const stepValues = computed(() => [1, 2, 3, 4, 5].map((n) => (n <= currentStep.value ? 100 : 0)))
 </script>
 
 <template>

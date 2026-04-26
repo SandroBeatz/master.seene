@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
 import AddressAutocomplete from './AddressAutocomplete.vue'
+import type { IGoogleAutocompleteItem, IGoogleAddressComponent } from './types'
 
 const meta = {
   title: 'Components/UI/AddressAutocomplete',
@@ -80,11 +81,11 @@ type Story = StoryObj<typeof meta>
  * Start typing an address to see autocomplete suggestions.
  */
 export const Default: Story = {
-  render: args => ({
+  render: (args) => ({
     components: { AddressAutocomplete },
     setup() {
       const address = ref('')
-      const handlePlaceChanged = (place: any) => {
+      const handlePlaceChanged = (place: IGoogleAutocompleteItem) => {
         console.log('Place selected:', place)
       }
       return { args, address, handlePlaceChanged }
@@ -113,11 +114,11 @@ export const Default: Story = {
  * Results are limited to Austria (AT).
  */
 export const WithCountryRestriction: Story = {
-  render: args => ({
+  render: (args) => ({
     components: { AddressAutocomplete },
     setup() {
       const address = ref('')
-      const handlePlaceChanged = (place: any) => {
+      const handlePlaceChanged = (place: IGoogleAutocompleteItem) => {
         console.log('Place selected:', place)
       }
       return { args, address, handlePlaceChanged }
@@ -146,7 +147,7 @@ export const WithCountryRestriction: Story = {
  * Disabled state of the AddressAutocomplete component.
  */
 export const Disabled: Story = {
-  render: args => ({
+  render: (args) => ({
     components: { AddressAutocomplete },
     setup() {
       const address = ref('123 Main St, Vienna')
@@ -173,7 +174,7 @@ export const Disabled: Story = {
  * with other form fields and extract address components.
  */
 export const CompleteFormExample: Story = {
-  render: args => ({
+  render: (args) => ({
     components: { AddressAutocomplete },
     setup() {
       const form = ref({
@@ -184,21 +185,26 @@ export const CompleteFormExample: Story = {
         country: 'AT',
       })
 
-      const handlePlaceChanged = (place: any) => {
+      const handlePlaceChanged = (place: IGoogleAutocompleteItem) => {
         console.log('Full place data:', place)
 
         // Extract street
-        const street = place.address_components.find((c: any) => c.types.includes('route'))
+        const street = place.address_components.find((c: IGoogleAddressComponent) =>
+          c.types.includes('route'),
+        )
         // Extract street number
-        const streetNumber = place.address_components.find((c: any) =>
-          c.types.includes('street_number')
+        const streetNumber = place.address_components.find((c: IGoogleAddressComponent) =>
+          c.types.includes('street_number'),
         )
         // Extract city
         const city = place.address_components.find(
-          (c: any) => c.types.includes('locality') || c.types.includes('postal_town')
+          (c: IGoogleAddressComponent) =>
+            c.types.includes('locality') || c.types.includes('postal_town'),
         )
         // Extract postal code
-        const zip = place.address_components.find((c: any) => c.types.includes('postal_code'))
+        const zip = place.address_components.find((c: IGoogleAddressComponent) =>
+          c.types.includes('postal_code'),
+        )
 
         form.value.street = street?.long_name || ''
         form.value.houseNumber = streetNumber?.long_name || ''
@@ -276,13 +282,13 @@ export const CompleteFormExample: Story = {
  * Use arrow keys to navigate suggestions, Enter to select, Escape to close.
  */
 export const KeyboardNavigation: Story = {
-  render: args => ({
+  render: (args) => ({
     components: { AddressAutocomplete },
     setup() {
       const address = ref('')
-      const selectedPlace = ref<any>(null)
+      const selectedPlace = ref<IGoogleAutocompleteItem | null>(null)
 
-      const handlePlaceChanged = (place: any) => {
+      const handlePlaceChanged = (place: IGoogleAutocompleteItem) => {
         selectedPlace.value = place
       }
 
@@ -333,7 +339,7 @@ export const KeyboardNavigation: Story = {
  * Multiple country examples showing different country restrictions.
  */
 export const MultipleCountries: Story = {
-  render: args => ({
+  render: (args) => ({
     components: { AddressAutocomplete },
     setup() {
       const addressAT = ref('')

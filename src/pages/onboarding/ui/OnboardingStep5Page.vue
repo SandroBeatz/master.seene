@@ -21,18 +21,6 @@ const DAY_KEYS: DayKey[] = [
   'sunday',
 ]
 
-const CATEGORIES = [
-  'makeup',
-  'hair',
-  'nails',
-  'barber',
-  'massage',
-  'tattoo_piercing',
-  'depilation',
-  'cosmetology',
-  'brows_lashes',
-] as const
-
 const isSubmitting = ref(false)
 
 const enabledDays = computed(() => DAY_KEYS.filter((day) => store.schedule.days[day].enabled))
@@ -236,10 +224,13 @@ async function createProfile() {
         <div v-for="day in enabledDays" :key="day" class="text-sm flex flex-wrap gap-x-3 gap-y-0.5">
           <span class="font-medium capitalize w-24">{{ $t(`onboarding.step4.days.${day}`) }}</span>
           <span class="text-muted"
-            >{{ $f.time(store.schedule.days[day].start) }} — {{ $f.time(store.schedule.days[day].end) }}</span
+            >{{ $f.time(store.schedule.days[day].start) }} —
+            {{ $f.time(store.schedule.days[day].end) }}</span
           >
           <span v-for="(brk, i) in store.schedule.days[day].breaks" :key="i" class="text-muted">
-            · {{ $t('onboarding.step5.schedule.break') }}: {{ $f.time(brk.start) }}–{{ $f.time(brk.end) }}
+            · {{ $t('onboarding.step5.schedule.break') }}: {{ $f.time(brk.start) }}–{{
+              $f.time(brk.end)
+            }}
           </span>
         </div>
       </div>

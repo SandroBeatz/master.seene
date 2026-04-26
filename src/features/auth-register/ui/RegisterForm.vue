@@ -134,7 +134,13 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
 
     <p class="text-center text-sm text-muted pt-4">
       {{ $t('auth.register.haveAccount') }}
-      <UButton variant="link" color="primary" size="sm" type="button" @click="router.push('/login')">
+      <UButton
+        variant="link"
+        color="primary"
+        size="sm"
+        type="button"
+        @click="router.push('/login')"
+      >
         {{ $t('auth.register.signIn') }}
       </UButton>
     </p>

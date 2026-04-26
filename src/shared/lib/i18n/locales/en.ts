@@ -10,7 +10,8 @@ export default {
     profile: 'Profile',
   },
   common: {
-    dashboardWelcome: "Welcome back to your dashboard. Here's what's happening with your projects today.",
+    dashboardWelcome:
+      "Welcome back to your dashboard. Here's what's happening with your projects today.",
     userAvatarAlt: 'User Avatar',
     previous: 'Previous',
     next: 'Next',
@@ -25,15 +26,18 @@ export default {
   },
   calendar: {
     title: 'Calendar',
-    description: "Welcome back to your dashboard. Here's what's happening with your projects today.",
+    description:
+      "Welcome back to your dashboard. Here's what's happening with your projects today.",
   },
   clients: {
     title: 'Clients',
-    description: "Welcome back to your dashboard. Here's what's happening with your projects today.",
+    description:
+      "Welcome back to your dashboard. Here's what's happening with your projects today.",
   },
   services: {
     title: 'Services',
-    description: "Welcome back to your dashboard. Here's what's happening with your projects today.",
+    description:
+      "Welcome back to your dashboard. Here's what's happening with your projects today.",
   },
   about: {
     title: 'This is an about page',
@@ -85,7 +89,8 @@ export default {
       confirmPasswordMatch: 'Passwords do not match',
     },
     testimonial: {
-      quote: "We've been using Untitled to kick start every new project and can't imagine working without it.",
+      quote:
+        "We've been using Untitled to kick start every new project and can't imagine working without it.",
       name: 'Andi Lane',
       role: 'Founder, Catalog',
       company: 'Web Design Agency',

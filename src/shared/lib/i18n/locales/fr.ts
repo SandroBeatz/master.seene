@@ -25,15 +25,18 @@ export default {
   },
   calendar: {
     title: 'Calendrier',
-    description: "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
+    description:
+      "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
   },
   clients: {
     title: 'Clients',
-    description: "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
+    description:
+      "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
   },
   services: {
     title: 'Services',
-    description: "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
+    description:
+      "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
   },
   about: {
     title: "C'est la page À propos",
@@ -85,7 +88,8 @@ export default {
       confirmPasswordMatch: 'Les mots de passe ne correspondent pas',
     },
     testimonial: {
-      quote: "Nous utilisons Untitled pour démarrer chaque nouveau projet et nous ne pouvons pas imaginer travailler sans lui.",
+      quote:
+        'Nous utilisons Untitled pour démarrer chaque nouveau projet et nous ne pouvons pas imaginer travailler sans lui.',
       name: 'Andi Lane',
       role: 'Fondatrice, Catalog',
       company: 'Agence de design web',
@@ -94,7 +98,8 @@ export default {
   onboarding: {
     step1: {
       title: 'Choisissez vos spécialisations',
-      subtitle: 'Sélectionnez les services que vous proposez. Vous pourrez modifier cela plus tard.',
+      subtitle:
+        'Sélectionnez les services que vous proposez. Vous pourrez modifier cela plus tard.',
       submit: 'Continuer',
       categories: {
         makeup: 'Maquillage',
@@ -122,7 +127,7 @@ export default {
       phonePlaceholder: '+33 6 12 34 56 78',
       username: "Nom d'utilisateur",
       usernamePlaceholder: 'anna.dupont',
-      usernameHint: "Votre lien public\u00a0: seene.app/{username}",
+      usernameHint: 'Votre lien public\u00a0: seene.app/{username}',
       back: 'Retour',
       submit: 'Continuer',
       validation: {
@@ -190,8 +195,9 @@ export default {
       validation: {
         missingSpecializations: 'Veuillez sélectionner au moins une spécialisation',
         missingPersonal: 'Veuillez remplir vos informations personnelles',
-        missingLocation: "Veuillez remplir votre lieu de travail",
-        missingScheduleTimes: "Veuillez définir les heures de début et de fin pour tous les jours activés",
+        missingLocation: 'Veuillez remplir votre lieu de travail',
+        missingScheduleTimes:
+          'Veuillez définir les heures de début et de fin pour tous les jours activés',
       },
     },
     step4: {
@@ -218,7 +224,8 @@ export default {
       back: 'Retour',
       submit: 'Continuer',
       validation: {
-        enabledDayMissingTimes: "Veuillez définir les heures de début et de fin pour tous les jours activés",
+        enabledDayMissingTimes:
+          'Veuillez définir les heures de début et de fin pour tous les jours activés',
       },
     },
   },

@@ -16,10 +16,7 @@ const { t } = useI18n()
     }"
   >
     <UPage as="main">
-      <UPageHeader
-        :title="t('services.title')"
-        :description="t('services.description')"
-      />
+      <UPageHeader :title="t('services.title')" :description="t('services.description')" />
       <UPageBody>
         <UPageCard variant="soft">
           Lorem ipsum dolor sit amet, consectetur adipisicing elit. Accusantium commodi, delectus

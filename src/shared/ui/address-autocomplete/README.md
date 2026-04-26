@@ -36,19 +36,19 @@ const handlePlaceChange = (place) => {
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `modelValue` | `string` | `''` | Current input value (v-model) |
-| `placeholder` | `string` | `undefined` | Input placeholder text |
+| Prop                    | Type                  | Default     | Description                                                    |
+| ----------------------- | --------------------- | ----------- | -------------------------------------------------------------- |
+| `modelValue`            | `string`              | `''`        | Current input value (v-model)                                  |
+| `placeholder`           | `string`              | `undefined` | Input placeholder text                                         |
 | `componentRestrictions` | `{ country: string }` | `undefined` | Restrict results to specific country (ISO 3166-1 Alpha-2 code) |
-| `disabled` | `boolean` | `false` | Disable the input |
+| `disabled`              | `boolean`             | `false`     | Disable the input                                              |
 
 ## Events
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `update:modelValue` | `string` | Emitted when input value changes |
-| `place_changed` | `IGoogleAutocompleteItem` | Emitted when a place is selected from dropdown |
+| Event               | Payload                   | Description                                    |
+| ------------------- | ------------------------- | ---------------------------------------------- |
+| `update:modelValue` | `string`                  | Emitted when input value changes               |
+| `place_changed`     | `IGoogleAutocompleteItem` | Emitted when a place is selected from dropdown |
 
 ## Place Object Structure
 
@@ -129,18 +129,14 @@ const countryCode = ref('AT')
 const handleAddressSelect = (place) => {
   // Extract city
   const city = place.address_components.find(
-    c => c.types.includes('locality') || c.types.includes('postal_town')
+    (c) => c.types.includes('locality') || c.types.includes('postal_town'),
   )
 
   // Extract postal code
-  const zip = place.address_components.find(
-    c => c.types.includes('postal_code')
-  )
+  const zip = place.address_components.find((c) => c.types.includes('postal_code'))
 
   // Extract street
-  const street = place.address_components.find(
-    c => c.types.includes('route')
-  )
+  const street = place.address_components.find((c) => c.types.includes('route'))
 
   // Update form
   form.street = street?.long_name || ''

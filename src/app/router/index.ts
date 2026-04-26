@@ -108,7 +108,9 @@ async function getProfile(userId: string) {
 }
 
 router.beforeEach(async (to) => {
-  const { data: { session } } = await supabase.auth.getSession()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
   const isAuthRoute = authRoutes.includes(to.path)
   const isOnboarding = to.path.startsWith('/onboarding')
 

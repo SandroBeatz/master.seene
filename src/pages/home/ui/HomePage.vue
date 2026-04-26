@@ -12,7 +12,7 @@ const { data, status } = useQuery({
     <UPageHeader
       :title="$t('home.title')"
       :description="$t('home.description')"
-      :ui="{root: 'border-none'}"
+      :ui="{ root: 'border-none' }"
     />
     <UPageBody>
       <div class="grid grid-cols-3 gap-4">
