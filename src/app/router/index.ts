@@ -72,7 +72,7 @@ const router = createRouter({
   ],
 })
 
-const publicRoutes = ['/login', '/register']
+const publicRoutes = ['/login', '/register', '/onboarding']
 
 router.beforeEach(async (to) => {
   const { data: { session } } = await supabase.auth.getSession()

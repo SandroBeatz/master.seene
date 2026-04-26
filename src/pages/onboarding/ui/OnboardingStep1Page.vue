@@ -68,7 +68,7 @@ async function onSubmit(event: FormSubmitEvent<OnboardingStep1Data>) {
 </script>
 
 <template>
-  <div class="w-full max-w-sm">
+  <div class="py-8">
     <UAuthForm
       :schema="schema"
       :fields="fields"
@@ -76,11 +76,7 @@ async function onSubmit(event: FormSubmitEvent<OnboardingStep1Data>) {
       @submit="onSubmit"
     >
       <template #header>
-        <div class="flex flex-col items-center text-center gap-2 pb-8">
-          <div class="pb-10">
-            <AppFullLogo class="w-52 h-10" />
-          </div>
-
+        <div class="flex flex-col items-center text-center gap-2 pb-2">
           <h1 class="text-2xl font-bold text-primary">
             {{ $t('onboarding.step1.title') }}
           </h1>
