@@ -1,26 +1,28 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { AppFullLogo } from '@shared/ui'
-import { reactive } from 'vue'
 
-const step = reactive({
-  first: 100,
-  second: 0,
-  third: 0,
-  forth: 0,
-  fifth: 0,
+const route = useRoute()
+
+const currentStep = computed(() => {
+  const name = route.name as string | undefined
+  const match = name ? name.match(/^onboarding-step(\d)$/) : null
+  return match ? Number(match[1]) : 1
 })
+
+const stepValues = computed(() =>
+  [1, 2, 3, 4, 5].map((n) => (n <= currentStep.value ? 100 : 0)),
+)
 </script>
+
 <template>
   <UPage :ui="{ root: 'min-h-dvh py-12', center: 'flex flex-col flex-1 h-full' }">
     <div class="flex flex-col items-center justify-center mb-12">
       <AppFullLogo class="w-52 h-10 mb-10" />
 
       <div class="w-full max-w-sm grid grid-cols-5 gap-3">
-        <UProgress v-model="step.first" />
-        <UProgress v-model="step.second" />
-        <UProgress v-model="step.third" />
-        <UProgress v-model="step.forth" />
-        <UProgress v-model="step.fifth" />
+        <UProgress v-for="(val, i) in stepValues" :key="i" :model-value="val" />
       </div>
     </div>
     <div class="flex-1 flex flex-col">

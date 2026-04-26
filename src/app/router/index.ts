@@ -23,8 +23,32 @@ const router = createRouter({
       children: [
         {
           path: '',
+          redirect: '/onboarding/step1',
+        },
+        {
+          path: 'step1',
           name: 'onboarding-step1',
           component: async () => (await import('@pages/onboarding')).OnboardingStep1Page,
+        },
+        {
+          path: 'step2',
+          name: 'onboarding-step2',
+          component: async () => (await import('@pages/onboarding')).OnboardingStep2Page,
+        },
+        {
+          path: 'step3',
+          name: 'onboarding-step3',
+          component: async () => (await import('@pages/onboarding')).OnboardingStep3Page,
+        },
+        {
+          path: 'step4',
+          name: 'onboarding-step4',
+          component: async () => (await import('@pages/onboarding')).OnboardingStep4Page,
+        },
+        {
+          path: 'step5',
+          name: 'onboarding-step5',
+          component: async () => (await import('@pages/onboarding')).OnboardingStep5Page,
         },
       ],
     },
@@ -72,14 +96,15 @@ const router = createRouter({
   ],
 })
 
-const publicRoutes = ['/login', '/register', '/onboarding']
+const authRoutes = ['/login', '/register']
 
 router.beforeEach(async (to) => {
   const { data: { session } } = await supabase.auth.getSession()
-  const isPublic = publicRoutes.includes(to.path)
+  const isAuthRoute = authRoutes.includes(to.path)
+  const isOnboarding = to.path.startsWith('/onboarding')
 
-  if (!session && !isPublic) return '/login'
-  if (session && isPublic) return '/home'
+  if (!session && !isAuthRoute && !isOnboarding) return '/login'
+  if (session && isAuthRoute) return '/home'
 })
 
 export default router

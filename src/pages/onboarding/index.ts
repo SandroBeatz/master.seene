@@ -1,1 +1,5 @@
 export { default as OnboardingStep1Page } from './ui/OnboardingStep1Page.vue'
+export { default as OnboardingStep2Page } from './ui/OnboardingStep2Page.vue'
+export { default as OnboardingStep3Page } from './ui/OnboardingStep3Page.vue'
+export { default as OnboardingStep4Page } from './ui/OnboardingStep4Page.vue'
+export { default as OnboardingStep5Page } from './ui/OnboardingStep5Page.vue'
