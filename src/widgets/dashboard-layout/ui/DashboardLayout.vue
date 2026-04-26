@@ -1,39 +1,66 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import { AppLogo } from '@shared/ui'
+import { supabase } from '@shared/lib/supabase'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
+const router = useRouter()
 const showNotifications = ref(false)
 
 const navItems = computed(() => [
-  { label: t('nav.home'), icon: 'i-lucide-home', to: '/' },
-  { label: t('nav.calendar'), icon: 'i-lucide-calendar', to: '/calendar' },
-  { label: t('nav.clients'), icon: 'i-lucide-users', to: '/clients' },
-  { label: t('nav.services'), icon: 'i-lucide-grid-2x2-plus', to: '/services' },
+  { label: t('nav.home'), tooltip: t('nav.home'), icon: 'i-lucide-home', to: '/home' },
+  {
+    label: t('nav.calendar'),
+    tooltip: t('nav.calendar'),
+    icon: 'i-lucide-calendar',
+    to: '/calendar',
+  },
+  { label: t('nav.clients'), tooltip: t('nav.clients'), icon: 'i-lucide-users', to: '/clients' },
+  {
+    label: t('nav.services'),
+    tooltip: t('nav.services'),
+    icon: 'i-lucide-grid-2x2-plus',
+    to: '/services',
+  },
 ])
 
 const addItems = computed(() => [
   {
     label: t('nav.notifications'),
+    tooltip: t('nav.notifications'),
     icon: 'i-lucide-bell',
     onSelect: () => (showNotifications.value = true),
   },
-  { label: t('nav.settings'), icon: 'i-lucide-settings', to: '/settings' },
+  {
+    label: t('nav.analytics'),
+    tooltip: t('nav.analytics'),
+    icon: 'i-lucide-chart-area',
+    to: '/analytics',
+  },
+  {
+    label: t('nav.settings'),
+    tooltip: t('nav.settings'),
+    icon: 'i-lucide-settings',
+    to: '/settings',
+  },
 ])
 
 const footerItems = computed(() => [
   {
     label: t('nav.logout'),
+    tooltip: t('nav.logout'),
     icon: 'i-lucide-log-out',
-    onSelect: () => {
-      // Handle logout logic here
-      console.log('User logged out')
+    onSelect: async () => {
+      await supabase.auth.signOut()
+      await router.push('/login')
     },
   },
   {
     label: t('nav.profile'),
+    tooltip: t('nav.profile'),
     avatar: {
       src: 'https://i.pravatar.cc/200?img=47',
       alt: t('common.userAvatarAlt'),
