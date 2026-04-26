@@ -98,13 +98,36 @@ const router = createRouter({
 
 const authRoutes = ['/login', '/register']
 
+async function getProfile(userId: string) {
+  const { data } = await supabase
+    .from('master_profile')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  return data
+}
+
 router.beforeEach(async (to) => {
   const { data: { session } } = await supabase.auth.getSession()
   const isAuthRoute = authRoutes.includes(to.path)
   const isOnboarding = to.path.startsWith('/onboarding')
 
+  // Unauthenticated → login (except auth routes and onboarding)
   if (!session && !isAuthRoute && !isOnboarding) return '/login'
-  if (session && isAuthRoute) return '/home'
+
+  if (session) {
+    // Auth routes: check if onboarding done to decide where to send
+    if (isAuthRoute) {
+      const profile = await getProfile(session.user.id)
+      return profile ? '/home' : '/onboarding/step1'
+    }
+
+    // Dashboard routes: must have completed onboarding
+    if (!isOnboarding) {
+      const profile = await getProfile(session.user.id)
+      if (!profile) return '/onboarding/step1'
+    }
+  }
 })
 
 export default router
