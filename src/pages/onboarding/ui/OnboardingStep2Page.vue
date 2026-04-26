@@ -64,13 +64,10 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
 
   isSubmitting.value = true
   try {
-    const { data: existing } = await supabase
-      .from('master_profile')
-      .select('id')
-      .eq('username', event.data.username)
-      .maybeSingle()
+    const { data: isAvailable, error: rpcError } = await supabase
+      .rpc('check_username_available', { p_username: event.data.username })
 
-    if (existing) {
+    if (rpcError || !isAvailable) {
       toast.add({
         title: t('onboarding.step2.validation.usernameTaken'),
         color: 'error',
