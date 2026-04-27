@@ -162,4 +162,8 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     setSchedule,
     toMasterProfile,
   }
+}, {
+  persist: {
+    storage: sessionStorage,
+  },
 })

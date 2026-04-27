@@ -79,6 +79,7 @@ async function createProfile() {
       .upsert({ user_id: user.id, time_format: store.timeFormat }, { onConflict: 'user_id' })
     if (settingsError) console.error('Failed to save settings:', settingsError)
 
+    sessionStorage.removeItem('onboarding')
     void router.push('/home')
   } finally {
     isSubmitting.value = false
