@@ -221,21 +221,14 @@ supabase.auth.signUp()
 
 ### Router guard
 
-Defined in `src/app/router/index.ts` via `router.beforeEach`:
+Defined in `src/app/router/index.ts` via `router.beforeEach`. The guard reads session and profile state from `useSessionStore` (a Pinia store backed by `onAuthStateChange`) — no Supabase calls are made on each navigation after the first.
 
-```ts
-const publicRoutes = ['/login', '/register']
+Rules:
+- Unauthenticated → only `/login` and `/register` are accessible; everything else redirects to `/login`.
+- Authenticated without a `master_profile` → redirected to `/onboarding/step1`; cannot access dashboard routes.
+- Authenticated with profile → redirected away from auth routes to `/home`.
 
-router.beforeEach(async (to) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  const isPublic = publicRoutes.includes(to.path)
-
-  if (!session && !isPublic) return '/login'      // unauthenticated → login
-  if (session && isPublic)   return '/home'       // already logged in → dashboard
-})
-```
-
-> The guard also checks whether onboarding is complete: authenticated users without a `master_profile` record are redirected to `/onboarding` and cannot access dashboard routes.
+See [Auth Guard & Session Store](../architecture/auth-guard.md) for implementation details, the session store design, and the Supabase auth lock constraint.
 
 ---
 
@@ -370,6 +363,7 @@ See [Data Model](./data-model.md) for the full schema, constraints, RLS policies
 | Email login | ✅ Done | `src/features/auth-login/ui/LoginForm.vue` |
 | Supabase client | ✅ Done | `src/shared/lib/supabase/client.ts` |
 | Router guard (auth + onboarding gate) | ✅ Done | `src/app/router/index.ts` |
+| Session store (cached auth + profile state) | ✅ Done | `src/entities/session/model/session.store.ts` |
 | Onboarding layout & route | ✅ Done | `src/widgets/onboarding-layout/` |
 | Onboarding Step 1 — Specializations | ✅ Done | `src/pages/onboarding/ui/OnboardingStep1Page.vue` |
 | Onboarding Step 2 — Personal info | ✅ Done | `src/pages/onboarding/ui/OnboardingStep2Page.vue` |
