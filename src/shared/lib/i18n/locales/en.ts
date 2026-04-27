@@ -157,6 +157,7 @@ export default {
       canTravel: 'I can travel to the client',
       back: 'Back',
       submit: 'Continue',
+      skipHint: 'You can skip this step — address details can be configured later in profile settings.',
       validation: {
         countryRequired: 'Country is required',
       },
@@ -195,7 +196,6 @@ export default {
       validation: {
         missingSpecializations: 'Please select at least one specialization',
         missingPersonal: 'Please fill in your personal info',
-        missingLocation: 'Please fill in your work location',
         missingScheduleTimes: 'Please set start and end time for all enabled days',
       },
     },

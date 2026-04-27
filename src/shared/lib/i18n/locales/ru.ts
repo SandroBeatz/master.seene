@@ -153,6 +153,7 @@ export default {
       canTravel: 'Выезжаю к клиенту',
       back: 'Назад',
       submit: 'Продолжить',
+      skipHint: 'Вы можете пропустить этот шаг — адрес можно настроить позже в настройках профиля.',
       validation: {
         countryRequired: 'Выберите страну',
       },
@@ -191,7 +192,6 @@ export default {
       validation: {
         missingSpecializations: 'Выберите хотя бы одну специализацию',
         missingPersonal: 'Заполните личные данные',
-        missingLocation: 'Заполните место работы',
         missingScheduleTimes: 'Укажите время начала и конца для всех активных дней',
       },
     },

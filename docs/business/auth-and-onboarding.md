@@ -1,12 +1,12 @@
 ---
-version: 1.2
-date: 2026-04-26
+version: 1.3
+date: 2026-04-27
 category: business
 ---
 
 # Auth & Onboarding Flow
 
-> Version 1.2 · 2026-04-26 · [Business](../)
+> Version 1.3 · 2026-04-27 · [Business](../)
 
 ## Overview
 
@@ -86,9 +86,138 @@ Only **email + password** is active. Google and Apple OAuth buttons are rendered
 
 | Feature | Notes |
 |---|---|
-| Email confirmation | Disabled now. Will be enabled in Supabase project settings; requires adding a confirmation-pending state and a `/verify-email` page. |
+| Email confirmation | Disabled now. Will be enabled in Supabase project settings; requires adding a confirmation-pending state and a `/verify-email` page. See [Email Confirmation Implementation Plan](#email-confirmation-implementation-plan) below. |
 | Google OAuth | `supabase.auth.signInWithOAuth({ provider: 'google' })` — requires Google Cloud credentials configured in Supabase. |
 | Apple OAuth | `supabase.auth.signInWithOAuth({ provider: 'apple' })` — requires Apple Developer setup. |
+
+---
+
+### Email Confirmation Implementation Plan
+
+> **Current state:** email confirmation is **disabled** in Supabase Auth settings for this project. This section documents the known breakage and the concrete implementation plan for when it is re-enabled.
+
+#### The problem
+
+When Supabase Auth's "Confirm email" setting is enabled, `supabase.auth.signUp()` does **not** create a session. The user receives a confirmation email instead. The current `RegisterForm.vue` (`:110`) calls `router.push('/onboarding')` immediately after `signUp()` resolves, regardless of session state.
+
+The `router.beforeEach` guard in `src/app/router/index.ts` then runs:
+
+```
+signUp() → no session created
+    ↓
+router.push('/onboarding')
+    ↓
+beforeEach: getSession() → null
+    ↓
+!session && !isAuthRoute && !isOnboarding → return '/login'   ← user lands here
+```
+
+The redirect to `/login` is silent — no explanation is shown. The user is lost.
+
+#### Implementation checklist
+
+When enabling email confirmation, make **all** of the following changes together:
+
+**1. Add a `/verify-email` page**
+
+Create `src/pages/verify-email/` with a simple info screen:
+
+> "We've sent a confirmation email to **{email}**. Please click the link in the email to activate your account."
+
+Add the route to `src/app/router/index.ts` and mark it as a public route (no session required):
+
+```ts
+const authRoutes = ['/login', '/register', '/verify-email']
+```
+
+**2. Update `RegisterForm.vue` — redirect to `/verify-email` instead**
+
+Replace the immediate redirect with a conditional:
+
+```ts
+async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
+  const { data, error } = await supabase.auth.signUp({
+    email: event.data.email,
+    password: event.data.password,
+  })
+  if (error) {
+    toast.add({ title: t('auth.register.errorTitle'), description: error.message, color: 'error' })
+    return
+  }
+
+  // With email confirmation enabled, signUp returns no session.
+  // A session means the user is already confirmed (e.g. confirmation disabled).
+  if (data.session) {
+    router.push('/onboarding')
+  } else {
+    // Store email in router state so the verify-email page can display it.
+    router.push({ path: '/verify-email', state: { email: event.data.email } })
+  }
+}
+```
+
+**3. Handle the confirmation callback**
+
+Supabase sends the user a link that redirects to your app's **Site URL** with a token in the URL hash (e.g. `/#access_token=...&type=signup`). The Supabase JS client handles this automatically if you listen to `onAuthStateChange` — the `SIGNED_IN` event fires after the token is exchanged.
+
+Wire this up once, globally, in `src/app/main.ts` or a dedicated `src/app/auth/supabase-listener.ts`:
+
+```ts
+import { supabase } from '@shared/lib/supabase'
+import router from '@app/router'
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    // User confirmed their email and is now logged in.
+    // Check onboarding state and redirect appropriately.
+    router.push('/onboarding')
+  }
+})
+```
+
+> **Note:** The `SIGNED_IN` event also fires on normal `signInWithPassword` logins. Guard against double-navigation if both paths are active simultaneously — e.g. check that the current route is `/verify-email` before redirecting, or use a flag.
+
+**4. Configure the confirmation redirect URL in Supabase**
+
+In the Supabase dashboard → Auth → URL Configuration:
+- **Site URL**: your production domain (e.g. `https://seene.app`)
+- **Additional Redirect URLs**: add `http://localhost:5173` for local dev
+
+The confirmation email link will use the Site URL. The Supabase JS client picks up the token from the URL hash on load.
+
+**5. Add `/verify-email` to i18n**
+
+Add keys to `src/shared/lib/i18n/locales/{en,ru,fr}.ts` for the verification screen copy (title, body text, resend-link label).
+
+#### Sequence diagram (with email confirmation enabled)
+
+```
+User fills /register form
+        │
+        ▼
+supabase.auth.signUp()
+        │
+        ├── error → toast, stay on /register
+        │
+        └── success, NO session (email not confirmed)
+                │
+                ▼
+        router.push('/verify-email')
+                │
+                │  User opens email, clicks confirmation link
+                │
+                ▼
+        Browser loads app URL with #access_token in hash
+                │
+                ▼
+        Supabase JS exchanges token → fires SIGNED_IN event
+                │
+                ▼
+        onAuthStateChange listener → router.push('/onboarding')
+                │
+                ▼
+        Onboarding wizard (normal flow)
+```
 
 ### Router guard
 
@@ -252,7 +381,7 @@ See [Data Model](./data-model.md) for the full schema, constraints, RLS policies
 | `master_profile` DB table | ✅ Done | Migrations applied via Supabase MCP |
 | `master_settings` DB table | ✅ Done | Migration `20260426140000_master_settings.sql` |
 | Google / Apple OAuth | ❌ Not built | UI present, logic not wired |
-| Email verification | ❌ Not built | Disabled in Supabase settings |
+| Email verification | ❌ Not built | Disabled in Supabase settings — see [implementation plan](#email-confirmation-implementation-plan) |
 
 ---
 

@@ -35,8 +35,6 @@ function validate(): string | null {
     !store.personal.username
   )
     return t('onboarding.step5.validation.missingPersonal')
-  if (!store.location.city || !store.location.address || !store.location.zipCode)
-    return t('onboarding.step5.validation.missingLocation')
   const badDay = DAY_KEYS.some((d) => {
     const day = store.schedule.days[d]
     return day.enabled && (!day.start || !day.end)

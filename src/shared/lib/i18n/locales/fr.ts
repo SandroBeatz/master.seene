@@ -157,6 +157,7 @@ export default {
       canTravel: 'Je peux me déplacer chez le client',
       back: 'Retour',
       submit: 'Continuer',
+      skipHint: "Vous pouvez ignorer cette étape — les détails de l'adresse peuvent être configurés plus tard dans les paramètres du profil.",
       validation: {
         countryRequired: 'Le pays est requis',
       },
@@ -195,7 +196,6 @@ export default {
       validation: {
         missingSpecializations: 'Veuillez sélectionner au moins une spécialisation',
         missingPersonal: 'Veuillez remplir vos informations personnelles',
-        missingLocation: 'Veuillez remplir votre lieu de travail',
         missingScheduleTimes:
           'Veuillez définir les heures de début et de fin pour tous les jours activés',
       },
