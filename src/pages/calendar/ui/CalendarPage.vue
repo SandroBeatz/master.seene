@@ -19,9 +19,11 @@ const { t } = useI18n()
     <UPage as="main">
       <UPageHeader :title="t('calendar.title')" :description="t('calendar.description')" />
       <UPageBody>
-        <div class="min-h-[700px]">
-          <CalendarWidget />
-        </div>
+        <UPageCard>
+          <div class="min-h-[700px]">
+            <CalendarWidget />
+          </div>
+        </UPageCard>
       </UPageBody>
     </UPage>
   </UTheme>
