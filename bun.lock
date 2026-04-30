@@ -22,6 +22,7 @@
         "vue-tel-input": "^9.8.0",
       },
       "devDependencies": {
+        "@pinia/colada-devtools": "^1.0.0",
         "@tsconfig/node24": "^24.0.4",
         "@types/google.maps": "^3.64.0",
         "@types/joi": "^17.2.3",
@@ -364,6 +365,8 @@
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.60.0", "", { "os": "win32", "cpu": "x64" }, "sha512-JOro4ZcfBLamJCyfURQmOQByoorgOdx3ZjAkSqnb/CyG/i+lN3KoV5LAgk5ZAW6DPq7/Cx7n23f8DuTWXTWgyQ=="],
 
     "@pinia/colada": ["@pinia/colada@1.2.0", "", { "peerDependencies": { "pinia": "^2.2.6 || ^3.0.0", "vue": "^3.5.17" } }, "sha512-uEi4BtAQIn3AmlYvIYblJJIIJpNriwBwNFWkpTvSXBwqCZmQPiDjpv0GngFjuvq4ewdY6IMTvpIlec6tzydqog=="],
+
+    "@pinia/colada-devtools": ["@pinia/colada-devtools@1.0.0", "", {}, "sha512-DS23RyFqQ+Gy2B4Wu5GjRLEeCRKZCnP0txjFxN04CMyt6quYudCdq4JnFByT6Km2aNd/TjjENFdfJK/gd8A+Sg=="],
 
     "@pkgjs/parseargs": ["@pkgjs/parseargs@0.11.0", "", {}, "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="],
 

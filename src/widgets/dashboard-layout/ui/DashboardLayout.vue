@@ -11,17 +11,15 @@ const router = useRouter()
 const showNotifications = ref(false)
 
 const navItems = computed(() => [
-  { label: t('nav.home'), tooltip: t('nav.home'), icon: 'i-lucide-home', to: '/home' },
+  { label: t('nav.home'), icon: 'i-lucide-home', to: '/home' },
   {
     label: t('nav.calendar'),
-    tooltip: t('nav.calendar'),
     icon: 'i-lucide-calendar',
     to: '/calendar',
   },
-  { label: t('nav.clients'), tooltip: t('nav.clients'), icon: 'i-lucide-users', to: '/clients' },
+  { label: t('nav.clients'), icon: 'i-lucide-users', to: '/clients' },
   {
     label: t('nav.services'),
-    tooltip: t('nav.services'),
     icon: 'i-lucide-grid-2x2-plus',
     to: '/services',
   },
@@ -30,19 +28,16 @@ const navItems = computed(() => [
 const addItems = computed(() => [
   {
     label: t('nav.notifications'),
-    tooltip: t('nav.notifications'),
     icon: 'i-lucide-bell',
     onSelect: () => (showNotifications.value = true),
   },
   {
     label: t('nav.analytics'),
-    tooltip: t('nav.analytics'),
     icon: 'i-lucide-chart-area',
     to: '/analytics',
   },
   {
     label: t('nav.settings'),
-    tooltip: t('nav.settings'),
     icon: 'i-lucide-settings',
     to: '/settings',
   },
@@ -51,7 +46,6 @@ const addItems = computed(() => [
 const footerItems = computed(() => [
   {
     label: t('nav.logout'),
-    tooltip: t('nav.logout'),
     icon: 'i-lucide-log-out',
     onSelect: async () => {
       await supabase.auth.signOut()
@@ -60,7 +54,6 @@ const footerItems = computed(() => [
   },
   {
     label: t('nav.profile'),
-    tooltip: t('nav.profile'),
     avatar: {
       src: 'https://i.pravatar.cc/200?img=47',
       alt: t('common.userAvatarAlt'),
@@ -97,6 +90,7 @@ const notifications = ref([
           :ui="navigationUI"
           variant="pill"
           orientation="vertical"
+          tooltip
           :collapsed="collapsed"
           :items="navItems"
         />
@@ -104,6 +98,7 @@ const notifications = ref([
           :ui="navigationUI"
           variant="pill"
           orientation="vertical"
+          tooltip
           :collapsed="collapsed"
           :items="addItems"
         />
@@ -113,6 +108,7 @@ const notifications = ref([
         <UNavigationMenu
           :ui="navigationUI"
           variant="pill"
+          tooltip
           :collapsed="collapsed"
           :items="footerItems"
           orientation="vertical"

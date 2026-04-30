@@ -48,6 +48,7 @@ const mockService = {
   sort_order: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  color: '#a78bfa',
   category: { id: 'cat-1', name: 'Hair' },
 }
 
@@ -98,6 +99,7 @@ describe('createService', () => {
     duration: 30,
     price: 20,
     is_active: true,
+    color: '#a78bfa',
     sort_order: 0,
   }
 

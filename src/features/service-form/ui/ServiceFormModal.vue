@@ -37,6 +37,19 @@ const isOpen = computed({
   set: (val) => emit('update:modelValue', val),
 })
 
+const COLOR_PALETTE = [
+  '#f87171',
+  '#fb923c',
+  '#facc15',
+  '#4ade80',
+  '#34d399',
+  '#60a5fa',
+  '#818cf8',
+  '#a78bfa',
+  '#f472b6',
+  '#94a3b8',
+]
+
 interface FormState {
   name: string
   description: string
@@ -44,6 +57,7 @@ interface FormState {
   price: number | null
   category_id: string | null
   is_active: boolean
+  color: string
 }
 
 const state = reactive<FormState>({
@@ -53,6 +67,7 @@ const state = reactive<FormState>({
   price: null,
   category_id: null,
   is_active: true,
+  color: '#a78bfa',
 })
 
 function resetForm() {
@@ -63,6 +78,7 @@ function resetForm() {
     state.price = props.service.price
     state.category_id = props.service.category_id
     state.is_active = props.service.is_active
+    state.color = props.service.color
   } else {
     state.name = ''
     state.description = ''
@@ -70,6 +86,7 @@ function resetForm() {
     state.price = null
     state.category_id = null
     state.is_active = true
+    state.color = '#a78bfa'
   }
 }
 
@@ -99,6 +116,7 @@ const schema = computed(() =>
     }),
     category_id: Joi.string().uuid().allow(null).optional(),
     is_active: Joi.boolean().required(),
+    color: Joi.string().required(),
   }),
 )
 
@@ -118,6 +136,7 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
       price: event.data.price!,
       category_id: event.data.category_id,
       is_active: event.data.is_active,
+      color: state.color,
       sort_order: props.service?.sort_order ?? 0,
     }
 
@@ -209,6 +228,19 @@ const categoryItems = computed(() => [
             value-key="value"
             class="w-full"
           />
+        </UFormField>
+
+        <UFormField :label="$t('services.form.color')" name="color">
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button
+              v-for="c in COLOR_PALETTE"
+              :key="c"
+              type="button"
+              class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
+              :style="{ backgroundColor: c, boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none' }"
+              @click="state.color = c"
+            />
+          </div>
         </UFormField>
 
         <UFormField name="is_active">
