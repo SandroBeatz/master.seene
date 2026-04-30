@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DatesSetArg, EventClickArg, EventDropArg, EventInput } from '@fullcalendar/core'
+import type { DatesSetArg, EventClickArg, EventDropArg, EventInput, SlotLaneMountArg } from '@fullcalendar/core'
 import type { DateClickArg } from '@fullcalendar/interaction'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -49,10 +49,19 @@ function handleDatesSet(info: DatesSetArg) {
   emit('dates-set', { from: info.startStr, to: info.endStr })
 }
 
+function handleSlotLaneMount(arg: SlotLaneMountArg) {
+  const timeStr = arg.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  const span = document.createElement('span')
+  span.className = 'fc-slot-time-label'
+  span.textContent = timeStr
+  arg.el.appendChild(span)
+}
+
 const calendarOptions = {
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   initialView: 'timeGridWeek',
   editable: true,
+  allDaySlot: false,
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
@@ -62,6 +71,7 @@ const calendarOptions = {
   eventClick: handleEventClick,
   eventDrop: handleEventDrop,
   datesSet: handleDatesSet,
+  slotLaneDidMount: handleSlotLaneMount,
 }
 </script>
 

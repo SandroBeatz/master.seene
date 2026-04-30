@@ -67,3 +67,42 @@
 .dark .vue-tel-input .vti__dropdown-item.highlighted {
   background: var(--color-zinc-800, #27272a);
 }
+
+/* FullCalendar — time slot hover */
+.fc .fc-timegrid-slot-lane {
+  position: relative;
+}
+
+.fc .fc-timegrid-slot-lane:hover {
+  background-color: color-mix(in srgb, var(--color-amber-500) 8%, transparent);
+  cursor: pointer;
+}
+
+.fc-slot-time-label {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-amber-500);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.fc .fc-timegrid-slot-lane:hover .fc-slot-time-label {
+  opacity: 1;
+}
+
+/* FullCalendar — event hover */
+.fc .fc-event {
+  transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fc .fc-event:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
