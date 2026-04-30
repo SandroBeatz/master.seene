@@ -17,13 +17,41 @@ export default defineConfig({
 
         button: {
           slots: {
-            base: 'cursor-pointer',
-          }
+            base: 'cursor-pointer rounded-3xl',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'px-3 py-2 text-base gap-1.5',
+                leadingIcon: 'size-5',
+                leadingAvatarSize: '2xs',
+                trailingIcon: 'size-5',
+              },
+            },
+          },
+        },
+
+        input: {
+          slots: {
+            base: 'rounded-3xl',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'px-3 py-2.5 text-base gap-1.5',
+                leading: 'ps-2.5',
+                trailing: 'pe-2.5',
+                leadingIcon: 'size-5',
+                leadingAvatarSize: '2xs',
+                trailingIcon: 'size-5',
+              },
+            },
+          },
         },
 
         pageCard: {
           slots: {
-            root: 'rounded-3xl shadow-md',
+            root: 'rounded-3xl shadow-lg',
           },
           variants: {
             variant: {

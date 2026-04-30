@@ -86,111 +86,108 @@ const cardActions = (service: Service) => [
 <template>
   <UTheme
     :ui="{
-      page: { root: 'px-12 w-full max-w-7xl mx-auto' },
-      pageHeader: { root: 'border-none' },
+      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
+      pageHeader: { root: 'border-none pb-2' },
     }"
   >
     <UPage as="main">
-      <UPageHeader :title="$t('services.title')" :description="$t('services.description')">
+      <UPageHeader :title="$t('services.title')">
         <template #links>
-          <UButton leading-icon="i-lucide-plus" color="primary" @click="openCreate">
+          <UButton leading-icon="i-lucide-plus" color="neutral" @click="openCreate">
             {{ $t('services.addService') }}
           </UButton>
         </template>
       </UPageHeader>
 
       <UPageBody>
-        <!-- Error -->
-        <UAlert
-          v-if="error"
-          color="error"
-          variant="soft"
-          :title="$t('services.loadError')"
-          :description="(error as Error).message"
-          leading-icon="i-lucide-alert-circle"
-          class="mb-6"
-        />
+        <UPageCard variant="soft">
+          <!-- Error -->
+          <UAlert
+            v-if="error"
+            color="error"
+            variant="soft"
+            :title="$t('services.loadError')"
+            :description="(error as Error).message"
+            leading-icon="i-lucide-alert-circle"
+            class="mb-6"
+          />
 
-        <!-- Loading -->
-        <div v-else-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <UCard v-for="i in 6" :key="i">
-            <div class="space-y-3">
-              <USkeleton class="h-5 w-3/4" />
-              <USkeleton class="h-4 w-full" />
-              <USkeleton class="h-4 w-1/2" />
-            </div>
-          </UCard>
-        </div>
+          <!-- Loading -->
+          <div v-else-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <UCard v-for="i in 6" :key="i">
+              <div class="space-y-3">
+                <USkeleton class="h-5 w-3/4" />
+                <USkeleton class="h-4 w-full" />
+                <USkeleton class="h-4 w-1/2" />
+              </div>
+            </UCard>
+          </div>
 
-        <!-- Empty -->
-        <UEmpty
-          v-else-if="!services?.length"
-          icon="i-lucide-scissors"
-          :title="$t('services.emptyTitle')"
-          :description="$t('services.emptyDescription')"
-          class="py-16"
-        >
-          <UButton
-            leading-icon="i-lucide-plus"
-            color="primary"
-            class="mt-4"
-            @click="openCreate"
+          <!-- Empty -->
+          <UEmpty
+            v-else-if="!services?.length"
+            icon="i-lucide-scissors"
+            :title="$t('services.emptyTitle')"
+            :description="$t('services.emptyDescription')"
+            class="py-16"
           >
-            {{ $t('services.addFirstService') }}
-          </UButton>
-        </UEmpty>
+            <UButton leading-icon="i-lucide-plus" color="primary" class="mt-4" @click="openCreate">
+              {{ $t('services.addFirstService') }}
+            </UButton>
+          </UEmpty>
 
-        <!-- Services grid -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <UCard v-for="service in services" :key="service.id">
-            <template #header>
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="font-semibold text-base truncate">{{ service.name }}</p>
-                  <p v-if="service.description" class="text-sm text-muted truncate mt-0.5">
-                    {{ service.description }}
-                  </p>
+          <!-- Services grid -->
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <UCard v-for="service in services" :key="service.id">
+              <template #header>
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-base truncate">{{ service.name }}</p>
+                    <p v-if="service.description" class="text-sm text-muted truncate mt-0.5">
+                      {{ service.description }}
+                    </p>
+                  </div>
+                  <UDropdownMenu :items="cardActions(service)" :ui="{ content: 'w-40' }">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      icon="i-lucide-more-horizontal"
+                      size="sm"
+                    />
+                  </UDropdownMenu>
                 </div>
-                <UDropdownMenu :items="cardActions(service)" :ui="{ content: 'w-40' }">
-                  <UButton
+              </template>
+
+              <div class="flex flex-wrap items-center gap-3 text-sm">
+                <div class="flex items-center gap-1.5 text-muted">
+                  <UIcon name="i-lucide-clock" class="size-4 shrink-0" />
+                  {{ formatDuration(service.duration) }}
+                </div>
+                <div class="flex items-center gap-1.5 font-medium">
+                  <UIcon name="i-lucide-wallet" class="size-4 shrink-0 text-muted" />
+                  {{ formatPrice(service.price) }}
+                </div>
+              </div>
+
+              <template #footer>
+                <div class="flex items-center justify-between gap-2">
+                  <UBadge
+                    :label="service.category?.name ?? $t('services.form.allServices')"
                     color="neutral"
-                    variant="ghost"
-                    icon="i-lucide-more-horizontal"
+                    variant="soft"
                     size="sm"
                   />
-                </UDropdownMenu>
-              </div>
-            </template>
-
-            <div class="flex flex-wrap items-center gap-3 text-sm">
-              <div class="flex items-center gap-1.5 text-muted">
-                <UIcon name="i-lucide-clock" class="size-4 shrink-0" />
-                {{ formatDuration(service.duration) }}
-              </div>
-              <div class="flex items-center gap-1.5 font-medium">
-                <UIcon name="i-lucide-wallet" class="size-4 shrink-0 text-muted" />
-                {{ formatPrice(service.price) }}
-              </div>
-            </div>
-
-            <template #footer>
-              <div class="flex items-center justify-between gap-2">
-                <UBadge
-                  :label="service.category?.name ?? $t('services.form.allServices')"
-                  color="neutral"
-                  variant="soft"
-                  size="sm"
-                />
-                <UBadge
-                  :label="service.is_active ? $t('services.active') : $t('services.inactive')"
-                  :color="service.is_active ? 'success' : 'neutral'"
-                  variant="soft"
-                  size="sm"
-                />
-              </div>
-            </template>
-          </UCard>
-        </div>
+                  <UBadge
+                    :label="service.is_active ? $t('services.active') : $t('services.inactive')"
+                    :color="service.is_active ? 'success' : 'neutral'"
+                    variant="soft"
+                    size="sm"
+                  />
+                </div>
+              </template>
+            </UCard>
+          </div>
+        </UPageCard>
       </UPageBody>
     </UPage>
   </UTheme>

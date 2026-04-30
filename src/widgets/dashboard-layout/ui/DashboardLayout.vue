@@ -120,7 +120,7 @@ const notifications = ref([
       </template>
     </UDashboardSidebar>
 
-    <UDashboardPanel :ui="{ root: 'items-center' }">
+    <UDashboardPanel :ui="{ root: 'items-center overflow-auto' }">
       <RouterView />
     </UDashboardPanel>
 

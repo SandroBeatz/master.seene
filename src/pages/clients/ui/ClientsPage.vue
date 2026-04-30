@@ -2,11 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TableColumn, TableRow } from '@nuxt/ui'
-import {
-  useClientsQuery,
-  useRemoveClientMutation,
-  type Client,
-} from '@entities/client'
+import { useClientsQuery, useRemoveClientMutation, type Client } from '@entities/client'
 import { useSessionStore } from '@entities/session'
 import { ClientFormDialog } from '@features/client-form'
 import { ClientDeleteConfirm } from '@features/client-delete'
@@ -127,14 +123,14 @@ async function confirmDelete() {
 <template>
   <UTheme
     :ui="{
-      page: { root: 'px-12 w-full max-w-7xl mx-auto' },
-      pageHeader: { root: 'border-none' },
+      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
+      pageHeader: { root: 'border-none pb-2' },
     }"
   >
     <UPage as="main">
       <UPageHeader :title="$t('clients.pageTitle')">
         <template #links>
-          <UButton leading-icon="i-lucide-user-plus" color="primary" @click="openCreate">
+          <UButton leading-icon="i-lucide-user-plus" color="neutral" @click="openCreate">
             {{ $t('clients.addButton') }}
           </UButton>
         </template>
@@ -147,41 +143,43 @@ async function confirmDelete() {
             v-model="query"
             leading-icon="i-lucide-search"
             :placeholder="$t('clients.searchPlaceholder')"
-            class="max-w-sm"
+            class="w-full max-w-sm"
           />
         </div>
 
-        <!-- Loading -->
-        <div v-if="isLoading" class="space-y-3">
-          <USkeleton v-for="i in 5" :key="i" class="h-12 w-full" />
-        </div>
+        <UPageCard variant="soft">
+          <!-- Loading -->
+          <div v-if="isLoading" class="space-y-3">
+            <USkeleton v-for="i in 5" :key="i" class="h-12 w-full" />
+          </div>
 
-        <!-- Empty state -->
-        <UEmpty
-          v-else-if="!filtered.length"
-          icon="i-lucide-users"
-          :title="$t('clients.emptyTitle')"
-          :description="$t('clients.emptyDescription')"
-          class="py-16"
-        >
-          <UButton
-            leading-icon="i-lucide-user-plus"
-            color="primary"
-            class="mt-4"
-            @click="openCreate"
+          <!-- Empty state -->
+          <UEmpty
+            v-else-if="!filtered.length"
+            icon="i-lucide-users"
+            :title="$t('clients.emptyTitle')"
+            :description="$t('clients.emptyDescription')"
+            class="py-16"
           >
-            {{ $t('clients.addFirstButton') }}
-          </UButton>
-        </UEmpty>
+            <UButton
+              leading-icon="i-lucide-user-plus"
+              color="primary"
+              class="mt-4"
+              @click="openCreate"
+            >
+              {{ $t('clients.addFirstButton') }}
+            </UButton>
+          </UEmpty>
 
-        <!-- Table -->
-        <UTable
-          v-else
-          :data="filtered"
-          :columns="columns"
-          class="cursor-pointer"
-          @select="onRowSelect"
-        />
+          <!-- Table -->
+          <UTable
+            v-else
+            :data="filtered"
+            :columns="columns"
+            class="cursor-pointer"
+            @select="onRowSelect"
+          />
+        </UPageCard>
       </UPageBody>
     </UPage>
   </UTheme>

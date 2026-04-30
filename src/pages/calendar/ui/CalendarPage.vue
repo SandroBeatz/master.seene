@@ -8,12 +8,8 @@ const { t } = useI18n()
 <template>
   <UTheme
     :ui="{
-      page: {
-        root: 'px-12 w-full max-w-7xl mx-auto',
-      },
-      pageHeader: {
-        root: 'border-none',
-      },
+      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
+      pageHeader: { root: 'border-none pb-2' },
     }"
   >
     <UPage as="main">
