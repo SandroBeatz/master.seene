@@ -28,6 +28,16 @@ export default {
   calendar: {
     title: 'Календарь',
     description: 'С возвращением на ваш дашборд. Вот что происходит с вашими проектами сегодня.',
+    controls: {
+      previous: 'Предыдущий период',
+      next: 'Следующий период',
+      today: 'Сегодня',
+    },
+    views: {
+      month: 'Месяц',
+      week: 'Неделя',
+      day: 'День',
+    },
   },
   services: {
     title: 'Услуги',

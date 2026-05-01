@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type {
+  CalendarApi,
+  CalendarOptions,
   DatesSetArg,
   EventClickArg,
   EventDropArg,
@@ -11,11 +13,17 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import FullCalendar from '@fullcalendar/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
 import { updateAppointment } from '@entities/appointment'
 import { DEFAULT_TIME_FORMAT, DEFAULT_TIME_ZONE, type TimeFormat } from '@entities/master'
+import {
+  normalizeCalendarViewType,
+  type CalendarDateRange,
+  type CalendarViewType,
+  type CalendarWidgetExpose,
+} from '../model/calendar-controls'
 
 const props = withDefaults(
   defineProps<{
@@ -33,11 +41,12 @@ const props = withDefaults(
 const emit = defineEmits<{
   'slot-click': [dateStr: string]
   'event-click': [appointment: Appointment]
-  'dates-set': [range: { from: string; to: string }]
+  'dates-set': [range: CalendarDateRange]
 }>()
 
 const { t } = useI18n()
 const toast = useToast()
+const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
 
 function handleDateClick(info: DateClickArg) {
   emit('slot-click', info.dateStr)
@@ -58,7 +67,14 @@ async function handleEventDrop(info: EventDropArg) {
 }
 
 function handleDatesSet(info: DatesSetArg) {
-  emit('dates-set', { from: info.startStr, to: info.endStr })
+  emit('dates-set', {
+    from: info.startStr,
+    to: info.endStr,
+    currentFrom: info.view.currentStart.toISOString(),
+    currentTo: info.view.currentEnd.toISOString(),
+    title: info.view.title,
+    viewType: normalizeCalendarViewType(info.view.type),
+  })
 }
 
 function handleSlotLaneMount(arg: SlotLaneMountArg) {
@@ -91,7 +107,7 @@ function formatCalendarTime(date: Date): string {
   }
 }
 
-const calendarOptions = computed(() => {
+const calendarOptions = computed<CalendarOptions>(() => {
   const hour12 = props.timeFormat === 12
   const timeFormat = {
     hour: hour12 ? 'numeric' : '2-digit',
@@ -107,11 +123,7 @@ const calendarOptions = computed(() => {
     timeZone: props.timeZone,
     slotLabelFormat: timeFormat,
     eventTimeFormat: timeFormat,
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay',
-    },
+    headerToolbar: false,
     dateClick: handleDateClick,
     eventClick: handleEventClick,
     eventDrop: handleEventDrop,
@@ -120,10 +132,37 @@ const calendarOptions = computed(() => {
     events: props.events,
   }
 })
+
+function getCalendarApi(): CalendarApi | undefined {
+  return calendarRef.value?.getApi()
+}
+
+function moveToPrevious() {
+  getCalendarApi()?.prev()
+}
+
+function moveToNext() {
+  getCalendarApi()?.next()
+}
+
+function moveToToday() {
+  getCalendarApi()?.today()
+}
+
+function changeView(viewType: CalendarViewType) {
+  getCalendarApi()?.changeView(viewType)
+}
+
+defineExpose<CalendarWidgetExpose>({
+  moveToPrevious,
+  moveToNext,
+  moveToToday,
+  changeView,
+})
 </script>
 
 <template>
   <div class="w-full">
-    <FullCalendar :options="calendarOptions" />
+    <FullCalendar ref="calendarRef" :options="calendarOptions" />
   </div>
 </template>

@@ -30,6 +30,16 @@ export default {
     title: 'Calendar',
     description:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
+    controls: {
+      previous: 'Previous period',
+      next: 'Next period',
+      today: 'Today',
+    },
+    views: {
+      month: 'Month',
+      week: 'Week',
+      day: 'Day',
+    },
   },
   services: {
     title: 'Services',

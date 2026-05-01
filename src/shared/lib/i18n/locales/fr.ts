@@ -29,6 +29,16 @@ export default {
     title: 'Calendrier',
     description:
       "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
+    controls: {
+      previous: 'Période précédente',
+      next: 'Période suivante',
+      today: "Aujourd'hui",
+    },
+    views: {
+      month: 'Mois',
+      week: 'Semaine',
+      day: 'Jour',
+    },
   },
   services: {
     title: 'Services',
