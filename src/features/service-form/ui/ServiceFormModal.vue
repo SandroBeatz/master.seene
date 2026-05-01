@@ -90,30 +90,46 @@ function resetForm() {
   }
 }
 
-watch(() => props.modelValue, (open) => {
-  if (open) resetForm()
-})
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (open) resetForm()
+  },
+)
 
 const schema = computed(() =>
   Joi.object({
-    name: Joi.string().min(1).max(100).required().messages({
-      'string.empty': t('services.validation.nameRequired'),
-      'any.required': t('services.validation.nameRequired'),
-      'string.max': t('services.validation.nameMax'),
-    }),
-    description: Joi.string().max(500).allow('', null).messages({
-      'string.max': t('services.validation.descriptionMax'),
-    }),
-    duration: Joi.number().valid(15, 30, 45, 60, 90, 120).required().messages({
-      'any.only': t('services.validation.durationRequired'),
-      'any.required': t('services.validation.durationRequired'),
-      'number.base': t('services.validation.durationRequired'),
-    }),
-    price: Joi.number().min(0).required().messages({
-      'number.base': t('services.validation.priceRequired'),
-      'any.required': t('services.validation.priceRequired'),
-      'number.min': t('services.validation.priceMin'),
-    }),
+    name: Joi.string()
+      .min(1)
+      .max(100)
+      .required()
+      .messages({
+        'string.empty': t('services.validation.nameRequired'),
+        'any.required': t('services.validation.nameRequired'),
+        'string.max': t('services.validation.nameMax'),
+      }),
+    description: Joi.string()
+      .max(500)
+      .allow('', null)
+      .messages({
+        'string.max': t('services.validation.descriptionMax'),
+      }),
+    duration: Joi.number()
+      .valid(15, 30, 45, 60, 90, 120)
+      .required()
+      .messages({
+        'any.only': t('services.validation.durationRequired'),
+        'any.required': t('services.validation.durationRequired'),
+        'number.base': t('services.validation.durationRequired'),
+      }),
+    price: Joi.number()
+      .min(0)
+      .required()
+      .messages({
+        'number.base': t('services.validation.priceRequired'),
+        'any.required': t('services.validation.priceRequired'),
+        'number.min': t('services.validation.priceMin'),
+      }),
     category_id: Joi.string().uuid().allow(null).optional(),
     is_active: Joi.boolean().required(),
     color: Joi.string().required(),
@@ -123,9 +139,7 @@ const schema = computed(() =>
 const createMutation = useCreateServiceMutation(userId)
 const updateMutation = useUpdateServiceMutation(userId)
 
-const isLoading = computed(
-  () => createMutation.isLoading.value || updateMutation.isLoading.value,
-)
+const isLoading = computed(() => createMutation.isLoading.value || updateMutation.isLoading.value)
 
 async function onSubmit(event: FormSubmitEvent<FormState>) {
   try {
@@ -237,7 +251,10 @@ const categoryItems = computed(() => [
               :key="c"
               type="button"
               class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
-              :style="{ backgroundColor: c, boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none' }"
+              :style="{
+                backgroundColor: c,
+                boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+              }"
               @click="state.color = c"
             />
           </div>
@@ -249,7 +266,6 @@ const categoryItems = computed(() => [
             <span class="text-sm">{{ $t('services.form.isActive') }}</span>
           </div>
         </UFormField>
-
       </UForm>
     </template>
 

@@ -12,11 +12,7 @@ export async function listClients(userId: string): Promise<Client[]> {
 }
 
 export async function getClientById(id: string): Promise<Client> {
-  const { data, error } = await supabase
-    .from('client')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data, error } = await supabase.from('client').select('*').eq('id', id).single()
   if (error) throw error
   return data as Client
 }

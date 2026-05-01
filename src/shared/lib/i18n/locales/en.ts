@@ -31,11 +31,6 @@ export default {
     description:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
   },
-  clients: {
-    title: 'Clients',
-    description:
-      "Welcome back to your dashboard. Here's what's happening with your projects today.",
-  },
   services: {
     title: 'Services',
     description:
@@ -196,7 +191,8 @@ export default {
       canTravel: 'I can travel to the client',
       back: 'Back',
       submit: 'Continue',
-      skipHint: 'You can skip this step — address details can be configured later in profile settings.',
+      skipHint:
+        'You can skip this step — address details can be configured later in profile settings.',
       validation: {
         countryRequired: 'Country is required',
       },

@@ -134,29 +134,41 @@ function resetForm() {
   }
 }
 
-watch(() => props.open, (open) => {
-  if (open) resetForm()
-})
+watch(
+  () => props.open,
+  (open) => {
+    if (open) resetForm()
+  },
+)
 
 // --- Validation schema ---
 const schema = computed(() =>
   Joi.object({
-    client_id: Joi.string().required().messages({
-      'string.empty': t('appointments.validation.clientRequired'),
-      'any.required': t('appointments.validation.clientRequired'),
-    }),
-    date: Joi.string().required().messages({
-      'string.empty': t('appointments.validation.dateRequired'),
-      'any.required': t('appointments.validation.dateRequired'),
-    }),
-    time: Joi.string().required().messages({
-      'string.empty': t('appointments.validation.timeRequired'),
-      'any.required': t('appointments.validation.timeRequired'),
-    }),
-    duration: Joi.number().min(1).required().messages({
-      'number.min': t('appointments.validation.durationMin'),
-      'any.required': t('appointments.validation.durationRequired'),
-    }),
+    client_id: Joi.string()
+      .required()
+      .messages({
+        'string.empty': t('appointments.validation.clientRequired'),
+        'any.required': t('appointments.validation.clientRequired'),
+      }),
+    date: Joi.string()
+      .required()
+      .messages({
+        'string.empty': t('appointments.validation.dateRequired'),
+        'any.required': t('appointments.validation.dateRequired'),
+      }),
+    time: Joi.string()
+      .required()
+      .messages({
+        'string.empty': t('appointments.validation.timeRequired'),
+        'any.required': t('appointments.validation.timeRequired'),
+      }),
+    duration: Joi.number()
+      .min(1)
+      .required()
+      .messages({
+        'number.min': t('appointments.validation.durationMin'),
+        'any.required': t('appointments.validation.durationRequired'),
+      }),
     price: Joi.number().min(0).allow(null).optional(),
     status: Joi.string().required(),
     notes: Joi.string().max(2000).allow('', null).optional(),
@@ -238,13 +250,7 @@ async function confirmDelete() {
     :ui="{ footer: 'justify-between' }"
   >
     <template #body>
-      <UForm
-        ref="formRef"
-        :schema="schema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmit"
-      >
+      <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
         <!-- Client -->
         <UFormField :label="$t('appointments.form.client')" name="client_id" required>
           <USelectMenu
@@ -305,12 +311,7 @@ async function confirmDelete() {
 
         <!-- Status -->
         <UFormField :label="$t('appointments.form.status')" name="status" required>
-          <USelect
-            v-model="state.status"
-            :items="statusItems"
-            value-key="value"
-            class="w-full"
-          />
+          <USelect v-model="state.status" :items="statusItems" value-key="value" class="w-full" />
         </UFormField>
 
         <!-- Notes -->

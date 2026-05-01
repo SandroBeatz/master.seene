@@ -87,10 +87,14 @@ watch(
 
 const schema = computed(() =>
   Joi.object({
-    firstName: Joi.string().min(1).max(100).required().messages({
-      'string.empty': t('clients.form.firstNameLabel') + ' ' + 'required',
-      'any.required': t('clients.form.firstNameLabel') + ' ' + 'required',
-    }),
+    firstName: Joi.string()
+      .min(1)
+      .max(100)
+      .required()
+      .messages({
+        'string.empty': t('clients.form.firstNameLabel') + ' ' + 'required',
+        'any.required': t('clients.form.firstNameLabel') + ' ' + 'required',
+      }),
     lastName: Joi.string().max(100).allow('', null).optional(),
     email: Joi.string()
       .email({ tlds: { allow: false } })
@@ -107,9 +111,7 @@ const schema = computed(() =>
 const createMutation = useCreateClientMutation(userId)
 const updateMutation = useUpdateClientMutation(userId)
 
-const isLoading = computed(
-  () => createMutation.isLoading.value || updateMutation.isLoading.value,
-)
+const isLoading = computed(() => createMutation.isLoading.value || updateMutation.isLoading.value)
 
 const formRef = ref<{ $el: HTMLFormElement } | null>(null)
 
@@ -164,16 +166,10 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
       <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
         <div class="grid grid-cols-2 gap-3">
           <UFormField :label="$t('clients.form.firstNameLabel')" name="firstName" required>
-            <UInput
-              v-model="state.firstName"
-              class="w-full"
-            />
+            <UInput v-model="state.firstName" class="w-full" />
           </UFormField>
           <UFormField :label="$t('clients.form.lastNameLabel')" name="lastName">
-            <UInput
-              v-model="state.lastName"
-              class="w-full"
-            />
+            <UInput v-model="state.lastName" class="w-full" />
           </UFormField>
         </div>
 
@@ -190,27 +186,15 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
         </UFormField>
 
         <UFormField :label="$t('clients.form.emailLabel')" name="email">
-          <UInput
-            v-model="state.email"
-            type="email"
-            class="w-full"
-          />
+          <UInput v-model="state.email" type="email" class="w-full" />
         </UFormField>
 
         <UFormField :label="$t('clients.form.birthdayLabel')" name="birthday">
-          <UInput
-            v-model="state.birthday"
-            type="date"
-            class="w-full"
-          />
+          <UInput v-model="state.birthday" type="date" class="w-full" />
         </UFormField>
 
         <UFormField :label="$t('clients.form.notesLabel')" name="notes">
-          <UTextarea
-            v-model="state.notes"
-            :rows="3"
-            class="w-full"
-          />
+          <UTextarea v-model="state.notes" :rows="3" class="w-full" />
         </UFormField>
       </UForm>
     </template>

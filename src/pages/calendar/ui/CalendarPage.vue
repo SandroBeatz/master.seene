@@ -5,6 +5,7 @@ import type { EventInput } from '@fullcalendar/core'
 import type { Appointment, AppointmentDateRange } from '@entities/appointment'
 import { useAppointmentsQuery } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
+import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import { useServicesQuery } from '@entities/service'
 import { AppointmentFormDialog } from '@features/appointment-form'
@@ -12,6 +13,7 @@ import { CalendarWidget } from '@widgets/calendar'
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
+const masterPreferencesStore = useMasterPreferencesStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -49,10 +51,10 @@ const serviceMap = computed(() => {
 })
 
 const STATUS_COLORS: Record<string, { borderColor: string; backgroundColor: string }> = {
-  pending:   { borderColor: '#f97316', backgroundColor: '#fff7ed' },
+  pending: { borderColor: '#f97316', backgroundColor: '#fff7ed' },
   completed: { borderColor: '#22c55e', backgroundColor: '#f0fdf4' },
   cancelled: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
-  no_show:   { borderColor: '#94a3b8', backgroundColor: '#f8fafc' },
+  no_show: { borderColor: '#94a3b8', backgroundColor: '#f8fafc' },
 }
 
 function getEventColors(appt: Appointment) {
@@ -61,7 +63,10 @@ function getEventColors(appt: Appointment) {
     const color = service?.color ?? '#a78bfa'
     return { borderColor: color, backgroundColor: color + '33', textColor: '#1e293b' }
   }
-  const colors = STATUS_COLORS[appt.status] ?? { borderColor: '#94a3b8', backgroundColor: '#f8fafc' }
+  const colors = STATUS_COLORS[appt.status] ?? {
+    borderColor: '#94a3b8',
+    backgroundColor: '#f8fafc',
+  }
   return { ...colors, textColor: '#1e293b' }
 }
 
@@ -107,6 +112,10 @@ function onEventClick(appointment: Appointment) {
   selectedAppointment.value = appointment
   isFormOpen.value = true
 }
+
+function openCreate() {
+  onSlotClick(new Date().toISOString())
+}
 </script>
 
 <template>
@@ -117,12 +126,20 @@ function onEventClick(appointment: Appointment) {
     }"
   >
     <UPage as="main">
-      <UPageHeader :title="t('calendar.title')" :description="t('calendar.description')" />
+      <UPageHeader :title="t('calendar.title')">
+        <template #links>
+          <UButton leading-icon="i-lucide-user-plus" color="neutral" @click="openCreate">
+            {{ $t('clients.addButton') }}
+          </UButton>
+        </template>
+      </UPageHeader>
       <UPageBody>
         <UPageCard>
           <div class="min-h-[700px]">
             <CalendarWidget
               :events="calendarEvents"
+              :time-format="masterPreferencesStore.timeFormat"
+              :time-zone="masterPreferencesStore.timeZone"
               @slot-click="onSlotClick"
               @event-click="onEventClick"
               @dates-set="onDatesSet"

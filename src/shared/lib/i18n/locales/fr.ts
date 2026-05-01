@@ -30,11 +30,6 @@ export default {
     description:
       "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
   },
-  clients: {
-    title: 'Clients',
-    description:
-      "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
-  },
   services: {
     title: 'Services',
     description:
@@ -47,7 +42,8 @@ export default {
     active: 'Actif',
     inactive: 'Inactif',
     deleteConfirmTitle: 'Supprimer le service',
-    deleteConfirmBody: 'Supprimer le service «\u00a0{name}\u00a0»\u00a0? Cette action est irréversible.',
+    deleteConfirmBody:
+      'Supprimer le service «\u00a0{name}\u00a0»\u00a0? Cette action est irréversible.',
     deleteAction: 'Supprimer',
     form: {
       createTitle: 'Ajouter un service',
@@ -196,7 +192,8 @@ export default {
       canTravel: 'Je peux me déplacer chez le client',
       back: 'Retour',
       submit: 'Continuer',
-      skipHint: "Vous pouvez ignorer cette étape — les détails de l'adresse peuvent être configurés plus tard dans les paramètres du profil.",
+      skipHint:
+        "Vous pouvez ignorer cette étape — les détails de l'adresse peuvent être configurés plus tard dans les paramètres du profil.",
       validation: {
         countryRequired: 'Le pays est requis',
       },
@@ -290,7 +287,7 @@ export default {
     addButton: 'Ajouter un client',
     addFirstButton: 'Ajouter le premier client',
     searchPlaceholder: 'Nom ou téléphone',
-    emptyTitle: 'Aucun client pour l\'instant',
+    emptyTitle: "Aucun client pour l'instant",
     emptyDescription: 'Ajoutez votre premier client pour gérer votre base.',
     deleteSuccess: 'Client supprimé',
     deleteError: 'Échec de la suppression du client',
@@ -314,7 +311,7 @@ export default {
       submitEdit: 'Enregistrer',
       cancel: 'Annuler',
       duplicatePhone: 'Un client avec ce numéro de téléphone existe déjà',
-      errorTitle: 'Échec de l\'enregistrement du client',
+      errorTitle: "Échec de l'enregistrement du client",
       successCreate: 'Client ajouté',
       successEdit: 'Client mis à jour',
     },
@@ -385,7 +382,7 @@ export default {
       dateRequired: 'La date est requise',
       timeRequired: "L'heure est requise",
       durationRequired: 'La durée est requise',
-      durationMin: 'La durée doit être d\'au moins 1 minute',
+      durationMin: "La durée doit être d'au moins 1 minute",
     },
   },
 }

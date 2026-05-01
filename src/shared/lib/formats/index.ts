@@ -1,22 +1,24 @@
 import { inject, type App } from 'vue'
-import { useOnboardingStore } from '@features/onboarding'
+
+type TimeFormat = 12 | 24
+
+export interface FormatsPluginOptions {
+  getTimeFormat?: () => TimeFormat | undefined
+}
 
 export interface Formats {
-  time(value: string | null | undefined, overrideFormat?: 12 | 24): string
+  time(value: string | null | undefined, overrideFormat?: TimeFormat): string
   price(value: number | null | undefined, currency?: string): string
 }
 
-function createFormats(): Formats {
-  function time(value: string | null | undefined, overrideFormat?: 12 | 24): string {
+function createFormats(options: FormatsPluginOptions = {}): Formats {
+  function time(value: string | null | undefined, overrideFormat?: TimeFormat): string {
     if (!value) return '—'
     const [hStr, mStr] = value.split(':')
     const h = parseInt(hStr ?? '0', 10)
     const m = parseInt(mStr ?? '0', 10)
 
-    // Read format from store (auto-detected from country, or set by user toggle).
-    // In the future: replace with a persistent settingsStore after onboarding.
-    const store = useOnboardingStore()
-    const fmt = overrideFormat ?? store.timeFormat
+    const fmt = overrideFormat ?? options.getTimeFormat?.() ?? 24
 
     if (fmt === 12) {
       const period = h >= 12 ? 'PM' : 'AM'
@@ -42,8 +44,8 @@ function createFormats(): Formats {
 const FORMATS_KEY = Symbol('formats')
 
 export const formatsPlugin = {
-  install(app: App) {
-    const f = createFormats()
+  install(app: App, options?: FormatsPluginOptions) {
+    const f = createFormats(options)
     app.config.globalProperties.$f = f
     app.provide(FORMATS_KEY, f)
   },

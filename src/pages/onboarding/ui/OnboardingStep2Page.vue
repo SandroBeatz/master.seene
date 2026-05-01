@@ -64,8 +64,9 @@ async function onSubmit(event: FormSubmitEvent<Step2Data>) {
 
   isSubmitting.value = true
   try {
-    const { data: isAvailable, error: rpcError } = await supabase
-      .rpc('check_username_available', { p_username: event.data.username })
+    const { data: isAvailable, error: rpcError } = await supabase.rpc('check_username_available', {
+      p_username: event.data.username,
+    })
 
     if (rpcError || !isAvailable) {
       toast.add({

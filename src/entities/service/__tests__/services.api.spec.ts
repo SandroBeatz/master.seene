@@ -1,34 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockSingle, mockOrder, mockEq, mockSelect, mockInsert, mockUpdate, mockDeleteEq, mockFrom } =
-  vi.hoisted(() => {
-    const mockSingle = vi.fn()
-    const mockOrder = vi.fn()
-    const mockDeleteEq = vi.fn()
-    const mockEq = vi.fn()
-    const mockSelect = vi.fn()
-    const mockInsert = vi.fn()
-    const mockUpdate = vi.fn()
-    const mockFrom = vi.fn()
+const {
+  mockSingle,
+  mockOrder,
+  mockEq,
+  mockSelect,
+  mockInsert,
+  mockUpdate,
+  mockDeleteEq,
+  mockFrom,
+} = vi.hoisted(() => {
+  const mockSingle = vi.fn()
+  const mockOrder = vi.fn()
+  const mockDeleteEq = vi.fn()
+  const mockEq = vi.fn()
+  const mockSelect = vi.fn()
+  const mockInsert = vi.fn()
+  const mockUpdate = vi.fn()
+  const mockFrom = vi.fn()
 
-    const builder = {
-      select: mockSelect,
-      eq: mockEq,
-      order: mockOrder,
-      insert: mockInsert,
-      update: mockUpdate,
-      single: mockSingle,
-      delete: vi.fn().mockReturnValue({ eq: mockDeleteEq }),
-    }
+  const builder = {
+    select: mockSelect,
+    eq: mockEq,
+    order: mockOrder,
+    insert: mockInsert,
+    update: mockUpdate,
+    single: mockSingle,
+    delete: vi.fn().mockReturnValue({ eq: mockDeleteEq }),
+  }
 
-    mockSelect.mockReturnValue(builder)
-    mockEq.mockReturnValue(builder)
-    mockInsert.mockReturnValue(builder)
-    mockUpdate.mockReturnValue(builder)
-    mockFrom.mockReturnValue(builder)
+  mockSelect.mockReturnValue(builder)
+  mockEq.mockReturnValue(builder)
+  mockInsert.mockReturnValue(builder)
+  mockUpdate.mockReturnValue(builder)
+  mockFrom.mockReturnValue(builder)
 
-    return { mockSingle, mockOrder, mockEq, mockSelect, mockInsert, mockUpdate, mockDeleteEq, mockFrom }
-  })
+  return {
+    mockSingle,
+    mockOrder,
+    mockEq,
+    mockSelect,
+    mockInsert,
+    mockUpdate,
+    mockDeleteEq,
+    mockFrom,
+  }
+})
 
 vi.mock('@shared/lib/supabase', () => ({
   supabase: { from: mockFrom },

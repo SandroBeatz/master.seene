@@ -234,13 +234,13 @@ function onSubmit(event: FormSubmitEvent<Step3Data>) {
       </p>
     </div>
 
-<!--    <UAlert-->
-<!--      icon="i-lucide-info"-->
-<!--      color="primary"-->
-<!--      variant="soft"-->
-<!--      :description="$t('onboarding.step3.skipHint')"-->
-<!--      class="mb-4"-->
-<!--    />-->
+    <!--    <UAlert-->
+    <!--      icon="i-lucide-info"-->
+    <!--      color="primary"-->
+    <!--      variant="soft"-->
+    <!--      :description="$t('onboarding.step3.skipHint')"-->
+    <!--      class="mb-4"-->
+    <!--    />-->
 
     <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
       <UFormField :label="$t('onboarding.step3.country')" name="country" required>

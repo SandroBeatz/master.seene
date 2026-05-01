@@ -23,18 +23,12 @@ const isOpen = computed({
 })
 
 const clientName = computed(() =>
-  props.client
-    ? [props.client.first_name, props.client.last_name].filter(Boolean).join(' ')
-    : '',
+  props.client ? [props.client.first_name, props.client.last_name].filter(Boolean).join(' ') : '',
 )
 </script>
 
 <template>
-  <UModal
-    v-model:open="isOpen"
-    :title="$t('clients.delete.title')"
-    :ui="{ footer: 'justify-end' }"
-  >
+  <UModal v-model:open="isOpen" :title="$t('clients.delete.title')" :ui="{ footer: 'justify-end' }">
     <template #body>
       <p class="text-sm text-muted">
         {{ $t('clients.delete.message', { name: clientName }) }}
@@ -45,15 +39,16 @@ const clientName = computed(() =>
       <UButton
         color="neutral"
         variant="outline"
-        @click="() => { emit('cancel'); close() }"
+        @click="
+          () => {
+            emit('cancel')
+            close()
+          }
+        "
       >
         {{ $t('clients.delete.cancel') }}
       </UButton>
-      <UButton
-        color="error"
-        :loading="loading"
-        @click="emit('confirm')"
-      >
+      <UButton color="error" :loading="loading" @click="emit('confirm')">
         {{ $t('clients.delete.confirm') }}
       </UButton>
     </template>

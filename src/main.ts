@@ -13,6 +13,7 @@ import App from './App.vue'
 import router from './app/router'
 import { i18n } from '@shared/lib/i18n'
 import { formatsPlugin } from '@shared/lib/formats'
+import { useMasterPreferencesStore } from '@entities/master'
 
 const app = createApp(App)
 
@@ -24,6 +25,8 @@ app.use(router)
 app.use(ui)
 app.use(i18n)
 app.use(VueTelInput)
-app.use(formatsPlugin)
+app.use(formatsPlugin, {
+  getTimeFormat: () => useMasterPreferencesStore().timeFormat,
+})
 
 app.mount('#app')

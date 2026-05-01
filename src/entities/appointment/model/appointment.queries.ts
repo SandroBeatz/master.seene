@@ -13,10 +13,7 @@ export interface AppointmentDateRange {
   to?: string
 }
 
-export const useAppointmentsQuery = (
-  userId: Ref<string>,
-  dateRange?: Ref<AppointmentDateRange>,
-) =>
+export const useAppointmentsQuery = (userId: Ref<string>, dateRange?: Ref<AppointmentDateRange>) =>
   useQuery({
     key: () => [
       'appointments',

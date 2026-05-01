@@ -1,0 +1,4 @@
+interface:
+  display_name: "FSD"
+  short_description: "Place Vue code using project FSD rules"
+  default_prompt: "Use $fsd before creating or moving files under src/."

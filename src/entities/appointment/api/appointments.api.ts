@@ -5,11 +5,7 @@ export async function listAppointments(
   userId: string,
   options?: { from?: string; to?: string },
 ): Promise<Appointment[]> {
-  let query = supabase
-    .from('appointments')
-    .select('*')
-    .eq('user_id', userId)
-    .order('start_at')
+  let query = supabase.from('appointments').select('*').eq('user_id', userId).order('start_at')
 
   if (options?.from) query = query.gte('start_at', options.from)
   if (options?.to) query = query.lte('start_at', options.to)
@@ -20,11 +16,7 @@ export async function listAppointments(
 }
 
 export async function getAppointmentById(id: string): Promise<Appointment> {
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data, error } = await supabase.from('appointments').select('*').eq('id', id).single()
   if (error) throw error
   return data as Appointment
 }
