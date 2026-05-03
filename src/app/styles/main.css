@@ -96,6 +96,59 @@
   opacity: 1;
 }
 
+/* FullCalendar — week day headers */
+.fc .fc-week-day-header .fc-col-header-cell-cushion {
+  width: 100%;
+  padding: 0.5rem 0.25rem;
+}
+
+.fc-week-day-header-content {
+  display: flex;
+  min-height: 3rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.fc-week-day-header-weekday {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-zinc-500);
+  text-transform: capitalize;
+}
+
+.fc-week-day-header-number {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-zinc-700);
+}
+
+.dark .fc-week-day-header-weekday {
+  color: var(--color-zinc-400);
+}
+
+.dark .fc-week-day-header-number {
+  color: var(--color-zinc-200);
+}
+
+.fc .fc-week-day-header-today .fc-week-day-header-weekday {
+  color: var(--color-primary-500);
+}
+
+.fc .fc-week-day-header-today .fc-week-day-header-number {
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
 /* FullCalendar — master schedule availability */
 .fc .fc-non-business {
   background:

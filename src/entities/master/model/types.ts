@@ -1,4 +1,6 @@
 export type TimeFormat = 12 | 24
+export type CalendarFirstDay = 0 | 1 | 2 | 3 | 4 | 5 | 6
+export type MasterCalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
 
 export type MasterScheduleDayKey =
   | 'monday'
@@ -35,6 +37,9 @@ export interface MasterProfile {
 export interface MasterSettings {
   user_id: string
   time_format: TimeFormat
+  calendar_first_day: CalendarFirstDay
+  calendar_slot_step_minutes: number
+  default_calendar_view: MasterCalendarViewType
 }
 
 export interface MasterPreferences {
@@ -42,4 +47,7 @@ export interface MasterPreferences {
   settings: MasterSettings
   timeFormat: TimeFormat
   timeZone: string
+  calendarFirstDay: CalendarFirstDay
+  calendarSlotStepMinutes: number
+  defaultCalendarView: MasterCalendarViewType
 }

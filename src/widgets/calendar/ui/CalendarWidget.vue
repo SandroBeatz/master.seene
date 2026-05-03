@@ -3,6 +3,7 @@ import type {
   CalendarApi,
   CalendarOptions,
   DatesSetArg,
+  DayHeaderContentArg,
   EventClickArg,
   EventDropArg,
   EventInput,
@@ -23,7 +24,12 @@ import { updateAppointment } from '@entities/appointment'
 import {
   DEFAULT_TIME_FORMAT,
   DEFAULT_TIME_ZONE,
+  DEFAULT_CALENDAR_FIRST_DAY,
+  DEFAULT_CALENDAR_SLOT_STEP_MINUTES,
+  DEFAULT_CALENDAR_VIEW,
+  type CalendarFirstDay,
   type MasterSchedule,
+  type MasterCalendarViewType,
   type TimeFormat,
 } from '@entities/master'
 import type { TimeBlock } from '@entities/time-block'
@@ -47,11 +53,17 @@ const props = withDefaults(
     schedule?: MasterSchedule | null
     timeFormat?: TimeFormat
     timeZone?: string
+    firstDay?: CalendarFirstDay
+    slotStepMinutes?: number
+    defaultView?: MasterCalendarViewType
   }>(),
   {
     events: () => [],
     timeFormat: DEFAULT_TIME_FORMAT,
     timeZone: DEFAULT_TIME_ZONE,
+    firstDay: DEFAULT_CALENDAR_FIRST_DAY,
+    slotStepMinutes: DEFAULT_CALENDAR_SLOT_STEP_MINUTES,
+    defaultView: DEFAULT_CALENDAR_VIEW,
   },
 )
 
@@ -65,7 +77,7 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 const toast = useToast()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
-const currentViewType = ref<CalendarViewType>('timeGridWeek')
+const currentViewType = ref<CalendarViewType>(props.defaultView)
 const currentFullCalendarLocale = computed(() => normalizeCalendarLocale(locale.value))
 const scheduleDisplay = computed(() => buildCalendarScheduleDisplay(props.schedule))
 const timeGridScheduleDisplay = computed(() =>
@@ -83,6 +95,9 @@ const calendarRenderKey = computed(() => {
   return JSON.stringify({
     timeZone: props.timeZone,
     timeFormat: props.timeFormat,
+    firstDay: props.firstDay,
+    slotStepMinutes: props.slotStepMinutes,
+    defaultView: props.defaultView,
     locale: currentFullCalendarLocale.value,
     allDayText: t('calendar.allDay'),
     slotMinTime: display.slotMinTime ?? null,
@@ -224,6 +239,66 @@ function formatCalendarTime(date: Date): string {
   }
 }
 
+function renderDayHeaderContent(arg: DayHeaderContentArg) {
+  if (arg.view.type !== 'timeGridWeek') return arg.text
+
+  const weekday = formatCalendarWeekday(arg.date)
+  const dayNumber = getCalendarDateParts(arg.date).day
+  const root = document.createElement('div')
+  const weekdayElement = document.createElement('span')
+  const dayElement = document.createElement('span')
+
+  root.className = 'fc-week-day-header-content'
+  weekdayElement.className = 'fc-week-day-header-weekday'
+  weekdayElement.textContent = weekday
+  dayElement.className = 'fc-week-day-header-number'
+  dayElement.textContent = String(dayNumber)
+  root.append(weekdayElement, dayElement)
+
+  return { domNodes: [root] }
+}
+
+function getDayHeaderClassNames(arg: DayHeaderContentArg): string[] {
+  if (arg.view.type !== 'timeGridWeek') return []
+
+  return [
+    'fc-week-day-header',
+    arg.isToday ? 'fc-week-day-header-today' : 'fc-week-day-header-neutral',
+  ]
+}
+
+function formatCalendarWeekday(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = { weekday: 'short' }
+
+  if (props.timeZone !== DEFAULT_TIME_ZONE) {
+    options.timeZone = 'UTC'
+  }
+
+  try {
+    return new Intl.DateTimeFormat(currentFullCalendarLocale.value, options).format(date)
+  } catch {
+    delete options.timeZone
+    return new Intl.DateTimeFormat(currentFullCalendarLocale.value, options).format(date)
+  }
+}
+
+function getCalendarDateParts(date: Date) {
+  const useUtcParts = props.timeZone !== DEFAULT_TIME_ZONE
+
+  return {
+    year: useUtcParts ? date.getUTCFullYear() : date.getFullYear(),
+    month: useUtcParts ? date.getUTCMonth() + 1 : date.getMonth() + 1,
+    day: useUtcParts ? date.getUTCDate() : date.getDate(),
+  }
+}
+
+function getCalendarSlotDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+
+  return `${padDatePart(hours)}:${padDatePart(remainingMinutes)}:00`
+}
+
 const calendarOptions = computed<CalendarOptions>(() => {
   const hour12 = props.timeFormat === 12
   const timeFormat = {
@@ -250,11 +325,13 @@ const calendarOptions = computed<CalendarOptions>(() => {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     locales: [frLocale, ruLocale],
     locale: currentFullCalendarLocale.value,
-    initialView: 'timeGridWeek',
+    initialView: props.defaultView,
+    firstDay: props.firstDay,
     editable: true,
     allDaySlot: true,
     allDayText: t('calendar.allDay'),
     timeZone: props.timeZone,
+    slotDuration: getCalendarSlotDuration(props.slotStepMinutes),
     slotLabelFormat: timeFormat,
     eventTimeFormat: timeFormat,
     headerToolbar: false,
@@ -262,6 +339,8 @@ const calendarOptions = computed<CalendarOptions>(() => {
     eventClick: handleEventClick,
     eventDrop: handleEventDrop,
     datesSet: handleDatesSet,
+    dayHeaderContent: renderDayHeaderContent,
+    dayHeaderClassNames: getDayHeaderClassNames,
     slotLaneClassNames: getSlotLaneClassNames,
     slotLaneDidMount: handleSlotLaneMount,
     ...scheduleOptions,

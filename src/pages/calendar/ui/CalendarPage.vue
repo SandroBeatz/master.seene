@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Appointment, AppointmentStatus } from '@entities/appointment'
 import { useUpdateAppointmentMutation } from '@entities/appointment'
@@ -42,11 +42,18 @@ const { calendarEvents, onDatesSet } = useCalendarEvents(
 )
 const calendarRef = ref<CalendarWidgetExpose | null>(null)
 const calendarRange = ref<CalendarDateRange>()
-const calendarViewType = ref<CalendarViewType>('timeGridWeek')
+const defaultCalendarView = computed(() => masterPreferencesStore.defaultCalendarView)
+const calendarViewType = ref<CalendarViewType>(defaultCalendarView.value)
 const masterSchedule = computed(() => masterPreferencesStore.preferences.profile?.schedule ?? null)
 const calendarTitle = computed(() =>
   formatCalendarRangeTitle(calendarRange.value, locale.value, masterPreferencesStore.timeZone),
 )
+
+watch(defaultCalendarView, (nextViewType, previousViewType) => {
+  if (calendarViewType.value !== previousViewType) return
+
+  changeCalendarView(nextViewType)
+})
 
 function handleDatesSet(range: CalendarDateRange) {
   calendarRange.value = range
@@ -206,6 +213,9 @@ function openTimeBlockCreate() {
               :schedule="masterSchedule"
               :time-format="masterPreferencesStore.timeFormat"
               :time-zone="masterPreferencesStore.timeZone"
+              :first-day="masterPreferencesStore.calendarFirstDay"
+              :slot-step-minutes="masterPreferencesStore.calendarSlotStepMinutes"
+              :default-view="defaultCalendarView"
               @slot-click="onSlotClick"
               @event-click="onEventClick"
               @time-block-click="onTimeBlockClick"
@@ -285,7 +295,6 @@ function openTimeBlockCreate() {
     :title="$t('calendar.create.title')"
     :description="$t('calendar.create.description')"
   >
-
     <template #body>
       <div class="grid gap-2">
         <UButton
