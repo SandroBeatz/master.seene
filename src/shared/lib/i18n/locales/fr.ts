@@ -46,6 +46,7 @@ export default {
       week: 'Semaine',
       day: 'Jour',
     },
+    allDay: 'Toute la journée',
     dragError: "Impossible de mettre à jour l'heure de l'événement",
   },
   services: {

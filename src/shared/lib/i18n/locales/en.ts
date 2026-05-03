@@ -47,6 +47,7 @@ export default {
       week: 'Week',
       day: 'Day',
     },
+    allDay: 'All day',
     dragError: 'Failed to update calendar event time',
   },
   services: {

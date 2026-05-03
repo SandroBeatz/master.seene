@@ -45,6 +45,7 @@ export default {
       week: 'Неделя',
       day: 'День',
     },
+    allDay: 'Весь день',
     dragError: 'Не удалось обновить время события',
   },
   services: {

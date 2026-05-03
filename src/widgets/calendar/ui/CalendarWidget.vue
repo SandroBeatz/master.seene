@@ -9,6 +9,8 @@ import type {
   SlotLaneContentArg,
   SlotLaneMountArg,
 } from '@fullcalendar/core'
+import frLocale from '@fullcalendar/core/locales/fr'
+import ruLocale from '@fullcalendar/core/locales/ru'
 import type { DateClickArg } from '@fullcalendar/interaction'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -37,6 +39,7 @@ import {
   buildCalendarScheduleDisplay,
   isCalendarScheduleBreakSlot,
 } from '../model/calendar-schedule'
+import { normalizeCalendarLocale } from '../model/calendar-locale'
 
 const props = withDefaults(
   defineProps<{
@@ -59,10 +62,11 @@ const emit = defineEmits<{
   'dates-set': [range: CalendarDateRange]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const toast = useToast()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
 const currentViewType = ref<CalendarViewType>('timeGridWeek')
+const currentFullCalendarLocale = computed(() => normalizeCalendarLocale(locale.value))
 const scheduleDisplay = computed(() => buildCalendarScheduleDisplay(props.schedule))
 const timeGridScheduleDisplay = computed(() =>
   currentViewType.value === 'timeGridWeek' || currentViewType.value === 'timeGridDay'
@@ -79,6 +83,8 @@ const calendarRenderKey = computed(() => {
   return JSON.stringify({
     timeZone: props.timeZone,
     timeFormat: props.timeFormat,
+    locale: currentFullCalendarLocale.value,
+    allDayText: t('calendar.allDay'),
     slotMinTime: display.slotMinTime ?? null,
     slotMaxTime: display.slotMaxTime ?? null,
     businessHours: display.businessHours ?? null,
@@ -226,10 +232,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     hour12,
   } as const
   const calendarScheduleDisplay = timeGridScheduleDisplay.value
-  const scheduleOptions: Pick<
-    CalendarOptions,
-    'slotMinTime' | 'slotMaxTime' | 'businessHours'
-  > = {}
+  const scheduleOptions: Pick<CalendarOptions, 'slotMinTime' | 'slotMaxTime' | 'businessHours'> = {}
 
   if (calendarScheduleDisplay.slotMinTime) {
     scheduleOptions.slotMinTime = calendarScheduleDisplay.slotMinTime
@@ -245,9 +248,12 @@ const calendarOptions = computed<CalendarOptions>(() => {
 
   return {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+    locales: [frLocale, ruLocale],
+    locale: currentFullCalendarLocale.value,
     initialView: 'timeGridWeek',
     editable: true,
     allDaySlot: true,
+    allDayText: t('calendar.allDay'),
     timeZone: props.timeZone,
     slotLabelFormat: timeFormat,
     eventTimeFormat: timeFormat,
