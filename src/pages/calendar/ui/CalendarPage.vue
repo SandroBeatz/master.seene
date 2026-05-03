@@ -24,7 +24,12 @@ const masterPreferencesStore = useMasterPreferencesStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const unknownClientLabel = computed(() => t('appointments.unknownClient'))
 const timeBlockLabel = computed(() => t('timeBlocks.calendarTitle'))
-const { calendarEvents, onDatesSet } = useCalendarEvents(userId, unknownClientLabel, timeBlockLabel)
+const { calendarEvents, onDatesSet } = useCalendarEvents(
+  userId,
+  unknownClientLabel,
+  timeBlockLabel,
+  computed(() => masterPreferencesStore.timeZone),
+)
 const calendarRef = ref<CalendarWidgetExpose | null>(null)
 const calendarRange = ref<CalendarDateRange>()
 const calendarViewType = ref<CalendarViewType>('timeGridWeek')

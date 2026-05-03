@@ -71,12 +71,13 @@ describe('buildCalendarEvents', () => {
       services,
       unknownClientLabel: 'Unknown client',
       timeBlockLabel: 'Blocked time',
+      timeZone: 'UTC',
     })
 
     expect(event).toMatchObject({
       id: 'appointment-1',
-      start: '2026-05-01T10:00:00.000Z',
-      end: '2026-05-01T10:45:00.000Z',
+      start: '2026-05-01T10:00:00',
+      end: '2026-05-01T10:45:00',
       title: 'Anna Smith — Haircut',
       borderColor: '#2563eb',
       backgroundColor: '#2563eb33',
@@ -99,6 +100,7 @@ describe('buildCalendarEvents', () => {
       services,
       unknownClientLabel: 'Client inconnu',
       timeBlockLabel: 'Temps bloqué',
+      timeZone: 'UTC',
     })
 
     expect(event).toMatchObject({
@@ -117,12 +119,13 @@ describe('buildCalendarEvents', () => {
       services,
       unknownClientLabel: 'Unknown client',
       timeBlockLabel: 'Blocked time',
+      timeZone: 'UTC',
     })[0]
 
     expect(event).toMatchObject({
       id: 'time-block-1',
-      start: '2026-05-02T12:00:00.000Z',
-      end: '2026-05-02T13:30:00.000Z',
+      start: '2026-05-02T12:00:00',
+      end: '2026-05-02T13:30:00',
       allDay: false,
       title: 'Blocked time',
       borderColor: '#64748b',
@@ -146,12 +149,35 @@ describe('buildCalendarEvents', () => {
       services,
       unknownClientLabel: 'Unknown client',
       timeBlockLabel: 'Blocked time',
+      timeZone: 'UTC',
     })[0]
 
     expect(event).toMatchObject({
       allDay: true,
       title: 'Vacation',
       extendedProps: { type: 'time-block', timeBlock },
+    })
+  })
+
+  it('maps appointment UTC instants to selected timezone wall time for FullCalendar', () => {
+    const [event] = buildCalendarEvents({
+      appointments: [
+        {
+          ...baseAppointment,
+          start_at: '2026-05-01T02:00:00.000Z',
+          duration: 60,
+        },
+      ],
+      clients,
+      services,
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+      timeZone: 'Asia/Bishkek',
+    })
+
+    expect(event).toMatchObject({
+      start: '2026-05-01T08:00:00',
+      end: '2026-05-01T09:00:00',
     })
   })
 })

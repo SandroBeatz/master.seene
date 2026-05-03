@@ -10,6 +10,7 @@ export function useCalendarEvents(
   userId: Ref<string>,
   unknownClientLabel: Ref<string>,
   timeBlockLabel: Ref<string>,
+  timeZone: Ref<string>,
 ) {
   const dateRange = ref<AppointmentDateRange>(createInitialAppointmentDateRange())
 
@@ -26,6 +27,7 @@ export function useCalendarEvents(
       services: services.value,
       unknownClientLabel: unknownClientLabel.value,
       timeBlockLabel: timeBlockLabel.value,
+      timeZone: timeZone.value,
     }),
   )
 

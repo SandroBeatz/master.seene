@@ -3,6 +3,7 @@ import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import type { TimeBlock } from '@entities/time-block'
+import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 import {
   CALENDAR_CONFIRMED_FALLBACK_COLOR,
   CALENDAR_EVENT_TEXT_COLOR,
@@ -18,6 +19,7 @@ interface CalendarEventSources {
   services?: Service[]
   unknownClientLabel: string
   timeBlockLabel: string
+  timeZone?: string
 }
 
 interface CalendarServiceSummary {
@@ -32,15 +34,24 @@ export function buildCalendarEvents({
   services = [],
   unknownClientLabel,
   timeBlockLabel,
+  timeZone,
 }: CalendarEventSources): EventInput[] {
   const clientMap = createClientMap(clients)
   const serviceMap = createServiceMap(services)
 
   return [
     ...appointments.map((appointment) =>
-      buildAppointmentCalendarEvent(appointment, clientMap, serviceMap, unknownClientLabel),
+      buildAppointmentCalendarEvent(
+        appointment,
+        clientMap,
+        serviceMap,
+        unknownClientLabel,
+        timeZone,
+      ),
     ),
-    ...timeBlocks.map((timeBlock) => buildTimeBlockCalendarEvent(timeBlock, timeBlockLabel)),
+    ...timeBlocks.map((timeBlock) =>
+      buildTimeBlockCalendarEvent(timeBlock, timeBlockLabel, timeZone),
+    ),
   ]
 }
 
@@ -73,6 +84,7 @@ function buildAppointmentCalendarEvent(
   clientMap: Map<string, string>,
   serviceMap: Map<string, CalendarServiceSummary>,
   unknownClientLabel: string,
+  timeZone?: string,
 ): EventInput {
   const clientName = clientMap.get(appointment.client_id) ?? unknownClientLabel
   const serviceNames = appointment.service_ids
@@ -89,8 +101,8 @@ function buildAppointmentCalendarEvent(
 
   return {
     id: appointment.id,
-    start: appointment.start_at,
-    end: new Date(endMs).toISOString(),
+    start: getCalendarDateTimeString(appointment.start_at, timeZone),
+    end: getCalendarDateTimeString(new Date(endMs), timeZone),
     title: serviceNames ? `${clientName} — ${serviceNames}` : clientName,
     borderColor,
     backgroundColor,
@@ -99,11 +111,15 @@ function buildAppointmentCalendarEvent(
   }
 }
 
-function buildTimeBlockCalendarEvent(timeBlock: TimeBlock, fallbackTitle: string): EventInput {
+function buildTimeBlockCalendarEvent(
+  timeBlock: TimeBlock,
+  fallbackTitle: string,
+  timeZone?: string,
+): EventInput {
   return {
     id: timeBlock.id,
-    start: timeBlock.start_at,
-    end: timeBlock.end_at,
+    start: getCalendarDateTimeString(timeBlock.start_at, timeZone),
+    end: getCalendarDateTimeString(timeBlock.end_at, timeZone),
     allDay: timeBlock.all_day,
     title: timeBlock.notes || fallbackTitle,
     borderColor: '#64748b',
