@@ -16,6 +16,9 @@ export type {
   MasterPreferences,
   MasterProfile,
   MasterSchedule,
+  MasterScheduleBreak,
+  MasterScheduleDay,
+  MasterScheduleDayKey,
   MasterSettings,
   TimeFormat,
 } from './model/types'

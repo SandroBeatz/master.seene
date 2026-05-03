@@ -111,6 +111,28 @@ describe('buildCalendarEvents', () => {
     })
   })
 
+  it('maps no-show appointments to the shared neutral status color', () => {
+    const [event] = buildCalendarEvents({
+      appointments: [
+        {
+          ...baseAppointment,
+          status: 'no_show',
+        },
+      ],
+      clients,
+      services,
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+      timeZone: 'UTC',
+    })
+
+    expect(event).toMatchObject({
+      borderColor: '#64748b',
+      backgroundColor: '#f8fafc',
+      textColor: '#1e293b',
+    })
+  })
+
   it('maps blocked time as a separate calendar event type', () => {
     const event = buildCalendarEvents({
       appointments: [],

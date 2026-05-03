@@ -43,6 +43,7 @@ const { calendarEvents, onDatesSet } = useCalendarEvents(
 const calendarRef = ref<CalendarWidgetExpose | null>(null)
 const calendarRange = ref<CalendarDateRange>()
 const calendarViewType = ref<CalendarViewType>('timeGridWeek')
+const masterSchedule = computed(() => masterPreferencesStore.preferences.profile?.schedule ?? null)
 const calendarTitle = computed(() =>
   formatCalendarRangeTitle(calendarRange.value, locale.value, masterPreferencesStore.timeZone),
 )
@@ -202,6 +203,7 @@ function openTimeBlockCreate() {
             <CalendarWidget
               ref="calendarRef"
               :events="calendarEvents"
+              :schedule="masterSchedule"
               :time-format="masterPreferencesStore.timeFormat"
               :time-zone="masterPreferencesStore.timeZone"
               @slot-click="onSlotClick"
@@ -283,6 +285,7 @@ function openTimeBlockCreate() {
     :title="$t('calendar.create.title')"
     :description="$t('calendar.create.description')"
   >
+
     <template #body>
       <div class="grid gap-2">
         <UButton

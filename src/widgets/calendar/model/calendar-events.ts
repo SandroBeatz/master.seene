@@ -7,7 +7,6 @@ import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 import {
   CALENDAR_CONFIRMED_FALLBACK_COLOR,
   CALENDAR_EVENT_TEXT_COLOR,
-  CALENDAR_FALLBACK_STATUS_COLORS,
   CALENDAR_STATUS_COLORS,
   type CalendarEventColorSet,
 } from '../config/event-colors'
@@ -71,7 +70,7 @@ export function getAppointmentEventColors(
     }
   }
 
-  const colors = CALENDAR_STATUS_COLORS[appointment.status] ?? CALENDAR_FALLBACK_STATUS_COLORS
+  const colors = CALENDAR_STATUS_COLORS[appointment.status]
 
   return {
     ...colors,

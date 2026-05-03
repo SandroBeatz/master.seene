@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { ButtonProps } from '@nuxt/ui'
-import type { Appointment, AppointmentStatus } from '@entities/appointment'
+import { APPOINTMENT_STATUS_VIEW, type Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import type { TimeFormat } from '@entities/master'
@@ -27,14 +26,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const formats = useFormats()
-
-const statusColor: Record<AppointmentStatus, ButtonProps['color']> = {
-  pending: 'warning',
-  confirmed: 'primary',
-  completed: 'success',
-  cancelled: 'error',
-  no_show: 'neutral',
-}
+const statusView = computed(() => APPOINTMENT_STATUS_VIEW[props.appointment.status])
 
 const clientName = computed(() => {
   if (!props.client) return t('appointments.unknownClient')
@@ -91,7 +83,12 @@ const nextStatusAction = computed<'confirm' | 'complete' | null>(() => {
           <p class="text-xl font-semibold">{{ clientName }}</p>
           <p class="mt-1 text-sm text-muted">{{ appointmentDateTime }}</p>
         </div>
-        <UBadge :color="statusColor[appointment.status]" variant="soft" class="shrink-0">
+        <UBadge
+          :color="statusView.color"
+          :icon="statusView.icon"
+          variant="soft"
+          class="shrink-0"
+        >
           {{ $t(`appointments.status.${appointment.status}`) }}
         </UBadge>
       </div>

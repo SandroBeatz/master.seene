@@ -96,6 +96,43 @@
   opacity: 1;
 }
 
+/* FullCalendar — master schedule availability */
+.fc .fc-non-business {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--color-zinc-400) 16%, transparent) 0,
+      color-mix(in srgb, var(--color-zinc-400) 16%, transparent) 1px,
+      transparent 1px,
+      transparent 8px
+    ),
+    color-mix(in srgb, var(--color-zinc-500) 8%, transparent);
+}
+
+.fc .fc-bg-event.fc-schedule-break {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--color-zinc-500) 22%, transparent) 0,
+      color-mix(in srgb, var(--color-zinc-500) 22%, transparent) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    color-mix(in srgb, var(--color-zinc-500) 12%, transparent);
+  cursor: default;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fc .fc-timegrid-slot-lane.fc-schedule-break-slot:hover {
+  background-color: transparent;
+  cursor: default;
+}
+
+.fc .fc-timegrid-slot-lane.fc-schedule-break-slot:hover .fc-slot-time-label {
+  opacity: 0;
+}
+
 /* FullCalendar — event hover */
 .fc .fc-event {
   transition:

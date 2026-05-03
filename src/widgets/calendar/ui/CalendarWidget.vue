@@ -6,6 +6,7 @@ import type {
   EventClickArg,
   EventDropArg,
   EventInput,
+  SlotLaneContentArg,
   SlotLaneMountArg,
 } from '@fullcalendar/core'
 import type { DateClickArg } from '@fullcalendar/interaction'
@@ -17,7 +18,12 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
 import { updateAppointment } from '@entities/appointment'
-import { DEFAULT_TIME_FORMAT, DEFAULT_TIME_ZONE, type TimeFormat } from '@entities/master'
+import {
+  DEFAULT_TIME_FORMAT,
+  DEFAULT_TIME_ZONE,
+  type MasterSchedule,
+  type TimeFormat,
+} from '@entities/master'
 import type { TimeBlock } from '@entities/time-block'
 import { updateTimeBlock } from '@entities/time-block'
 import { toUtcIsoFromCalendarDateString } from '@shared/lib/time-zone'
@@ -27,10 +33,15 @@ import {
   type CalendarViewType,
   type CalendarWidgetExpose,
 } from '../model/calendar-controls'
+import {
+  buildCalendarScheduleDisplay,
+  isCalendarScheduleBreakSlot,
+} from '../model/calendar-schedule'
 
 const props = withDefaults(
   defineProps<{
     events?: EventInput[]
+    schedule?: MasterSchedule | null
     timeFormat?: TimeFormat
     timeZone?: string
   }>(),
@@ -51,6 +62,33 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
+const currentViewType = ref<CalendarViewType>('timeGridWeek')
+const scheduleDisplay = computed(() => buildCalendarScheduleDisplay(props.schedule))
+const timeGridScheduleDisplay = computed(() =>
+  currentViewType.value === 'timeGridWeek' || currentViewType.value === 'timeGridDay'
+    ? scheduleDisplay.value
+    : { backgroundEvents: [] },
+)
+const calendarEventsWithSchedule = computed(() => [
+  ...props.events,
+  ...timeGridScheduleDisplay.value.backgroundEvents,
+])
+const calendarRenderKey = computed(() => {
+  const display = scheduleDisplay.value
+
+  return JSON.stringify({
+    timeZone: props.timeZone,
+    timeFormat: props.timeFormat,
+    slotMinTime: display.slotMinTime ?? null,
+    slotMaxTime: display.slotMaxTime ?? null,
+    businessHours: display.businessHours ?? null,
+    backgroundEvents: display.backgroundEvents.map((event) => ({
+      daysOfWeek: event.daysOfWeek,
+      startTime: event.startTime,
+      endTime: event.endTime,
+    })),
+  })
+})
 
 function handleDateClick(info: DateClickArg) {
   emit('slot-click', toUtcIsoFromCalendarDateString(info.dateStr, props.timeZone))
@@ -92,6 +130,8 @@ async function handleEventDrop(info: EventDropArg) {
 }
 
 function handleDatesSet(info: DatesSetArg) {
+  currentViewType.value = normalizeCalendarViewType(info.view.type)
+
   emit('dates-set', {
     from: toUtcIsoFromCalendarDateString(info.startStr, props.timeZone),
     to: toUtcIsoFromCalendarDateString(info.endStr, props.timeZone),
@@ -104,7 +144,7 @@ function handleDatesSet(info: DatesSetArg) {
       props.timeZone,
     ),
     title: info.view.title,
-    viewType: normalizeCalendarViewType(info.view.type),
+    viewType: currentViewType.value,
   })
 }
 
@@ -136,6 +176,28 @@ function handleSlotLaneMount(arg: SlotLaneMountArg) {
   arg.el.appendChild(span)
 }
 
+function getSlotLaneClassNames(arg: SlotLaneContentArg): string[] {
+  if (!arg.date) return []
+
+  const { dayOfWeek, minutes } = getCalendarSlotTimeParts(arg.date)
+
+  return isCalendarScheduleBreakSlot(props.schedule, dayOfWeek, minutes)
+    ? ['fc-schedule-break-slot']
+    : []
+}
+
+function getCalendarSlotTimeParts(date: Date) {
+  const useUtcParts = props.timeZone !== DEFAULT_TIME_ZONE
+  const dayOfWeek = useUtcParts ? date.getUTCDay() : date.getDay()
+  const hour = useUtcParts ? date.getUTCHours() : date.getHours()
+  const minute = useUtcParts ? date.getUTCMinutes() : date.getMinutes()
+
+  return {
+    dayOfWeek,
+    minutes: hour * 60 + minute,
+  }
+}
+
 function formatCalendarTime(date: Date): string {
   const hour12 = props.timeFormat === 12
   const options: Intl.DateTimeFormatOptions = {
@@ -163,6 +225,23 @@ const calendarOptions = computed<CalendarOptions>(() => {
     minute: '2-digit',
     hour12,
   } as const
+  const calendarScheduleDisplay = timeGridScheduleDisplay.value
+  const scheduleOptions: Pick<
+    CalendarOptions,
+    'slotMinTime' | 'slotMaxTime' | 'businessHours'
+  > = {}
+
+  if (calendarScheduleDisplay.slotMinTime) {
+    scheduleOptions.slotMinTime = calendarScheduleDisplay.slotMinTime
+  }
+
+  if (calendarScheduleDisplay.slotMaxTime) {
+    scheduleOptions.slotMaxTime = calendarScheduleDisplay.slotMaxTime
+  }
+
+  if (calendarScheduleDisplay.businessHours) {
+    scheduleOptions.businessHours = calendarScheduleDisplay.businessHours
+  }
 
   return {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -177,8 +256,10 @@ const calendarOptions = computed<CalendarOptions>(() => {
     eventClick: handleEventClick,
     eventDrop: handleEventDrop,
     datesSet: handleDatesSet,
+    slotLaneClassNames: getSlotLaneClassNames,
     slotLaneDidMount: handleSlotLaneMount,
-    events: props.events,
+    ...scheduleOptions,
+    events: calendarEventsWithSchedule.value,
   }
 })
 
@@ -199,6 +280,7 @@ function moveToToday() {
 }
 
 function changeView(viewType: CalendarViewType) {
+  currentViewType.value = viewType
   getCalendarApi()?.changeView(viewType)
 }
 
@@ -212,6 +294,6 @@ defineExpose<CalendarWidgetExpose>({
 
 <template>
   <div class="w-full">
-    <FullCalendar ref="calendarRef" :options="calendarOptions" />
+    <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions" />
   </div>
 </template>

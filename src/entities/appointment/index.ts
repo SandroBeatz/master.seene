@@ -18,3 +18,5 @@ export {
   updateAppointment,
   removeAppointment,
 } from './api/appointments.api'
+export { APPOINTMENT_STATUS_VIEW } from './config/status'
+export type { AppointmentStatusViewConfig } from './config/status'

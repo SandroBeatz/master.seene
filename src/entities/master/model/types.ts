@@ -1,8 +1,29 @@
 export type TimeFormat = 12 | 24
 
+export type MasterScheduleDayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+export interface MasterScheduleBreak {
+  start: string
+  end: string
+}
+
+export interface MasterScheduleDay {
+  enabled: boolean
+  start: string | null
+  end: string | null
+  breaks: MasterScheduleBreak[]
+}
+
 export interface MasterSchedule {
   timezone?: string | null
-  days?: unknown
+  days?: Partial<Record<MasterScheduleDayKey, Partial<MasterScheduleDay> | null>> | null
 }
 
 export interface MasterProfile {
