@@ -53,7 +53,7 @@ const COLOR_PALETTE = [
 interface FormState {
   name: string
   description: string
-  duration: number | null
+  duration: number | undefined
   price: number | null
   category_id: string | null
   is_active: boolean
@@ -63,7 +63,7 @@ interface FormState {
 const state = reactive<FormState>({
   name: '',
   description: '',
-  duration: null,
+  duration: undefined,
   price: null,
   category_id: null,
   is_active: true,
@@ -82,7 +82,7 @@ function resetForm() {
   } else {
     state.name = ''
     state.description = ''
-    state.duration = null
+    state.duration = undefined
     state.price = null
     state.category_id = null
     state.is_active = true
