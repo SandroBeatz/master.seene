@@ -2,6 +2,7 @@ import type { EventInput } from '@fullcalendar/core'
 import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
+import type { TimeBlock } from '@entities/time-block'
 import {
   CALENDAR_CONFIRMED_FALLBACK_COLOR,
   CALENDAR_EVENT_TEXT_COLOR,
@@ -12,9 +13,11 @@ import {
 
 interface CalendarEventSources {
   appointments?: Appointment[]
+  timeBlocks?: TimeBlock[]
   clients?: Client[]
   services?: Service[]
   unknownClientLabel: string
+  timeBlockLabel: string
 }
 
 interface CalendarServiceSummary {
@@ -24,16 +27,21 @@ interface CalendarServiceSummary {
 
 export function buildCalendarEvents({
   appointments = [],
+  timeBlocks = [],
   clients = [],
   services = [],
   unknownClientLabel,
+  timeBlockLabel,
 }: CalendarEventSources): EventInput[] {
   const clientMap = createClientMap(clients)
   const serviceMap = createServiceMap(services)
 
-  return appointments.map((appointment) =>
-    buildCalendarEvent(appointment, clientMap, serviceMap, unknownClientLabel),
-  )
+  return [
+    ...appointments.map((appointment) =>
+      buildAppointmentCalendarEvent(appointment, clientMap, serviceMap, unknownClientLabel),
+    ),
+    ...timeBlocks.map((timeBlock) => buildTimeBlockCalendarEvent(timeBlock, timeBlockLabel)),
+  ]
 }
 
 export function getAppointmentEventColors(
@@ -60,7 +68,7 @@ export function getAppointmentEventColors(
   }
 }
 
-function buildCalendarEvent(
+function buildAppointmentCalendarEvent(
   appointment: Appointment,
   clientMap: Map<string, string>,
   serviceMap: Map<string, CalendarServiceSummary>,
@@ -87,7 +95,22 @@ function buildCalendarEvent(
     borderColor,
     backgroundColor,
     textColor,
-    extendedProps: { appointment },
+    extendedProps: { type: 'appointment', appointment },
+  }
+}
+
+function buildTimeBlockCalendarEvent(timeBlock: TimeBlock, fallbackTitle: string): EventInput {
+  return {
+    id: timeBlock.id,
+    start: timeBlock.start_at,
+    end: timeBlock.end_at,
+    allDay: timeBlock.all_day,
+    title: timeBlock.notes || fallbackTitle,
+    borderColor: '#64748b',
+    backgroundColor: '#f1f5f9',
+    textColor: '#334155',
+    editable: true,
+    extendedProps: { type: 'time-block', timeBlock },
   }
 }
 

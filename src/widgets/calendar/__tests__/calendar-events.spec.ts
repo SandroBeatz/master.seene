@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
+import type { TimeBlock } from '@entities/time-block'
 import { buildCalendarEvents } from '../model/calendar-events'
 
 const baseAppointment: Appointment = {
@@ -51,6 +52,17 @@ const services: Service[] = [
   },
 ]
 
+const baseTimeBlock: TimeBlock = {
+  id: 'time-block-1',
+  user_id: 'user-1',
+  start_at: '2026-05-02T12:00:00.000Z',
+  end_at: '2026-05-02T13:30:00.000Z',
+  all_day: false,
+  notes: null,
+  created_at: '2026-05-01T09:00:00.000Z',
+  updated_at: '2026-05-01T09:00:00.000Z',
+}
+
 describe('buildCalendarEvents', () => {
   it('maps appointment, client, service and confirmed service color to a calendar event', () => {
     const [event] = buildCalendarEvents({
@@ -58,6 +70,7 @@ describe('buildCalendarEvents', () => {
       clients,
       services,
       unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
     })
 
     expect(event).toMatchObject({
@@ -85,6 +98,7 @@ describe('buildCalendarEvents', () => {
       clients,
       services,
       unknownClientLabel: 'Client inconnu',
+      timeBlockLabel: 'Temps bloqué',
     })
 
     expect(event).toMatchObject({
@@ -92,6 +106,52 @@ describe('buildCalendarEvents', () => {
       borderColor: '#ef4444',
       backgroundColor: '#fef2f2',
       textColor: '#1e293b',
+    })
+  })
+
+  it('maps blocked time as a separate calendar event type', () => {
+    const event = buildCalendarEvents({
+      appointments: [],
+      timeBlocks: [baseTimeBlock],
+      clients,
+      services,
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+    })[0]
+
+    expect(event).toMatchObject({
+      id: 'time-block-1',
+      start: '2026-05-02T12:00:00.000Z',
+      end: '2026-05-02T13:30:00.000Z',
+      allDay: false,
+      title: 'Blocked time',
+      borderColor: '#64748b',
+      backgroundColor: '#f1f5f9',
+      textColor: '#334155',
+      extendedProps: { type: 'time-block', timeBlock: baseTimeBlock },
+    })
+  })
+
+  it('keeps all-day blocked time and uses notes as the event title', () => {
+    const timeBlock = {
+      ...baseTimeBlock,
+      all_day: true,
+      notes: 'Vacation',
+    }
+
+    const event = buildCalendarEvents({
+      appointments: [],
+      timeBlocks: [timeBlock],
+      clients,
+      services,
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+    })[0]
+
+    expect(event).toMatchObject({
+      allDay: true,
+      title: 'Vacation',
+      extendedProps: { type: 'time-block', timeBlock },
     })
   })
 })

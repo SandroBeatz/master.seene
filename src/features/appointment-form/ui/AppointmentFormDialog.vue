@@ -10,14 +10,22 @@ import {
   useUpdateAppointmentMutation,
 } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
+import { DEFAULT_TIME_ZONE } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import { useServicesQuery } from '@entities/service'
+import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 
-const props = defineProps<{
-  open: boolean
-  initialStartAt?: string
-  appointment?: Appointment
-}>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    initialStartAt?: string
+    appointment?: Appointment
+    timeZone?: string
+  }>(),
+  {
+    timeZone: DEFAULT_TIME_ZONE,
+  },
+)
 
 const emit = defineEmits<{
   'update:open': [boolean]
@@ -113,19 +121,23 @@ function resetForm() {
 
   if (props.appointment && isEdit.value) {
     const appt = props.appointment
-    const dt = new Date(appt.start_at)
+    const inputValue = getDateTimeInputValue(appt.start_at, props.timeZone)
     state.client_id = appt.client_id
-    state.date = dt.toISOString().slice(0, 10)
-    state.time = dt.toTimeString().slice(0, 5)
+    state.date = inputValue.date
+    state.time = inputValue.time
     state.duration = appt.duration
     state.price = appt.price
     state.status = appt.status
     state.notes = appt.notes ?? ''
     selectedServiceIds.value = [...appt.service_ids]
   } else {
+    const inputValue = props.initialStartAt
+      ? getDateTimeInputValue(props.initialStartAt, props.timeZone)
+      : { date: '', time: '' }
+
     state.client_id = ''
-    state.date = props.initialStartAt ? props.initialStartAt.slice(0, 10) : ''
-    state.time = props.initialStartAt ? props.initialStartAt.slice(11, 16) : ''
+    state.date = inputValue.date
+    state.time = inputValue.time
     state.duration = 0
     state.price = null
     state.status = 'pending'
@@ -199,7 +211,7 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
     return
   }
 
-  const startAt = new Date(`${event.data.date}T${event.data.time}:00`).toISOString()
+  const startAt = toUtcIsoFromZonedDateTime(event.data.date, event.data.time, props.timeZone)
 
   const dto: CreateAppointmentDto = {
     client_id: event.data.client_id,

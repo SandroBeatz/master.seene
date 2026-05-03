@@ -1,21 +1,24 @@
 import type { CalendarDateRange } from './calendar-controls'
 
 const DEFAULT_LOCALE = 'en'
+const LOCAL_TIME_ZONE = 'local'
 
 export function formatCalendarRangeTitle(
   range: CalendarDateRange | undefined,
   locale: string,
+  timeZone?: string,
 ): string {
   if (!range) return ''
 
   const normalizedLocale = locale || DEFAULT_LOCALE
+  const formatTimeZone = timeZone === LOCAL_TIME_ZONE ? undefined : timeZone
   const start = new Date(range.currentFrom)
   const endExclusive = new Date(range.currentTo)
 
   if (!isValidDate(start) || !isValidDate(endExclusive)) return range.title
 
   if (range.viewType === 'dayGridMonth') {
-    return formatMonthTitle(start, normalizedLocale)
+    return formatMonthTitle(start, normalizedLocale, formatTimeZone)
   }
 
   const endInclusive = addDays(endExclusive, -1)
@@ -25,21 +28,23 @@ export function formatCalendarRangeTitle(
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+      timeZone: formatTimeZone,
     })
   }
 
-  return formatDateRange(start, endInclusive, normalizedLocale)
+  return formatDateRange(start, endInclusive, normalizedLocale, formatTimeZone)
 }
 
-function formatMonthTitle(date: Date, locale: string): string {
-  return formatDate(date, locale, { month: 'long', year: 'numeric' })
+function formatMonthTitle(date: Date, locale: string, timeZone?: string): string {
+  return formatDate(date, locale, { month: 'long', year: 'numeric', timeZone })
 }
 
-function formatDateRange(start: Date, end: Date, locale: string): string {
+function formatDateRange(start: Date, end: Date, locale: string, timeZone?: string): string {
   const formatter = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone,
   }) as Intl.DateTimeFormat & {
     formatRange?: (startDate: Date, endDate: Date) => string
   }

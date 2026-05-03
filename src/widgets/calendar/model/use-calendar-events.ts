@@ -3,21 +3,29 @@ import type { AppointmentDateRange } from '@entities/appointment'
 import { useAppointmentsQuery } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
+import { useTimeBlocksQuery } from '@entities/time-block'
 import { buildCalendarEvents } from './calendar-events'
 
-export function useCalendarEvents(userId: Ref<string>, unknownClientLabel: Ref<string>) {
+export function useCalendarEvents(
+  userId: Ref<string>,
+  unknownClientLabel: Ref<string>,
+  timeBlockLabel: Ref<string>,
+) {
   const dateRange = ref<AppointmentDateRange>(createInitialAppointmentDateRange())
 
   const { data: appointments } = useAppointmentsQuery(userId, dateRange)
+  const { data: timeBlocks } = useTimeBlocksQuery(userId, dateRange)
   const { data: clients } = useClientsQuery(userId)
   const { data: services } = useServicesQuery(userId)
 
   const calendarEvents = computed(() =>
     buildCalendarEvents({
       appointments: appointments.value,
+      timeBlocks: timeBlocks.value,
       clients: clients.value,
       services: services.value,
       unknownClientLabel: unknownClientLabel.value,
+      timeBlockLabel: timeBlockLabel.value,
     }),
   )
 

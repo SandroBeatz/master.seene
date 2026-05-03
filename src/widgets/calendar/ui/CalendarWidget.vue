@@ -18,6 +18,9 @@ import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
 import { updateAppointment } from '@entities/appointment'
 import { DEFAULT_TIME_FORMAT, DEFAULT_TIME_ZONE, type TimeFormat } from '@entities/master'
+import type { TimeBlock } from '@entities/time-block'
+import { updateTimeBlock } from '@entities/time-block'
+import { toUtcIsoFromCalendarDateString } from '@shared/lib/time-zone'
 import {
   normalizeCalendarViewType,
   type CalendarDateRange,
@@ -41,6 +44,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   'slot-click': [dateStr: string]
   'event-click': [appointment: Appointment]
+  'time-block-click': [timeBlock: TimeBlock]
   'dates-set': [range: CalendarDateRange]
 }>()
 
@@ -49,32 +53,77 @@ const toast = useToast()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
 
 function handleDateClick(info: DateClickArg) {
-  emit('slot-click', info.dateStr)
+  emit('slot-click', toUtcIsoFromCalendarDateString(info.dateStr, props.timeZone))
 }
 
 function handleEventClick(info: EventClickArg) {
+  if (info.event.extendedProps.type === 'time-block') {
+    emit('time-block-click', info.event.extendedProps.timeBlock as TimeBlock)
+    return
+  }
+
   const appointment = info.event.extendedProps.appointment as Appointment
   emit('event-click', appointment)
 }
 
 async function handleEventDrop(info: EventDropArg) {
   try {
-    await updateAppointment({ id: info.event.id, start_at: info.event.startStr })
+    if (info.event.extendedProps.type === 'time-block') {
+      const startAt = info.event.startStr
+        ? toUtcIsoFromCalendarDateString(info.event.startStr, props.timeZone)
+        : undefined
+      const endAt = info.event.endStr
+        ? toUtcIsoFromCalendarDateString(info.event.endStr, props.timeZone)
+        : undefined
+      if (!startAt || !endAt) throw new Error('Invalid time block range')
+
+      await updateTimeBlock({ id: info.event.id, start_at: startAt, end_at: endAt })
+      return
+    }
+
+    await updateAppointment({
+      id: info.event.id,
+      start_at: toUtcIsoFromCalendarDateString(info.event.startStr, props.timeZone),
+    })
   } catch {
     info.revert()
-    toast.add({ title: t('appointments.dragError'), color: 'error' })
+    toast.add({ title: t('calendar.dragError'), color: 'error' })
   }
 }
 
 function handleDatesSet(info: DatesSetArg) {
   emit('dates-set', {
-    from: info.startStr,
-    to: info.endStr,
-    currentFrom: info.view.currentStart.toISOString(),
-    currentTo: info.view.currentEnd.toISOString(),
+    from: toUtcIsoFromCalendarDateString(info.startStr, props.timeZone),
+    to: toUtcIsoFromCalendarDateString(info.endStr, props.timeZone),
+    currentFrom: toUtcIsoFromCalendarDateString(
+      getCalendarDateString(info.view.currentStart),
+      props.timeZone,
+    ),
+    currentTo: toUtcIsoFromCalendarDateString(
+      getCalendarDateString(info.view.currentEnd),
+      props.timeZone,
+    ),
     title: info.view.title,
     viewType: normalizeCalendarViewType(info.view.type),
   })
+}
+
+function getCalendarDateString(date: Date): string {
+  const useUtcParts = props.timeZone !== DEFAULT_TIME_ZONE
+  const year = useUtcParts ? date.getUTCFullYear() : date.getFullYear()
+  const month = useUtcParts ? date.getUTCMonth() + 1 : date.getMonth() + 1
+  const day = useUtcParts ? date.getUTCDate() : date.getDate()
+  const hour = useUtcParts ? date.getUTCHours() : date.getHours()
+  const minute = useUtcParts ? date.getUTCMinutes() : date.getMinutes()
+  const second = useUtcParts ? date.getUTCSeconds() : date.getSeconds()
+
+  return `${year}-${padDatePart(month)}-${padDatePart(day)}T${padDatePart(hour)}:${padDatePart(
+    minute,
+  )}:${padDatePart(second)}`
+}
+
+function padDatePart(value: number): string {
+  return String(value).padStart(2, '0')
 }
 
 function handleSlotLaneMount(arg: SlotLaneMountArg) {
@@ -96,7 +145,7 @@ function formatCalendarTime(date: Date): string {
   }
 
   if (props.timeZone !== DEFAULT_TIME_ZONE) {
-    options.timeZone = props.timeZone
+    options.timeZone = 'UTC'
   }
 
   try {
@@ -119,7 +168,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'timeGridWeek',
     editable: true,
-    allDaySlot: false,
+    allDaySlot: true,
     timeZone: props.timeZone,
     slotLabelFormat: timeFormat,
     eventTimeFormat: timeFormat,
