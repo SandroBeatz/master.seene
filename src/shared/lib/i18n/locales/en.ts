@@ -17,6 +17,10 @@ export default {
     next: 'Next',
     edit: 'Edit',
     delete: 'Delete',
+    validation: {
+      required: 'This field is required',
+      tooLong: 'Value is too long',
+    },
   },
   notifications: {
     title: 'Notifications',
@@ -286,6 +290,7 @@ export default {
     description: 'Manage your account and preferences.',
     nav: {
       general: 'General',
+      paymentTypes: 'Payment methods',
     },
     general: {
       title: 'General',
@@ -296,6 +301,31 @@ export default {
       themeSystem: 'System',
       themeLight: 'Light',
       themeDark: 'Dark',
+    },
+    paymentTypes: {
+      title: 'Payment methods',
+      addButton: 'Add method',
+      defaultBadge: 'Default',
+      emptyTitle: 'No payment methods yet',
+      emptyDescription: 'Add your first payment method to start using it in appointments.',
+      createSuccess: 'Payment method added',
+      updateSuccess: 'Payment method updated',
+      deleteSuccess: 'Payment method deleted',
+      deleteError: 'Failed to delete payment method',
+      deleteDisabledTooltip: 'Cannot delete default payment method',
+      deleteConfirmTitle: 'Delete payment method',
+      deleteConfirmBody: 'Delete "{name}"? This action cannot be undone.',
+      deleteAction: 'Delete',
+      form: {
+        titleCreate: 'Add payment method',
+        titleEdit: 'Edit payment method',
+        name: 'Name',
+        namePlaceholder: 'e.g. Card',
+        color: 'Color',
+        submitCreate: 'Add',
+        submitEdit: 'Save',
+        cancel: 'Cancel',
+      },
     },
   },
   clients: {

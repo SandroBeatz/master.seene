@@ -16,6 +16,10 @@ export default {
     next: 'Вперёд',
     edit: 'Редактировать',
     delete: 'Удалить',
+    validation: {
+      required: 'Это поле обязательно',
+      tooLong: 'Значение слишком длинное',
+    },
   },
   notifications: {
     title: 'Уведомления',
@@ -282,6 +286,7 @@ export default {
     description: 'Управляйте своим аккаунтом и предпочтениями.',
     nav: {
       general: 'Общее',
+      paymentTypes: 'Способы оплаты',
     },
     general: {
       title: 'Общее',
@@ -292,6 +297,31 @@ export default {
       themeSystem: 'Системная',
       themeLight: 'Светлая',
       themeDark: 'Тёмная',
+    },
+    paymentTypes: {
+      title: 'Способы оплаты',
+      addButton: 'Добавить способ',
+      defaultBadge: 'По умолчанию',
+      emptyTitle: 'Способов оплаты пока нет',
+      emptyDescription: 'Добавьте первый способ оплаты для использования в записях.',
+      createSuccess: 'Способ оплаты добавлен',
+      updateSuccess: 'Способ оплаты обновлён',
+      deleteSuccess: 'Способ оплаты удалён',
+      deleteError: 'Не удалось удалить способ оплаты',
+      deleteDisabledTooltip: 'Нельзя удалить способ оплаты по умолчанию',
+      deleteConfirmTitle: 'Удалить способ оплаты',
+      deleteConfirmBody: 'Удалить «{name}»? Это действие нельзя отменить.',
+      deleteAction: 'Удалить',
+      form: {
+        titleCreate: 'Добавить способ оплаты',
+        titleEdit: 'Редактировать способ оплаты',
+        name: 'Название',
+        namePlaceholder: 'Например: Карта',
+        color: 'Цвет',
+        submitCreate: 'Добавить',
+        submitEdit: 'Сохранить',
+        cancel: 'Отмена',
+      },
     },
   },
   clients: {

@@ -89,6 +89,11 @@ const router = createRouter({
               name: 'settings-general',
               component: async () => (await import('@pages/settings')).SettingsGeneralPage,
             },
+            {
+              path: 'payment-types',
+              name: 'settings-payment-types',
+              component: async () => (await import('@pages/settings')).SettingsPaymentTypesPage,
+            },
           ],
         },
       ],

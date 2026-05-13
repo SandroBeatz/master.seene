@@ -16,6 +16,10 @@ export default {
     next: 'Suivant',
     edit: 'Modifier',
     delete: 'Supprimer',
+    validation: {
+      required: 'Ce champ est obligatoire',
+      tooLong: 'La valeur est trop longue',
+    },
   },
   notifications: {
     title: 'Notifications',
@@ -289,6 +293,7 @@ export default {
     description: 'Gérez votre compte et vos préférences.',
     nav: {
       general: 'Général',
+      paymentTypes: 'Modes de paiement',
     },
     general: {
       title: 'Général',
@@ -299,6 +304,31 @@ export default {
       themeSystem: 'Système',
       themeLight: 'Clair',
       themeDark: 'Sombre',
+    },
+    paymentTypes: {
+      title: 'Modes de paiement',
+      addButton: 'Ajouter un mode',
+      defaultBadge: 'Par défaut',
+      emptyTitle: 'Aucun mode de paiement',
+      emptyDescription: 'Ajoutez votre premier mode de paiement pour les rendez-vous.',
+      createSuccess: 'Mode de paiement ajouté',
+      updateSuccess: 'Mode de paiement mis à jour',
+      deleteSuccess: 'Mode de paiement supprimé',
+      deleteError: 'Impossible de supprimer le mode de paiement',
+      deleteDisabledTooltip: 'Impossible de supprimer le mode de paiement par défaut',
+      deleteConfirmTitle: 'Supprimer le mode de paiement',
+      deleteConfirmBody: 'Supprimer «\u00a0{name}\u00a0»\u00a0? Cette action est irréversible.',
+      deleteAction: 'Supprimer',
+      form: {
+        titleCreate: 'Ajouter un mode de paiement',
+        titleEdit: 'Modifier le mode de paiement',
+        name: 'Nom',
+        namePlaceholder: 'Ex. : Carte',
+        color: 'Couleur',
+        submitCreate: 'Ajouter',
+        submitEdit: 'Enregistrer',
+        cancel: 'Annuler',
+      },
     },
   },
   clients: {

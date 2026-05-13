@@ -31,7 +31,8 @@
     "vue": "beta",
     "vue-i18n": "^11.3.2",
     "vue-router": "^5.0.4",
-    "vue-tel-input": "^9.8.0"
+    "vue-tel-input": "^9.8.0",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@pinia/colada-devtools": "^1.0.0",

@@ -10,6 +10,11 @@ const settingsNav = computed(() => [
     icon: 'i-lucide-sliders-horizontal',
     to: '/settings/general',
   },
+  {
+    label: t('settings.nav.paymentTypes'),
+    icon: 'i-lucide-credit-card',
+    to: '/settings/payment-types',
+  },
 ])
 </script>
 
