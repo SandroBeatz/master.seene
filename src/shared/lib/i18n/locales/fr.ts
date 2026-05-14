@@ -288,6 +288,22 @@ export default {
       },
     },
   },
+  analytics: {
+    title: 'Analytiques',
+    description: 'Suivez les performances de votre activité et vos indicateurs clés.',
+    comingSoon: 'Analytiques bientôt disponibles',
+  },
+  profile: {
+    title: 'Profil',
+    description: 'Gérez vos informations personnelles et vos préférences.',
+    nav: {
+      info: 'Informations personnelles',
+    },
+    info: {
+      title: 'Informations personnelles',
+      comingSoon: 'Informations personnelles bientôt disponibles',
+    },
+  },
   settings: {
     title: 'Paramètres',
     description: 'Gérez votre compte et vos préférences.',

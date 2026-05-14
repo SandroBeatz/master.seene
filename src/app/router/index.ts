@@ -79,6 +79,24 @@ const router = createRouter({
           component: async () => (await import('@pages/services')).ServicesPage,
         },
         {
+          path: 'analytics',
+          name: 'analytics',
+          component: async () => (await import('@pages/analytics')).AnalyticsPage,
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          redirect: '/profile/info',
+          component: async () => (await import('@pages/profile')).ProfilePage,
+          children: [
+            {
+              path: 'info',
+              name: 'profile-info',
+              component: async () => (await import('@pages/profile')).ProfileInfoPage,
+            },
+          ],
+        },
+        {
           path: 'settings',
           name: 'settings',
           redirect: '/settings/general',

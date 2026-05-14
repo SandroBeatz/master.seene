@@ -285,6 +285,22 @@ export default {
       },
     },
   },
+  analytics: {
+    title: 'Analytics',
+    description: 'Track your business performance and key metrics.',
+    comingSoon: 'Analytics coming soon',
+  },
+  profile: {
+    title: 'Profile',
+    description: 'Manage your personal information and preferences.',
+    nav: {
+      info: 'Personal info',
+    },
+    info: {
+      title: 'Personal info',
+      comingSoon: 'Personal info coming soon',
+    },
+  },
   settings: {
     title: 'Settings',
     description: 'Manage your account and preferences.',
