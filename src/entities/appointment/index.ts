@@ -10,6 +10,7 @@ export {
   useCreateAppointmentMutation,
   useUpdateAppointmentMutation,
   useRemoveAppointmentMutation,
+  useActionableAppointmentsQuery,
 } from './model/appointment.queries'
 export {
   listAppointments,
@@ -17,6 +18,7 @@ export {
   createAppointment,
   updateAppointment,
   removeAppointment,
+  listActionableAppointments,
 } from './api/appointments.api'
 export { APPOINTMENT_STATUS_VIEW } from './config/status'
 export type { AppointmentStatusViewConfig } from './config/status'

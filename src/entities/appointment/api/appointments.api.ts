@@ -50,3 +50,15 @@ export async function removeAppointment(id: string): Promise<void> {
   const { error } = await supabase.from('appointments').delete().eq('id', id)
   if (error) throw error
 }
+
+export async function listActionableAppointments(userId: string): Promise<Appointment[]> {
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('user_id', userId)
+    .or(`status.eq.pending,and(status.eq.confirmed,start_at.lt.${now})`)
+    .order('start_at')
+  if (error) throw error
+  return data as Appointment[]
+}

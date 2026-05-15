@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
 import {
   createAppointment,
+  listActionableAppointments,
   listAppointments,
   removeAppointment,
   updateAppointment,
@@ -47,3 +48,9 @@ export const useRemoveAppointmentMutation = (userId: Ref<string>) => {
     onSettled: () => cache.invalidateQueries({ key: ['appointments', userId.value] }),
   })
 }
+
+export const useActionableAppointmentsQuery = (userId: Ref<string>) =>
+  useQuery({
+    key: () => ['appointments-actionable', userId.value],
+    query: () => listActionableAppointments(userId.value),
+  })
