@@ -1,20 +1,33 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { AnalyticsPeriod } from '@entities/analytics'
+import { useAnalyticsQuery } from '@entities/analytics'
+import AnalyticsPeriodTabs from './AnalyticsPeriodTabs.vue'
+import AnalyticsStatCards from './AnalyticsStatCards.vue'
+import AnalyticsTopServices from './AnalyticsTopServices.vue'
 
 const { t } = useI18n()
+const period = ref<AnalyticsPeriod>('today')
+const { data, status } = useAnalyticsQuery(period)
+const isLoading = computed(() => status.value === 'pending')
 </script>
 
 <template>
   <UPage :ui="{ root: 'px-12 max-w-7xl mx-auto' }" as="main">
     <UPageHeader
-      :title="$t('analytics.title')"
-      :description="$t('analytics.description')"
+      :title="t('analytics.title')"
+      :description="t('analytics.description')"
       :ui="{ root: 'border-none' }"
-    />
+    >
+      <template #links>
+        <AnalyticsPeriodTabs v-model="period" />
+      </template>
+    </UPageHeader>
     <UPageBody>
-      <div class="flex flex-col items-center justify-center py-24 gap-4 text-center">
-        <UIcon name="i-lucide-chart-area" class="size-16 text-zinc-300" />
-        <p class="text-lg font-medium text-zinc-500">{{ t('analytics.comingSoon') }}</p>
+      <div class="space-y-6">
+        <AnalyticsStatCards :data="data" :loading="isLoading" />
+        <AnalyticsTopServices :services="data?.top_services ?? []" :loading="isLoading" />
       </div>
     </UPageBody>
   </UPage>
