@@ -52,6 +52,7 @@ BEGIN
        WHERE s.user_id = auth.uid()
          AND s.paid_at BETWEEN p_from AND p_to
        GROUP BY si.name_snapshot
+       ORDER BY revenue DESC
        LIMIT 5
     ) t;
 
