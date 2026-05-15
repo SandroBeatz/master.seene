@@ -26,8 +26,21 @@ export default {
     timeAgo: '20 мин назад',
   },
   home: {
-    title: 'Привет, Анна!',
-    description: 'С возвращением на ваш дашборд.',
+    title: 'Главная',
+    description: 'Добро пожаловать на ваш дашборд.',
+    earnedToday: 'Заработано сегодня',
+    completedCount: 'Завершено записей',
+    workingHours: 'Рабочих часов',
+    actionAppointments: {
+      title: 'Нужно подтвердить или завершить',
+      empty: 'Нет записей, требующих действий',
+      confirm: 'Подтвердить',
+      complete: 'Завершить',
+    },
+    upcoming: {
+      title: 'Предстоящие записи',
+      empty: 'Нет записей на этот день',
+    },
   },
   calendar: {
     title: 'Календарь',
@@ -285,6 +298,19 @@ export default {
     title: 'Аналитика',
     description: 'Отслеживайте эффективность бизнеса и ключевые показатели.',
     comingSoon: 'Аналитика скоро появится',
+    period: {
+      today: 'Сегодня',
+      week: 'Неделя',
+      month: 'Месяц',
+    },
+    earned: 'Заработано',
+    completedCount: 'Записей завершено',
+    workingHours: 'Рабочих часов',
+    avgCheck: 'Средний чек',
+    topServices: 'Топ услуг по доходу',
+    noTopServices: 'Нет данных за период',
+    hoursUnit: 'ч',
+    minutesUnit: 'мин',
   },
   profile: {
     title: 'Профиль',

@@ -26,8 +26,21 @@ export default {
     timeAgo: 'il y a 20 min',
   },
   home: {
-    title: 'Bonjour, Anna\u00a0!',
+    title: 'Accueil',
     description: 'Bon retour sur votre tableau de bord.',
+    earnedToday: "Gagné aujourd'hui",
+    completedCount: 'Rendez-vous terminés',
+    workingHours: 'Heures de travail',
+    actionAppointments: {
+      title: 'À confirmer ou terminer',
+      empty: "Aucun rendez-vous n'est en attente d'action",
+      confirm: 'Confirmer',
+      complete: 'Terminer',
+    },
+    upcoming: {
+      title: 'Prochains rendez-vous',
+      empty: 'Aucun rendez-vous ce jour',
+    },
   },
   calendar: {
     title: 'Calendrier',
@@ -289,9 +302,22 @@ export default {
     },
   },
   analytics: {
-    title: 'Analytiques',
-    description: 'Suivez les performances de votre activité et vos indicateurs clés.',
-    comingSoon: 'Analytiques bientôt disponibles',
+    title: 'Analytique',
+    description: 'Suivez les performances de votre entreprise.',
+    comingSoon: 'Analytique bientôt disponible',
+    period: {
+      today: "Aujourd'hui",
+      week: 'Semaine',
+      month: 'Mois',
+    },
+    earned: 'Gagné',
+    completedCount: 'Rendez-vous terminés',
+    workingHours: 'Heures de travail',
+    avgCheck: 'Ticket moyen',
+    topServices: 'Top services par revenu',
+    noTopServices: 'Aucune donnée pour cette période',
+    hoursUnit: 'h',
+    minutesUnit: 'min',
   },
   profile: {
     title: 'Profil',

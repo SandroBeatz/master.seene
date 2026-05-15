@@ -27,8 +27,21 @@ export default {
     timeAgo: '20 min ago',
   },
   home: {
-    title: 'Hi, Anna!',
+    title: 'Home',
     description: 'Welcome back to your dashboard.',
+    earnedToday: 'Earned today',
+    completedCount: 'Appointments completed',
+    workingHours: 'Working hours',
+    actionAppointments: {
+      title: 'Needs confirmation or completion',
+      empty: 'No appointments require action',
+      confirm: 'Confirm',
+      complete: 'Complete',
+    },
+    upcoming: {
+      title: 'Upcoming appointments',
+      empty: 'No appointments for this day',
+    },
   },
   calendar: {
     title: 'Calendar',
@@ -289,6 +302,19 @@ export default {
     title: 'Analytics',
     description: 'Track your business performance and key metrics.',
     comingSoon: 'Analytics coming soon',
+    period: {
+      today: 'Today',
+      week: 'Week',
+      month: 'Month',
+    },
+    earned: 'Earned',
+    completedCount: 'Appointments completed',
+    workingHours: 'Working hours',
+    avgCheck: 'Average check',
+    topServices: 'Top services by revenue',
+    noTopServices: 'No data for this period',
+    hoursUnit: 'h',
+    minutesUnit: 'min',
   },
   profile: {
     title: 'Profile',
