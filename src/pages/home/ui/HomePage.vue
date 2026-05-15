@@ -1,45 +1,41 @@
 <script setup lang="ts">
-import { useQuery } from '@pinia/colada'
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useAnalyticsQuery } from '@entities/analytics'
+import { ActionAppointmentsWidget } from '@widgets/action-appointments'
+import { UpcomingAppointmentsWidget } from '@widgets/upcoming-appointments'
+import HomeEarnedTodayCard from './HomeEarnedTodayCard.vue'
+import HomeCompletedCountCard from './HomeCompletedCountCard.vue'
+import HomeWorkingHoursCard from './HomeWorkingHoursCard.vue'
 
-const { data, status } = useQuery({
-  key: ['todo'],
-  query: () => fetch('https://jsonplaceholder.typicode.com/todos/1').then((r) => r.json()),
-})
+const { t } = useI18n()
+
+const period = ref('today' as const)
+const { data, isLoading } = useAnalyticsQuery(period)
 </script>
 
 <template>
   <UPage :ui="{ root: 'px-12 max-w-7xl mx-auto' }" as="main">
     <UPageHeader
-      :title="$t('home.title')"
-      :description="$t('home.description')"
+      :title="t('home.title')"
+      :description="t('home.description')"
       :ui="{ root: 'border-none' }"
     />
     <UPageBody>
-      <div class="grid grid-cols-3 gap-4">
-        <div class="col-span-2">
-          <UPageCard
-            title="Tailwind CSS"
-            description="Nuxt UI integrates with latest Tailwind CSS, bringing significant improvements."
-            icon="i-simple-icons-tailwindcss"
-            to="https://tailwindcss.com/docs/v4-beta"
-            target="_blank"
-            variant="soft"
-          />
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+        <!-- Left column -->
+        <div class="space-y-6">
+          <UpcomingAppointmentsWidget />
+          <ActionAppointmentsWidget />
         </div>
-        <div class="col-span-1">
-          <UPageCard
-            title="Tailwind CSS"
-            description="Nuxt UI integrates with latest Tailwind CSS, bringing significant improvements."
-            icon="i-simple-icons-tailwindcss"
-            to="https://tailwindcss.com/docs/v4-beta"
-            target="_blank"
-            variant="soft"
-          />
+
+        <!-- Right column: stat cards -->
+        <div class="space-y-4">
+          <HomeEarnedTodayCard :earned="data?.earned" :loading="isLoading" />
+          <HomeCompletedCountCard :count="data?.completed_count" :loading="isLoading" />
+          <HomeWorkingHoursCard :minutes="data?.working_minutes" :loading="isLoading" />
         </div>
       </div>
-
-      <UButton class="mt-4">Nuxt UI works</UButton>
-      <pre class="mt-4 text-sm">{{ status }} {{ data }}</pre>
     </UPageBody>
   </UPage>
 </template>
