@@ -31,7 +31,7 @@ const items = computed<TimelineItem[]>(() =>
         : t('appointments.unknownClient')
       const svcList = a.service_ids
         .map((id) => props.services.find((s) => s.id === id)?.name)
-        .filter(Boolean)
+        .filter((n): n is string => Boolean(n))
         .join(', ')
       const time = new Intl.DateTimeFormat(undefined, {
         hour: '2-digit',

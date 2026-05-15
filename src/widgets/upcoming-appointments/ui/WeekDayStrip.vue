@@ -33,7 +33,7 @@ function isSameDay(a: Date, b: Date): boolean {
   <div class="flex gap-1">
     <button
       v-for="day in days"
-      :key="day.dayNum"
+      :key="day.date.toISOString()"
       type="button"
       class="flex flex-1 flex-col items-center rounded-xl px-2 py-2 text-center transition-colors"
       :class="
