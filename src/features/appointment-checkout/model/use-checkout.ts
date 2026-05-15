@@ -36,7 +36,7 @@ export function useCheckout(
       items: services.map((s, i) => ({
         service_id: s.id,
         name: s.name,
-        price: serviceAmounts.value[i],
+        price: serviceAmounts.value[i] ?? 0,
       })),
     }
   }
