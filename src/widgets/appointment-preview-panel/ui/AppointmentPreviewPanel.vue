@@ -7,6 +7,7 @@ import type { Service } from '@entities/service'
 import type { TimeFormat } from '@entities/master'
 import { getDateTimeInputValue } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
+import type { Sale, SaleItem } from '@entities/sale'
 
 const props = defineProps<{
   appointment: Appointment
@@ -15,6 +16,7 @@ const props = defineProps<{
   timeZone: string
   timeFormat: TimeFormat
   loading?: boolean
+  sale?: (Sale & { items: SaleItem[] }) | null
 }>()
 
 const emit = defineEmits<{
@@ -190,6 +192,32 @@ const nextStatusAction = computed<'confirm' | 'complete' | null>(() => {
           </p>
           <p class="whitespace-pre-wrap text-sm">{{ appointment.notes }}</p>
         </section>
+
+        <template v-if="appointment.status === 'completed' && sale">
+          <USeparator />
+          <section class="space-y-3">
+            <p class="text-xs font-semibold uppercase text-muted">
+              {{ $t('checkout.paymentInfo') }}
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="rounded-md bg-elevated p-3">
+                <p class="text-xs text-muted">{{ $t('checkout.paidAmount') }}</p>
+                <p class="mt-1 text-sm font-medium">{{ formats.price(sale.amount) }}</p>
+              </div>
+              <div class="rounded-md bg-elevated p-3">
+                <p class="text-xs text-muted">{{ $t('checkout.paidVia') }}</p>
+                <p class="mt-1 flex items-center gap-1.5 text-sm font-medium">
+                  <span
+                    v-if="sale.payment_type"
+                    class="inline-block h-2 w-2 shrink-0 rounded-full"
+                    :style="{ backgroundColor: sale.payment_type.color }"
+                  />
+                  {{ sale.payment_type?.name ?? '—' }}
+                </p>
+              </div>
+            </div>
+          </section>
+        </template>
       </div>
     </div>
 
