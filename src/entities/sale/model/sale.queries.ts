@@ -6,10 +6,8 @@ import type { CompleteSaleDto } from './types'
 export const useSaleByAppointmentQuery = (appointmentId: Ref<string | undefined>) =>
   useQuery({
     key: () => ['sale-by-appointment', appointmentId.value ?? ''],
-    query: () => {
-      if (!appointmentId.value) return Promise.resolve(null)
-      return getSaleByAppointmentId(appointmentId.value)
-    },
+    enabled: () => !!appointmentId.value,
+    query: () => getSaleByAppointmentId(appointmentId.value!),
   })
 
 export const useCompleteSaleMutation = (userId: Ref<string>) => {
