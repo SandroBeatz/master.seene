@@ -54,7 +54,7 @@ interface FormState {
 
 const state = reactive<FormState>({
   name: '',
-  color: COLOR_PALETTE[0],
+  color: COLOR_PALETTE[0]!,
 })
 
 function resetForm() {
@@ -63,7 +63,7 @@ function resetForm() {
     state.color = props.paymentType.color
   } else {
     state.name = ''
-    state.color = COLOR_PALETTE[0]
+    state.color = COLOR_PALETTE[0]!
   }
 }
 

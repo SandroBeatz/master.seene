@@ -10,7 +10,11 @@ import { useSessionStore } from '@entities/session'
 import type { Service } from '@entities/service'
 import { useServicesQuery } from '@entities/service'
 import type { TimeBlock } from '@entities/time-block'
+import { useCompleteSaleMutation, useSaleByAppointmentQuery } from '@entities/sale'
+import type { CompleteSaleDto } from '@entities/sale'
+import { usePaymentTypesQuery } from '@entities/payment-type'
 import { AppointmentFormDialog } from '@features/appointment-form'
+import { AppointmentCheckoutModal } from '@features/appointment-checkout'
 import { TimeBlockFormDialog } from '@features/time-block-form'
 import { AppointmentPreviewPanel } from '@widgets/appointment-preview-panel'
 import {
@@ -34,6 +38,9 @@ const timeBlockLabel = computed(() => t('timeBlocks.calendarTitle'))
 const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
 const updateAppointmentMutation = useUpdateAppointmentMutation(userId)
+const completeSaleMutation = useCompleteSaleMutation(userId)
+const { data: paymentTypes } = usePaymentTypesQuery(userId)
+
 const { calendarEvents, onDatesSet } = useCalendarEvents(
   userId,
   unknownClientLabel,
@@ -87,6 +94,9 @@ const isCancelConfirmOpen = ref(false)
 const selectedStartAt = ref<string | undefined>(undefined)
 const selectedAppointment = ref<Appointment | undefined>(undefined)
 const selectedTimeBlock = ref<TimeBlock | undefined>(undefined)
+const isCheckoutOpen = ref(false)
+const selectedAppointmentId = computed(() => selectedAppointment.value?.id)
+const { data: selectedSale } = useSaleByAppointmentQuery(selectedAppointmentId)
 const selectedClient = computed<Client | undefined>(() =>
   selectedAppointment.value
     ? clients.value?.find((client) => client.id === selectedAppointment.value?.client_id)
@@ -151,6 +161,25 @@ function requestCancelAppointment() {
 async function confirmCancelAppointment() {
   await updateSelectedAppointmentStatus('cancelled')
   isCancelConfirmOpen.value = false
+}
+
+async function handleCheckoutConfirm(payload: CompleteSaleDto) {
+  try {
+    await completeSaleMutation.mutateAsync(payload)
+    if (selectedAppointment.value) {
+      selectedAppointment.value = { ...selectedAppointment.value, status: 'completed' }
+    }
+    isCheckoutOpen.value = false
+    toast.add({ title: t('checkout.successTitle'), color: 'success' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (message.includes('already_completed')) {
+      toast.add({ title: t('checkout.alreadyCompleted'), color: 'warning' })
+      isCheckoutOpen.value = false
+    } else {
+      toast.add({ title: t('checkout.errorTitle'), color: 'error' })
+    }
+  }
 }
 
 function openCreateMenu() {
@@ -257,13 +286,14 @@ function openTimeBlockCreate() {
         :appointment="selectedAppointment"
         :client="selectedClient"
         :services="selectedServices"
+        :sale="selectedSale"
         :time-zone="masterPreferencesStore.timeZone"
         :time-format="masterPreferencesStore.timeFormat"
         :loading="updateAppointmentMutation.isLoading.value"
         @edit="openAppointmentEdit"
         @cancel="requestCancelAppointment"
         @confirm="updateSelectedAppointmentStatus('confirmed')"
-        @complete="updateSelectedAppointmentStatus('completed')"
+        @complete="isCheckoutOpen = true"
       />
     </template>
   </USlideover>
@@ -289,6 +319,17 @@ function openTimeBlockCreate() {
       </UButton>
     </template>
   </UModal>
+
+  <AppointmentCheckoutModal
+    v-if="selectedAppointment"
+    :open="isCheckoutOpen"
+    :appointment="selectedAppointment"
+    :services="selectedServices"
+    :payment-types="paymentTypes ?? []"
+    :loading="completeSaleMutation.isLoading.value"
+    @update:open="isCheckoutOpen = $event"
+    @confirm="handleCheckoutConfirm"
+  />
 
   <UModal
     v-model:open="isCreateMenuOpen"
