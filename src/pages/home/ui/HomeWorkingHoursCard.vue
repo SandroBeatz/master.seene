@@ -3,14 +3,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
-  minutes: number | null | undefined
+  minutes: number | undefined
   loading: boolean
 }>()
 
 const { t } = useI18n()
 
 const label = computed(() => {
-  if (props.minutes === null || props.minutes === undefined) return '—'
+  if (props.minutes === undefined) return '—'
   const totalMinutes = props.minutes
   if (totalMinutes === 0) return `0 ${t('analytics.hoursUnit')}`
   const h = Math.floor(totalMinutes / 60)

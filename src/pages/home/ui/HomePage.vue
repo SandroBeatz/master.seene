@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { AnalyticsPeriod } from '@entities/analytics'
 import { useAnalyticsQuery } from '@entities/analytics'
 import { ActionAppointmentsWidget } from '@widgets/action-appointments'
 import { UpcomingAppointmentsWidget } from '@widgets/upcoming-appointments'
@@ -10,7 +11,7 @@ import HomeWorkingHoursCard from './HomeWorkingHoursCard.vue'
 
 const { t } = useI18n()
 
-const period = ref('today' as const)
+const period = ref<AnalyticsPeriod>('today')
 const { data, isLoading } = useAnalyticsQuery(period)
 </script>
 

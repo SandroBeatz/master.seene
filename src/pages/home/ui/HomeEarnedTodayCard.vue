@@ -30,7 +30,7 @@ const formats = useFormats()
             {{ formats.price(props.earned ?? 0) }}
           </p>
         </div>
-        <UIcon name="i-lucide-arrow-right" class="size-5 shrink-0 text-muted" />
+        <UIcon name="i-lucide-arrow-right" class="size-5 shrink-0 text-muted" aria-hidden="true" />
       </div>
     </RouterLink>
   </UPageCard>
