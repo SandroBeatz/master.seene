@@ -11,7 +11,6 @@ CREATE TABLE sale (
 );
 
 CREATE INDEX sale_user_id_idx        ON sale(user_id);
-CREATE INDEX sale_appointment_id_idx ON sale(appointment_id);
 CREATE INDEX sale_paid_at_idx        ON sale(paid_at);
 
 ALTER TABLE sale ENABLE ROW LEVEL SECURITY;
@@ -83,7 +82,7 @@ BEGIN
   VALUES (v_user_id, p_appointment_id, v_client_id, p_payment_type_id, p_amount)
   RETURNING id INTO v_sale_id;
 
-  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+  FOR v_item IN SELECT * FROM jsonb_array_elements(COALESCE(p_items, '[]'))
   LOOP
     INSERT INTO sale_item (sale_id, service_id, name_snapshot, price_snapshot)
     VALUES (
