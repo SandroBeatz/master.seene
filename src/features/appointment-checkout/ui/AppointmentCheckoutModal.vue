@@ -23,7 +23,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const formats = useFormats()
 
-const { amount, selectedPaymentTypeId, canSubmit, buildPayload } = useCheckout(
+const { serviceAmounts, total, selectedPaymentTypeId, canSubmit, buildPayload } = useCheckout(
   props.appointment,
   props.services,
   props.paymentTypes,
@@ -51,12 +51,21 @@ function handleConfirm() {
           </p>
           <div class="divide-y divide-default rounded-md border border-default">
             <div
-              v-for="service in services"
+              v-for="(service, i) in services"
               :key="service.id"
-              class="flex items-center justify-between px-3 py-2 text-sm"
+              class="flex items-center justify-between gap-3 px-3 py-2 text-sm"
             >
-              <span>{{ service.name }}</span>
-              <span class="font-medium">{{ formats.price(service.price) }}</span>
+              <span class="flex-1 truncate">{{ service.name }}</span>
+              <UInput
+                v-if="services.length > 1"
+                v-model.number="serviceAmounts[i]"
+                type="number"
+                min="0"
+                step="1"
+                size="sm"
+                class="w-28"
+              />
+              <span v-else class="font-medium">{{ formats.price(service.price) }}</span>
             </div>
           </div>
         </div>
@@ -66,8 +75,12 @@ function handleConfirm() {
           <label class="text-xs font-semibold uppercase text-muted">
             {{ $t('checkout.total') }}
           </label>
+          <p v-if="services.length > 1" class="py-2 text-xl font-semibold">
+            {{ formats.price(total) }}
+          </p>
           <UInput
-            v-model.number="amount"
+            v-else
+            v-model.number="serviceAmounts[0]"
             type="number"
             min="0"
             step="1"
