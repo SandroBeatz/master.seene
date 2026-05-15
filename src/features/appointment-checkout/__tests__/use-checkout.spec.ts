@@ -46,23 +46,50 @@ const makePaymentType = (id: string, isDefault = false): PaymentType => ({
 })
 
 describe('useCheckout', () => {
-  it('sets default amount to sum of service prices', () => {
-    const { amount } = useCheckout(
+  it('initializes serviceAmounts to each service price', () => {
+    const { serviceAmounts } = useCheckout(
       makeAppointment(),
       [makeService('svc-1', 1200), makeService('svc-2', 800)],
       [makePaymentType('pt-1', true)],
     )
-    expect(amount.value).toBe(2000)
+    expect(serviceAmounts.value).toEqual([1200, 800])
   })
 
-  it('falls back to appointment.price when no services', () => {
-    const { amount } = useCheckout(makeAppointment({ price: 1500 }), [], [makePaymentType('pt-1', true)])
-    expect(amount.value).toBe(1500)
+  it('total is the sum of serviceAmounts', () => {
+    const { total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200), makeService('svc-2', 800)],
+      [makePaymentType('pt-1', true)],
+    )
+    expect(total.value).toBe(2000)
   })
 
-  it('defaults to 0 when no services and appointment.price is null', () => {
-    const { amount } = useCheckout(makeAppointment({ price: null }), [], [makePaymentType('pt-1', true)])
-    expect(amount.value).toBe(0)
+  it('total updates reactively when a serviceAmount changes', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200), makeService('svc-2', 800)],
+      [makePaymentType('pt-1', true)],
+    )
+    serviceAmounts.value[0] = 900
+    expect(total.value).toBe(1700)
+  })
+
+  it('falls back to [appointment.price] when no services', () => {
+    const { serviceAmounts } = useCheckout(
+      makeAppointment({ price: 1500 }),
+      [],
+      [makePaymentType('pt-1', true)],
+    )
+    expect(serviceAmounts.value).toEqual([1500])
+  })
+
+  it('defaults to [0] when no services and appointment.price is null', () => {
+    const { serviceAmounts } = useCheckout(
+      makeAppointment({ price: null }),
+      [],
+      [makePaymentType('pt-1', true)],
+    )
+    expect(serviceAmounts.value).toEqual([0])
   })
 
   it('pre-selects the default payment type', () => {
@@ -88,13 +115,22 @@ describe('useCheckout', () => {
     expect(selectedPaymentTypeId.value).toBeNull()
   })
 
-  it('canSubmit is false when amount is 0', () => {
-    const { amount, canSubmit } = useCheckout(
+  it('canSubmit is false when total is 0', () => {
+    const { canSubmit } = useCheckout(
       makeAppointment({ price: null }),
       [],
       [makePaymentType('pt-1', true)],
     )
-    amount.value = 0
+    expect(canSubmit.value).toBe(false)
+  })
+
+  it('canSubmit is false when any serviceAmount is negative', () => {
+    const { serviceAmounts, canSubmit } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200), makeService('svc-2', 800)],
+      [makePaymentType('pt-1', true)],
+    )
+    serviceAmounts.value[0] = -10
     expect(canSubmit.value).toBe(false)
   })
 
@@ -108,7 +144,7 @@ describe('useCheckout', () => {
     expect(canSubmit.value).toBe(false)
   })
 
-  it('canSubmit is true when amount > 0 and payment type is selected', () => {
+  it('canSubmit is true when total > 0 and payment type is selected', () => {
     const { canSubmit } = useCheckout(
       makeAppointment(),
       [makeService('svc-1', 1000)],
@@ -117,20 +153,20 @@ describe('useCheckout', () => {
     expect(canSubmit.value).toBe(true)
   })
 
-  it('buildPayload returns dto with correct amount, paymentTypeId, and items', () => {
+  it('buildPayload uses serviceAmounts as item prices and total as sale amount', () => {
     const services = [makeService('svc-1', 1200), makeService('svc-2', 800)]
-    const { buildPayload, amount } = useCheckout(
+    const { serviceAmounts, buildPayload } = useCheckout(
       makeAppointment(),
       services,
       [makePaymentType('pt-1', true)],
     )
-    amount.value = 1800
+    serviceAmounts.value[0] = 1000
     expect(buildPayload()).toEqual({
       appointment_id: 'appt-1',
       amount: 1800,
       payment_type_id: 'pt-1',
       items: [
-        { service_id: 'svc-1', name: 'Service svc-1', price: 1200 },
+        { service_id: 'svc-1', name: 'Service svc-1', price: 1000 },
         { service_id: 'svc-2', name: 'Service svc-2', price: 800 },
       ],
     })
