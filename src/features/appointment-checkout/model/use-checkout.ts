@@ -9,31 +9,37 @@ export function useCheckout(
   services: Service[],
   paymentTypes: PaymentType[],
 ) {
-  const defaultAmount =
+  const serviceAmounts = ref<number[]>(
     services.length > 0
-      ? services.reduce((sum, s) => sum + s.price, 0)
-      : (appointment.price ?? 0)
+      ? services.map((s) => s.price)
+      : [appointment.price ?? 0],
+  )
 
-  const amount = ref<number>(defaultAmount)
+  const total = computed(() => serviceAmounts.value.reduce((sum, a) => sum + a, 0))
 
   const defaultPaymentType =
     paymentTypes.find((pt) => pt.is_default) ?? paymentTypes[0] ?? null
   const selectedPaymentTypeId = ref<string | null>(defaultPaymentType?.id ?? null)
 
-  const canSubmit = computed(() => amount.value > 0 && selectedPaymentTypeId.value !== null)
+  const canSubmit = computed(
+    () =>
+      serviceAmounts.value.every((a) => a >= 0) &&
+      total.value > 0 &&
+      selectedPaymentTypeId.value !== null,
+  )
 
   function buildPayload(): CompleteSaleDto {
     return {
       appointment_id: appointment.id,
-      amount: amount.value,
+      amount: total.value,
       payment_type_id: selectedPaymentTypeId.value!,
-      items: services.map((s) => ({
+      items: services.map((s, i) => ({
         service_id: s.id,
         name: s.name,
-        price: s.price,
+        price: serviceAmounts.value[i],
       })),
     }
   }
 
-  return { amount, selectedPaymentTypeId, canSubmit, buildPayload }
+  return { serviceAmounts, total, selectedPaymentTypeId, canSubmit, buildPayload }
 }
