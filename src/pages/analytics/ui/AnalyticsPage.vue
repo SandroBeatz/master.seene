@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AnalyticsPeriod } from '@entities/analytics'
 import { useAnalyticsQuery } from '@entities/analytics'
@@ -9,8 +9,7 @@ import AnalyticsTopServices from './AnalyticsTopServices.vue'
 
 const { t } = useI18n()
 const period = ref<AnalyticsPeriod>('today')
-const { data, status } = useAnalyticsQuery(period)
-const isLoading = computed(() => status.value === 'pending')
+const { data, isLoading } = useAnalyticsQuery(period)
 </script>
 
 <template>
