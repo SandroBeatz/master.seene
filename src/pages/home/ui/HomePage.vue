@@ -16,27 +16,32 @@ const { data, isLoading } = useAnalyticsQuery(period)
 </script>
 
 <template>
-  <UPage :ui="{ root: 'px-12 max-w-7xl mx-auto' }" as="main">
-    <UPageHeader
-      :title="t('home.title')"
-      :description="t('home.description')"
-      :ui="{ root: 'border-none' }"
-    />
-    <UPageBody>
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
-        <!-- Left column -->
-        <div class="space-y-6">
-          <UpcomingAppointmentsWidget />
-          <ActionAppointmentsWidget />
-        </div>
-
-        <!-- Right column: stat cards -->
-        <div class="space-y-4">
+  <UTheme
+    :ui="{
+      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
+      pageHeader: { root: 'border-none pb-2' },
+    }"
+  >
+    <UPage as="main">
+      <UPageHeader
+        :title="t('home.title')"
+        :description="t('home.description')"
+        :ui="{ root: 'border-none' }"
+      />
+      <UPageBody>
+        <div class="grid grid-cols-3 gap-10">
           <HomeEarnedTodayCard :earned="data?.earned" :loading="isLoading" />
           <HomeCompletedCountCard :count="data?.completed_count" :loading="isLoading" />
           <HomeWorkingHoursCard :minutes="data?.working_minutes" :loading="isLoading" />
         </div>
-      </div>
-    </UPageBody>
-  </UPage>
+        <div class="grid grid-cols-3 gap-10">
+          <div class="col-span-2">
+            <ActionAppointmentsWidget />
+          </div>
+
+          <UpcomingAppointmentsWidget />
+        </div>
+      </UPageBody>
+    </UPage>
+  </UTheme>
 </template>

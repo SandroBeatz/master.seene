@@ -63,9 +63,9 @@ const footerItems = computed(() => [
 ])
 
 const navigationUI = {
-  root: 'bg-white dark:bg-zinc-800 rounded-4xl w-14 shadow-md',
-  link: 'cursor-pointer rounded-4xl justify-center size-14 text-zinc-400 hover:text-zinc-600 before:rounded-4xl aria-[current=page]:before:bg-zinc-900',
-  linkLeadingIcon: 'group-aria-[current=page]:text-amber-400',
+  root: 'bg-white dark:bg-neutral-800 rounded-4xl w-14 shadow-md',
+  link: 'cursor-pointer rounded-4xl justify-center size-14 text-neutral-400 hover:text-neutral-600 before:rounded-4xl aria-[current=page]:before:bg-neutral-900',
+  linkLeadingIcon: 'group-aria-[current=page]:text-neutral-50',
 }
 
 const notifications = ref([
