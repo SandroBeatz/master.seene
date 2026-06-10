@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@shared/lib/supabase'
+import { fetchSessionProfile } from '../api/session.api'
 
 export interface SessionProfile {
   id: string
@@ -18,12 +19,7 @@ export const useSessionStore = defineStore('session', () => {
   let _processingPromise: Promise<void> | null = null
 
   async function fetchProfile(userId: string): Promise<void> {
-    const { data } = await supabase
-      .from('master_profile')
-      .select('id, first_name, last_name')
-      .eq('user_id', userId)
-      .maybeSingle()
-    profile.value = data ?? null
+    profile.value = await fetchSessionProfile(userId)
   }
 
   function waitForReady(): Promise<void> {
