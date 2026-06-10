@@ -67,6 +67,16 @@ export default {
         bookedThisMonth: 'booked this month',
       },
     },
+    nextUp: {
+      title: 'Next up',
+      noAppointments: 'No upcoming appointments',
+      needAction: '{n} need action',
+      statusPending: 'Needs confirmation',
+      statusUpcoming: 'Upcoming',
+      decline: 'Decline',
+      confirm: 'Confirm',
+      complete: 'Complete',
+    },
   },
   calendar: {
     title: 'Calendar',

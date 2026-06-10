@@ -66,6 +66,16 @@ export default {
         bookedThisMonth: 'забронировано в месяце',
       },
     },
+    nextUp: {
+      title: 'Следующий визит',
+      noAppointments: 'Нет предстоящих записей',
+      needAction: '{n} требует действий',
+      statusPending: 'Нужно подтвердить',
+      statusUpcoming: 'Предстоит',
+      decline: 'Отклонить',
+      confirm: 'Подтвердить',
+      complete: 'Завершить',
+    },
   },
   calendar: {
     title: 'Календарь',

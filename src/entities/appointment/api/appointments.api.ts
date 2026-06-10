@@ -62,3 +62,18 @@ export async function listActionableAppointments(userId: string): Promise<Appoin
   if (error) throw error
   return data as Appointment[]
 }
+
+export async function getNextAppointment(userId: string): Promise<Appointment | null> {
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', ['pending', 'confirmed'])
+    .gte('start_at', now)
+    .order('start_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data as Appointment | null
+}

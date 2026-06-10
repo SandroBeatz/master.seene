@@ -66,6 +66,16 @@ export default {
         bookedThisMonth: 'réservé ce mois-ci',
       },
     },
+    nextUp: {
+      title: 'Prochain',
+      noAppointments: 'Aucun rendez-vous à venir',
+      needAction: '{n} à traiter',
+      statusPending: 'À confirmer',
+      statusUpcoming: 'À venir',
+      decline: 'Refuser',
+      confirm: 'Confirmer',
+      complete: 'Terminer',
+    },
   },
   calendar: {
     title: 'Calendrier',
