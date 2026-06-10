@@ -5,6 +5,8 @@ import { supabase } from '@shared/lib/supabase'
 
 export interface SessionProfile {
   id: string
+  first_name: string
+  last_name: string
 }
 
 export const useSessionStore = defineStore('session', () => {
@@ -18,7 +20,7 @@ export const useSessionStore = defineStore('session', () => {
   async function fetchProfile(userId: string): Promise<void> {
     const { data } = await supabase
       .from('master_profile')
-      .select('id')
+      .select('id, first_name, last_name')
       .eq('user_id', userId)
       .maybeSingle()
     profile.value = data ?? null

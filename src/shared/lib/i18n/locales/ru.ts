@@ -28,6 +28,12 @@ export default {
   home: {
     title: 'Главная',
     description: 'Добро пожаловать на ваш дашборд.',
+    greeting: {
+      morning: 'Доброе утро!',
+      afternoon: 'Добрый день!',
+      evening: 'Добрый вечер!',
+      night: 'Доброй ночи!',
+    },
     earnedToday: 'Заработано сегодня',
     completedCount: 'Завершено записей',
     workingHours: 'Рабочих часов',

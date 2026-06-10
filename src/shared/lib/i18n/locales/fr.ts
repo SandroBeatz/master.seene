@@ -28,6 +28,12 @@ export default {
   home: {
     title: 'Accueil',
     description: 'Bon retour sur votre tableau de bord.',
+    greeting: {
+      morning: 'Bonjour !',
+      afternoon: 'Bon après-midi !',
+      evening: 'Bonsoir !',
+      night: 'Bonne nuit !',
+    },
     earnedToday: "Gagné aujourd'hui",
     completedCount: 'Rendez-vous terminés',
     workingHours: 'Heures de travail',

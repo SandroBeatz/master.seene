@@ -29,6 +29,12 @@ export default {
   home: {
     title: 'Home',
     description: 'Welcome back to your dashboard.',
+    greeting: {
+      morning: 'Good morning!',
+      afternoon: 'Good afternoon!',
+      evening: 'Good evening!',
+      night: 'Good night!',
+    },
     earnedToday: 'Earned today',
     completedCount: 'Appointments completed',
     workingHours: 'Working hours',
