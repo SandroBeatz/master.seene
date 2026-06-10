@@ -47,6 +47,25 @@ export default {
       title: 'Предстоящие записи',
       empty: 'Нет записей на этот день',
     },
+    overview: {
+      title: 'Обзор',
+      earnedToday: 'Заработано',
+      appointments: 'Записи',
+      workingHours: 'Рабочих часов',
+      period: {
+        day: 'День',
+        week: 'Неделя',
+        month: 'Месяц',
+      },
+      subtext: {
+        today: 'сегодня',
+        thisWeek: 'на этой неделе',
+        thisMonth: 'в этом месяце',
+        bookedToday: 'забронировано сегодня',
+        bookedThisWeek: 'забронировано на неделе',
+        bookedThisMonth: 'забронировано в месяце',
+      },
+    },
   },
   calendar: {
     title: 'Календарь',

@@ -47,6 +47,25 @@ export default {
       title: 'Prochains rendez-vous',
       empty: 'Aucun rendez-vous ce jour',
     },
+    overview: {
+      title: "Vue d'ensemble",
+      earnedToday: "Gagné aujourd'hui",
+      appointments: 'Rendez-vous',
+      workingHours: 'Heures de travail',
+      period: {
+        day: 'Jour',
+        week: 'Semaine',
+        month: 'Mois',
+      },
+      subtext: {
+        today: "aujourd'hui",
+        thisWeek: 'cette semaine',
+        thisMonth: 'ce mois-ci',
+        bookedToday: "réservé aujourd'hui",
+        bookedThisWeek: 'réservé cette semaine',
+        bookedThisMonth: 'réservé ce mois-ci',
+      },
+    },
   },
   calendar: {
     title: 'Calendrier',

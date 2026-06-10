@@ -48,6 +48,25 @@ export default {
       title: 'Upcoming appointments',
       empty: 'No appointments for this day',
     },
+    overview: {
+      title: 'Overview',
+      earnedToday: 'Earned today',
+      appointments: 'Appointments',
+      workingHours: 'Working hours',
+      period: {
+        day: 'Day',
+        week: 'Week',
+        month: 'Month',
+      },
+      subtext: {
+        today: 'today',
+        thisWeek: 'this week',
+        thisMonth: 'this month',
+        bookedToday: 'booked today',
+        bookedThisWeek: 'booked this week',
+        bookedThisMonth: 'booked this month',
+      },
+    },
   },
   calendar: {
     title: 'Calendar',
