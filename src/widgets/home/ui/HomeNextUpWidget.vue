@@ -37,13 +37,6 @@ const pendingCount = computed(
   () => appointments.value?.filter((a) => a.status === 'pending').length ?? 0,
 )
 
-const checkoutServices = computed<Service[]>(() => {
-  if (!checkoutAppointment.value) return []
-  return checkoutAppointment.value.service_ids
-    .map((id) => services.value?.find((s) => s.id === id))
-    .filter((s): s is Service => Boolean(s))
-})
-
 function getClient(appointment: Appointment) {
   return clients.value?.find((c) => c.id === appointment.client_id)
 }
@@ -81,9 +74,7 @@ async function handleConfirm(appointment: Appointment) {
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status: 'confirmed' })
     cache.invalidateQueries({ key: ['analytics'] })
-    if (new Date(appointment.start_at) > new Date()) {
-      await refresh()
-    }
+    await refresh()
   } catch {
     toast.add({ title: t('appointments.preview.statusUpdateError'), color: 'error' })
   }

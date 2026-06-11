@@ -39,6 +39,7 @@ export const useCreateAppointmentMutation = (userId: Ref<string>) => {
     mutation: (dto: CreateAppointmentDto) => createAppointment(userId.value, dto),
     onSettled: () => {
       cache.invalidateQueries({ key: ['appointments', userId.value] })
+      cache.invalidateQueries({ key: ['appointments-actionable', userId.value] })
       cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] })
     },
   })
@@ -50,6 +51,7 @@ export const useUpdateAppointmentMutation = (userId: Ref<string>) => {
     mutation: (dto: UpdateAppointmentDto) => updateAppointment(dto),
     onSettled: () => {
       cache.invalidateQueries({ key: ['appointments', userId.value] })
+      cache.invalidateQueries({ key: ['appointments-actionable', userId.value] })
       cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] })
     },
   })
@@ -61,6 +63,7 @@ export const useRemoveAppointmentMutation = (userId: Ref<string>) => {
     mutation: (id: string) => removeAppointment(id),
     onSettled: () => {
       cache.invalidateQueries({ key: ['appointments', userId.value] })
+      cache.invalidateQueries({ key: ['appointments-actionable', userId.value] })
       cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] })
     },
   })

@@ -24,7 +24,7 @@ const dateRange = computed(() => {
   return { from: from.toISOString(), to: to.toISOString() }
 })
 
-const { data: appointments, isLoading } = useAppointmentsQuery(userId, dateRange)
+const { data: appointments, isPending } = useAppointmentsQuery(userId, dateRange)
 const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
 
@@ -55,7 +55,7 @@ function handleSelect(appointment: Appointment) {
       :appointments="appointments ?? []"
       :clients="clients ?? []"
       :services="services ?? []"
-      :loading="isLoading"
+      :loading="isPending"
       :selected-date="selectedDate"
       @select="handleSelect"
     />
