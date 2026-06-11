@@ -46,8 +46,10 @@ export default {
     upcoming: {
       title: 'Prochains rendez-vous',
       empty: 'Aucun rendez-vous ce jour',
-      prevWeek: 'Semaine précédente',
-      nextWeek: 'Semaine suivante',
+      prevDay: 'Jour précédent',
+      nextDay: 'Jour suivant',
+      openCalendar: 'Ouvrir le calendrier',
+      more: 'Plus',
     },
     schedule: {
       title: 'Planning',

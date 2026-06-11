@@ -1,50 +1,99 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { useLocaleStore } from '@shared/lib/locale'
 
 const { t } = useI18n()
+const router = useRouter()
+const localeStore = useLocaleStore()
 const model = defineModel<Date>({ required: true })
 
-function getWeekStart(date: Date): Date {
-  const d = new Date(date)
+interface DayItem {
+  kind: 'day'
+  date: Date
+  label: string
+  dayNum: string
+  isToday: boolean
+}
+
+// Trailing slide that links to the full calendar page once the month window ends.
+interface MoreItem {
+  kind: 'more'
+}
+
+type CarouselItem = DayItem | MoreItem
+
+// One month window, fully materialised so the user can swipe to the last day in one go.
+const DAYS_TOTAL = 30
+
+function startOfToday(): Date {
+  const d = new Date()
   d.setHours(0, 0, 0, 0)
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
   return d
 }
 
-const windowStart = ref(getWeekStart(model.value))
+const today = startOfToday()
 
-watch(model, (val) => {
-  const ws = getWeekStart(val)
-  const we = new Date(ws)
-  we.setDate(we.getDate() + 6)
-  if (val < ws || val > we) {
-    windowStart.value = getWeekStart(val)
-  }
-})
-
-const monthYearLabel = computed(() =>
-  new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(model.value),
-)
-
-const days = computed(() => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(windowStart.value)
-    d.setDate(windowStart.value.getDate() + i)
-    const midnight = new Date(d)
-    midnight.setHours(0, 0, 0, 0)
+const days = computed<DayItem[]>(() => {
+  const weekdayFmt = new Intl.DateTimeFormat(localeStore.current, { weekday: 'short' })
+  return Array.from({ length: DAYS_TOTAL }, (_, i) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() + i)
     return {
-      date: d,
-      label: new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(d),
-      dayNum: String(d.getDate()),
-      isToday: midnight.getTime() === today.getTime(),
+      kind: 'day' as const,
+      date,
+      label: weekdayFmt.format(date),
+      dayNum: String(date.getDate()),
+      isToday: i === 0,
     }
   })
 })
+
+const items = computed<CarouselItem[]>(() => [...days.value, { kind: 'more' }])
+
+// Index of the leading visible slide; drives the month/year header.
+const leadingIndex = ref(0)
+
+const monthYearLabel = computed(() => {
+  const date = days.value[Math.min(leadingIndex.value, days.value.length - 1)]?.date ?? today
+  return new Intl.DateTimeFormat(localeStore.current, { month: 'long', year: 'numeric' }).format(date)
+})
+
+const carousel = useTemplateRef('carousel')
+
+// Index of the currently selected day within the window (-1 if outside it).
+const selectedIndex = computed(() => days.value.findIndex((d) => isSameDay(d.date, model.value)))
+
+function onSelect() {
+  const api = carousel.value?.emblaApi
+  if (!api) return
+  // Track the first slide actually in view so the month header follows the swipe.
+  const first = api.slidesInView()[0]
+  if (first !== undefined) leadingIndex.value = first
+}
+
+// Move the selection to a day and keep it on screen if it scrolled out of view.
+function selectDay(index: number) {
+  const day = days.value[index]
+  if (!day) return
+  model.value = day.date
+  const api = carousel.value?.emblaApi
+  if (api && !api.slidesInView().includes(index)) api.scrollTo(index)
+}
+
+function goPrev() {
+  if (selectedIndex.value > 0) selectDay(selectedIndex.value - 1)
+}
+
+function goNext() {
+  if (selectedIndex.value < 0) selectDay(0)
+  else if (selectedIndex.value < days.value.length - 1) selectDay(selectedIndex.value + 1)
+}
+
+function openCalendar() {
+  router.push({ name: 'calendar' })
+}
 
 function isSameDay(a: Date, b: Date): boolean {
   return (
@@ -52,18 +101,6 @@ function isSameDay(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   )
-}
-
-function prevWeek() {
-  const d = new Date(windowStart.value)
-  d.setDate(d.getDate() - 7)
-  windowStart.value = d
-}
-
-function nextWeek() {
-  const d = new Date(windowStart.value)
-  d.setDate(d.getDate() + 7)
-  windowStart.value = d
 }
 </script>
 
@@ -78,39 +115,62 @@ function nextWeek() {
             variant="ghost"
             size="xs"
             icon="i-lucide-chevron-left"
-            :aria-label="t('home.upcoming.prevWeek')"
-            @click="prevWeek"
+            :disabled="selectedIndex <= 0"
+            :aria-label="t('home.upcoming.prevDay')"
+            @click="goPrev"
           />
           <UButton
             color="neutral"
             variant="ghost"
             size="xs"
             icon="i-lucide-chevron-right"
-            :aria-label="t('home.upcoming.nextWeek')"
-            @click="nextWeek"
+            :disabled="selectedIndex === days.length - 1"
+            :aria-label="t('home.upcoming.nextDay')"
+            @click="goNext"
           />
         </div>
       </div>
     </template>
 
-    <div class="flex gap-1">
+    <UCarousel
+      ref="carousel"
+      v-slot="{ item }"
+      :items="items"
+      align="start"
+      wheel-gestures
+      :ui="{ item: 'basis-[calc(100%/7)] ps-1', container: 'ms-0' }"
+      @select="onSelect"
+    >
       <button
-        v-for="day in days"
-        :key="day.date.toISOString()"
+        v-if="item.kind === 'day'"
         type="button"
-        class="flex flex-1 flex-col items-center rounded-xl px-1 py-2 text-center transition-colors"
+        class="flex w-full flex-col items-center rounded-xl px-1 py-2 text-center transition-colors"
         :class="
-          isSameDay(day.date, model)
+          isSameDay(item.date, model)
             ? 'bg-inverted text-inverted'
-            : day.isToday
+            : item.isToday
               ? 'ring-1 ring-inset ring-primary/40 text-default hover:bg-elevated'
               : 'text-muted hover:bg-elevated hover:text-default'
         "
-        @click="model = day.date"
+        @click="model = item.date"
       >
-        <span class="text-xs font-medium uppercase leading-none">{{ day.label }}</span>
-        <span class="mt-1 text-sm font-semibold tabular-nums leading-none">{{ day.dayNum }}</span>
+        <span class="text-xs font-medium uppercase leading-none">{{ item.label }}</span>
+        <span class="mt-1 text-sm font-semibold tabular-nums leading-none">{{ item.dayNum }}</span>
+        <!-- Appointment-count dots are added in a separate task (master.seene-x4f). -->
       </button>
-    </div>
+
+      <button
+        v-else
+        type="button"
+        class="flex w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-muted transition-colors hover:bg-elevated hover:text-default"
+        :aria-label="t('home.upcoming.openCalendar')"
+        @click="openCalendar"
+      >
+        <UIcon name="i-lucide-calendar-days" class="size-5" />
+        <span class="text-[0.625rem] font-medium uppercase leading-none">
+          {{ t('home.upcoming.more') }}
+        </span>
+      </button>
+    </UCarousel>
   </UCard>
 </template>
