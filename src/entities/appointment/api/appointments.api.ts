@@ -58,15 +58,16 @@ export async function listActionableAppointments(userId: string): Promise<Appoin
     .select('*')
     .eq('user_id', userId)
     .in('status', ['pending', 'confirmed'])
-    .lt('start_at', now.toISOString())
     .order('start_at')
   if (error) throw error
 
-  // Only surface appointments whose end time (start + duration) has passed
+  // Surface pending appointments for any day (they always need action), and
+  // confirmed appointments only once their end time (start + duration) has passed.
   const nowMs = now.getTime()
-  return (data as Appointment[]).filter(
-    (a) => new Date(a.start_at).getTime() + a.duration * 60_000 <= nowMs,
-  )
+  return (data as Appointment[]).filter((a) => {
+    if (a.status === 'pending') return true
+    return new Date(a.start_at).getTime() + a.duration * 60_000 <= nowMs
+  })
 }
 
 export async function getNextAppointment(userId: string): Promise<Appointment | null> {

@@ -3,10 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQueryCache } from '@pinia/colada'
 import { useSessionStore } from '@entities/session'
-import {
-  useActionableAppointmentsQuery,
-  useUpdateAppointmentMutation,
-} from '@entities/appointment'
+import { useActionableAppointmentsQuery, useUpdateAppointmentMutation } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
 import { usePaymentTypesQuery } from '@entities/payment-type'
@@ -58,10 +55,12 @@ function getClientName(appointment: Appointment) {
 }
 
 function getServiceNames(appointment: Appointment): string {
-  return appointment.service_ids
-    .map((id) => services.value?.find((s) => s.id === id)?.name)
-    .filter(Boolean)
-    .join(', ') || '—'
+  return (
+    appointment.service_ids
+      .map((id) => services.value?.find((s) => s.id === id)?.name)
+      .filter(Boolean)
+      .join(', ') || '—'
+  )
 }
 
 function getCheckoutServices(appointment: Appointment): Service[] {
@@ -132,12 +131,7 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-base font-semibold">{{ t('home.nextUp.title') }}</h2>
-        <UBadge
-          v-if="pendingCount > 0"
-          color="warning"
-          variant="soft"
-          size="sm"
-        >
+        <UBadge v-if="pendingCount > 0" color="warning" variant="soft" size="sm">
           {{ t('home.nextUp.needAction', { n: pendingCount }) }}
         </UBadge>
       </div>
@@ -188,20 +182,10 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="text-sm font-medium truncate">{{ getClientName(appt) }}</span>
-            <UBadge
-              v-if="appt.status === 'pending'"
-              color="warning"
-              variant="soft"
-              size="xs"
-            >
+            <UBadge v-if="appt.status === 'pending'" color="warning" variant="soft" size="xs">
               {{ t('home.nextUp.statusPending') }}
             </UBadge>
-            <UBadge
-              v-else
-              color="neutral"
-              variant="soft"
-              size="xs"
-            >
+            <UBadge v-else color="neutral" variant="soft" size="xs">
               {{ t('home.nextUp.statusUpcoming') }}
             </UBadge>
           </div>
