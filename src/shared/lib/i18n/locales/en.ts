@@ -85,6 +85,9 @@ export default {
       decline: 'Decline',
       confirm: 'Confirm',
       complete: 'Complete',
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+      minutesLabel: '{n} min',
     },
   },
   calendar: {

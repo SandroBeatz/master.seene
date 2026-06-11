@@ -9,6 +9,7 @@ import { useServicesQuery } from '@entities/service'
 import { usePaymentTypesQuery } from '@entities/payment-type'
 import { useCompleteSaleMutation } from '@entities/sale'
 import { useFormats } from '@shared/lib/formats'
+import { useLocaleStore } from '@shared/lib/locale'
 import type { Appointment } from '@entities/appointment'
 import type { Service } from '@entities/service'
 import type { CompleteSaleDto } from '@entities/sale'
@@ -19,6 +20,7 @@ const toast = useToast()
 const cache = useQueryCache()
 const sessionStore = useSessionStore()
 const formats = useFormats()
+const localeStore = useLocaleStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
 const { data: appointments, isPending, refresh } = useActionableAppointmentsQuery(userId)
@@ -63,11 +65,44 @@ function getCheckoutServices(appointment: Appointment): Service[] {
 }
 
 function formatTime(isoString: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(isoString))
+  const d = new Date(isoString)
+  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formats.time(hhmm)
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+function isToday(isoString: string): boolean {
+  return isSameCalendarDay(new Date(isoString), new Date())
+}
+
+function isTomorrow(isoString: string): boolean {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return isSameCalendarDay(new Date(isoString), tomorrow)
+}
+
+function dateLabel(isoString: string): string {
+  if (isToday(isoString)) return t('home.nextUp.today')
+  if (isTomorrow(isoString)) return t('home.nextUp.tomorrow')
+  return new Intl.DateTimeFormat(localeStore.current, { day: 'numeric', month: 'short' }).format(
+    new Date(isoString),
+  )
+}
+
+// Accent color by status: pending → amber (primary), confirmed → violet.
+function accentBarClass(status: Appointment['status']): string {
+  return status === 'pending' ? 'bg-primary' : 'bg-violet-500'
+}
+
+function accentTextClass(status: Appointment['status']): string {
+  return status === 'pending' ? 'text-primary' : 'text-violet-500'
 }
 
 async function handleConfirm(appointment: Appointment) {
@@ -161,10 +196,24 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
         :key="appt.id"
         class="flex items-center gap-3 rounded-xl border border-default bg-default px-4 py-3"
       >
-        <!-- Time -->
-        <span class="w-10 shrink-0 text-xs font-medium text-muted tabular-nums">
-          {{ formatTime(appt.start_at) }}
-        </span>
+        <!-- Accent bar + time / date / duration -->
+        <div class="flex shrink-0 items-stretch gap-3">
+          <span class="w-1 rounded-full" :class="accentBarClass(appt.status)" />
+          <div class="flex w-14 flex-col justify-center">
+            <span class="text-sm font-bold tabular-nums leading-tight">
+              {{ formatTime(appt.start_at) }}
+            </span>
+            <span
+              class="text-xs font-medium leading-tight"
+              :class="isToday(appt.start_at) ? accentTextClass(appt.status) : 'text-muted'"
+            >
+              {{ dateLabel(appt.start_at) }}
+            </span>
+            <span class="text-xs text-muted leading-tight">
+              {{ t('home.nextUp.minutesLabel', { n: appt.duration }) }}
+            </span>
+          </div>
+        </div>
 
         <!-- Avatar -->
         <UAvatar :alt="getClientName(appt)" size="sm" class="shrink-0" />

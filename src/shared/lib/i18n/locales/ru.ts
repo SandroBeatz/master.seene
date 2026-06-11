@@ -84,6 +84,9 @@ export default {
       decline: 'Отклонить',
       confirm: 'Подтвердить',
       complete: 'Завершить',
+      today: 'Сегодня',
+      tomorrow: 'Завтра',
+      minutesLabel: '{n} мин',
     },
   },
   calendar: {
