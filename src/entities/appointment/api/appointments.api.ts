@@ -52,15 +52,21 @@ export async function removeAppointment(id: string): Promise<void> {
 }
 
 export async function listActionableAppointments(userId: string): Promise<Appointment[]> {
-  const now = new Date().toISOString()
+  const now = new Date()
   const { data, error } = await supabase
     .from('appointments')
     .select('*')
     .eq('user_id', userId)
-    .or(`status.eq.pending,and(status.eq.confirmed,start_at.lt.${now})`)
+    .in('status', ['pending', 'confirmed'])
+    .lt('start_at', now.toISOString())
     .order('start_at')
   if (error) throw error
-  return data as Appointment[]
+
+  // Only surface appointments whose end time (start + duration) has passed
+  const nowMs = now.getTime()
+  return (data as Appointment[]).filter(
+    (a) => new Date(a.start_at).getTime() + a.duration * 60_000 <= nowMs,
+  )
 }
 
 export async function getNextAppointment(userId: string): Promise<Appointment | null> {

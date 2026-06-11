@@ -47,6 +47,13 @@ export default {
     upcoming: {
       title: 'Upcoming appointments',
       empty: 'No appointments for this day',
+      prevWeek: 'Previous week',
+      nextWeek: 'Next week',
+    },
+    schedule: {
+      title: 'Schedule',
+      subtitle: 'for {date} · {n} appointments',
+      options: 'Options',
     },
     overview: {
       title: 'Overview',

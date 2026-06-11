@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@entities/session'
-import { useAppointmentsQuery } from '@entities/appointment'
+import { useAppointmentsQuery, type Appointment } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
-import WeekDayStrip from './WeekDayStrip.vue'
-import AppointmentTimeline from './AppointmentTimeline.vue'
+import { useMasterPreferencesStore } from '@entities/master'
+import { AppointmentPreviewPanel } from '@widgets/appointment-preview-panel'
+import ScheduleCalendar from './ScheduleCalendar.vue'
+import ScheduleTimeline from './ScheduleTimeline.vue'
 
-const { t } = useI18n()
 const sessionStore = useSessionStore()
+const masterPreferencesStore = useMasterPreferencesStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
 const selectedDate = ref(new Date())
+const previewOpen = ref(false)
+const selectedAppointment = ref<Appointment | null>(null)
 
 const dateRange = computed(() => {
   const d = selectedDate.value
@@ -24,17 +27,50 @@ const dateRange = computed(() => {
 const { data: appointments, isLoading } = useAppointmentsQuery(userId, dateRange)
 const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
+
+const selectedClient = computed(() =>
+  clients.value?.find((c) => c.id === selectedAppointment.value?.client_id) ?? null,
+)
+
+const selectedServices = computed(() =>
+  (selectedAppointment.value?.service_ids ?? [])
+    .map((id) => services.value?.find((s) => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s)),
+)
+
+function handleSelect(appointment: Appointment) {
+  selectedAppointment.value = appointment
+  previewOpen.value = true
+}
 </script>
 
 <template>
   <div class="space-y-3">
-    <p class="text-sm font-semibold uppercase text-muted">{{ t('home.upcoming.title') }}</p>
-    <WeekDayStrip v-model="selectedDate" />
-    <AppointmentTimeline
+    <ScheduleCalendar v-model="selectedDate" />
+    <ScheduleTimeline
       :appointments="appointments ?? []"
       :clients="clients ?? []"
       :services="services ?? []"
       :loading="isLoading"
+      :selected-date="selectedDate"
+      @select="handleSelect"
     />
   </div>
+
+  <USlideover v-model:open="previewOpen" side="right">
+    <template #content>
+      <AppointmentPreviewPanel
+        v-if="selectedAppointment"
+        :appointment="selectedAppointment"
+        :client="selectedClient"
+        :services="selectedServices ?? []"
+        :time-zone="masterPreferencesStore.timeZone"
+        :time-format="masterPreferencesStore.timeFormat"
+        @edit="previewOpen = false"
+        @cancel="previewOpen = false"
+        @confirm="previewOpen = false"
+        @complete="previewOpen = false"
+      />
+    </template>
+  </USlideover>
 </template>

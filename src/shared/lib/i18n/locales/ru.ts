@@ -46,6 +46,13 @@ export default {
     upcoming: {
       title: 'Предстоящие записи',
       empty: 'Нет записей на этот день',
+      prevWeek: 'Предыдущая неделя',
+      nextWeek: 'Следующая неделя',
+    },
+    schedule: {
+      title: 'Расписание',
+      subtitle: '{date} · {n} записей',
+      options: 'Параметры',
     },
     overview: {
       title: 'Обзор',

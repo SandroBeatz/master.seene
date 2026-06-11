@@ -46,6 +46,13 @@ export default {
     upcoming: {
       title: 'Prochains rendez-vous',
       empty: 'Aucun rendez-vous ce jour',
+      prevWeek: 'Semaine précédente',
+      nextWeek: 'Semaine suivante',
+    },
+    schedule: {
+      title: 'Planning',
+      subtitle: 'pour le {date} · {n} rendez-vous',
+      options: 'Options',
     },
     overview: {
       title: "Vue d'ensemble",
