@@ -4,7 +4,10 @@ export type {
   CreateAppointmentDto,
   UpdateAppointmentDto,
 } from './model/types'
-export type { AppointmentDateRange } from './model/appointment.queries'
+export type {
+  AppointmentDateRange,
+  AppointmentDayCountsRange,
+} from './model/appointment.queries'
 export {
   useAppointmentsQuery,
   useCreateAppointmentMutation,
@@ -12,6 +15,7 @@ export {
   useRemoveAppointmentMutation,
   useActionableAppointmentsQuery,
   useNextAppointmentQuery,
+  useAppointmentDayCountsQuery,
 } from './model/appointment.queries'
 export {
   listAppointments,
@@ -21,6 +25,8 @@ export {
   removeAppointment,
   listActionableAppointments,
   getNextAppointment,
+  listAppointmentDayCounts,
 } from './api/appointments.api'
+export type { AppointmentDayCount } from './api/appointments.api'
 export { APPOINTMENT_STATUS_VIEW } from './config/status'
 export type { AppointmentStatusViewConfig } from './config/status'

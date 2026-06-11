@@ -51,6 +51,31 @@ export async function removeAppointment(id: string): Promise<void> {
   if (error) throw error
 }
 
+export interface AppointmentDayCount {
+  /** Calendar day in the master's timezone, formatted as 'YYYY-MM-DD'. */
+  day: string
+  /** Number of non-cancelled appointments on that day. */
+  cnt: number
+}
+
+/**
+ * Per-day appointment counts for the current user over [from, to), grouped by
+ * calendar day in the given timezone. Backed by the `appointment_day_counts` RPC.
+ */
+export async function listAppointmentDayCounts(
+  from: string,
+  to: string,
+  timeZone: string,
+): Promise<AppointmentDayCount[]> {
+  const { data, error } = await supabase.rpc('appointment_day_counts', {
+    p_from: from,
+    p_to: to,
+    p_tz: timeZone,
+  })
+  if (error) throw error
+  return (data ?? []) as AppointmentDayCount[]
+}
+
 export async function listActionableAppointments(userId: string): Promise<Appointment[]> {
   const now = new Date()
   const { data, error } = await supabase

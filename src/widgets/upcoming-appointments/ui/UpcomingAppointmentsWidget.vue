@@ -46,7 +46,11 @@ function handleSelect(appointment: Appointment) {
 
 <template>
   <div class="space-y-3">
-    <ScheduleCalendar v-model="selectedDate" />
+    <ScheduleCalendar
+      v-model="selectedDate"
+      :user-id="userId"
+      :time-zone="masterPreferencesStore.timeZone"
+    />
     <ScheduleTimeline
       :appointments="appointments ?? []"
       :clients="clients ?? []"
