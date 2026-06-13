@@ -6,6 +6,7 @@ import { useMasterPreferencesStore } from '@entities/master'
 import type { MasterScheduleDayKey } from '@entities/master'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
+import { Typography } from '@shared/ui'
 
 const props = defineProps<{
   appointments: Appointment[]
@@ -180,30 +181,30 @@ function statusStyle(appointment: Appointment): Record<string, string> {
   if (!cfg) return {}
   return { borderLeftColor: cfg.borderColor, backgroundColor: cfg.backgroundColor }
 }
+
+// Nuxt UI overrides
+const hostUI = {
+  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
+  header: 'pb-0',
+}
 </script>
 
 <template>
-  <UCard
-    :ui="{
-      root: 'rounded-3xl shadow-panel ring-0 divide-y-0',
-      header: 'px-5 pb-2 pt-5',
-      body: 'px-5 pb-6 pt-3',
-    }"
-  >
+  <UCard :ui="hostUI">
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
-          <h2 class="text-lg font-bold leading-none text-highlighted">
-            {{ t('home.schedule.title') }}
-          </h2>
-          <p class="mt-1 truncate text-sm text-muted">
-            {{ t('home.schedule.subtitle', { date: subtitleDate, n: visibleAppointments.length }) }}
-          </p>
+          <Typography variant="h5" class="text-highlighted font-bold">{{
+            t('home.schedule.title')
+          }}</Typography>
+          <Typography variant="caption" class="text-muted">{{
+            t('home.schedule.subtitle', { date: subtitleDate, n: visibleAppointments.length })
+          }}</Typography>
         </div>
         <UButton
           color="neutral"
           variant="soft"
-          size="xs"
+          size="sm"
           icon="i-lucide-ellipsis"
           :aria-label="t('home.schedule.options')"
         />
@@ -216,13 +217,13 @@ function statusStyle(appointment: Appointment): Record<string, string> {
     </div>
 
     <!-- Empty -->
-    <div
+    <UEmpty
       v-else-if="!visibleAppointments.length"
-      class="flex items-center justify-center gap-2 rounded-xl border border-dashed border-default px-4 py-6"
-    >
-      <UIcon name="i-lucide-calendar-x" class="size-5 text-muted" />
-      <p class="text-sm text-muted">{{ t('home.upcoming.empty') }}</p>
-    </div>
+      variant="naked"
+      icon="i-lucide-calendar-x"
+      :description="t('home.upcoming.empty')"
+      :ui="{ root: 'rounded-lg border border-dashed border-default' }"
+    />
 
     <!-- Time grid -->
     <div v-else class="relative overflow-hidden" :style="{ height: totalHeight + 'px' }">
@@ -252,11 +253,10 @@ function statusStyle(appointment: Appointment): Record<string, string> {
       </template>
 
       <!-- Appointment blocks -->
-      <button
+      <div
         v-for="block in appointmentBlocks"
         :key="block.appointment.id"
-        type="button"
-        class="absolute overflow-hidden rounded-xl border-l-4 px-3 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        class="absolute overflow-hidden rounded-sm border-l-4 px-3 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         :style="{
           top: block.top + 'px',
           height: block.height + 'px',
@@ -275,12 +275,11 @@ function statusStyle(appointment: Appointment): Record<string, string> {
           }}</span>
         </div>
         <p
-          v-if="block.height >= SLOT_HEIGHT"
           class="text-[10px] text-muted truncate leading-tight mt-0.5"
         >
           {{ block.serviceNames }}
         </p>
-      </button>
+      </div>
 
       <!-- Now line -->
       <div

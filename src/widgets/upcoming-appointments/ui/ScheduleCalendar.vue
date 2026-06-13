@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useLocaleStore } from '@shared/lib/locale'
 import { useAppointmentDayCountsQuery, type AppointmentDayCountsRange } from '@entities/appointment'
+import { Typography } from '@shared/ui'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -135,24 +136,29 @@ function isSameDay(a: Date, b: Date): boolean {
     a.getDate() === b.getDate()
   )
 }
+
+// Nuxt UI overrides
+const hostUI = {
+  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
+  header: 'pb-0',
+}
+const buttonUI = {
+  base: 'flex h-18 w-full flex-col items-center justify-center gap-1 rounded-md border px-1 py-2 text-center transition-colors',
+}
 </script>
 
 <template>
-  <UCard
-    :ui="{
-      root: 'rounded-3xl shadow-panel ring-0 divide-y-0',
-      header: 'px-5 pb-2 pt-5',
-      body: 'px-4 pb-5 pt-2',
-    }"
-  >
+  <UCard :ui="hostUI">
     <template #header>
       <div class="flex items-center justify-between">
-        <span class="text-lg font-bold capitalize text-highlighted">{{ monthYearLabel }}</span>
+        <Typography variant="h5" class="text-highlighted font-bold">{{
+          monthYearLabel
+        }}</Typography>
         <div class="flex items-center gap-1">
           <UButton
             color="neutral"
             variant="soft"
-            size="xs"
+            size="sm"
             icon="i-lucide-chevron-left"
             :disabled="selectedIndex <= 0"
             :aria-label="t('home.upcoming.prevDay')"
@@ -161,7 +167,7 @@ function isSameDay(a: Date, b: Date): boolean {
           <UButton
             color="neutral"
             variant="soft"
-            size="xs"
+            size="sm"
             icon="i-lucide-chevron-right"
             :disabled="selectedIndex === days.length - 1"
             :aria-label="t('home.upcoming.nextDay')"
@@ -177,7 +183,7 @@ function isSameDay(a: Date, b: Date): boolean {
       :items="items"
       align="start"
       wheel-gestures
-      :ui="{ item: 'basis-[calc(100%/7)] ps-1.5', container: 'ms-0' }"
+      :ui="{ item: 'basis-[calc(100%/6)] ps-1', container: '-ms-1' }"
       @select="onSelect"
     >
       <UButton
@@ -185,26 +191,28 @@ function isSameDay(a: Date, b: Date): boolean {
         type="button"
         color="neutral"
         variant="ghost"
-        :ui="{
-          base: 'flex h-auto w-full flex-col items-center gap-1.5 rounded-2xl border px-1 py-3 text-center transition-colors',
-        }"
+        :ui="buttonUI"
         :class="
           isSameDay(item.date, model)
-            ? 'border-transparent bg-inverted text-inverted'
+            ? 'border-transparent bg-inverted text-inverted hover:bg-inverted/90'
             : item.isToday
               ? 'border-default text-default ring-1 ring-inset ring-primary/40 hover:bg-elevated'
               : 'border-default text-default hover:bg-elevated'
         "
         @click="model = item.date"
       >
-        <span
-          class="text-xs font-medium leading-none"
+        <Typography
+          variant="footnote"
+          class="font-medium"
           :class="isSameDay(item.date, model) ? 'opacity-70' : 'text-muted'"
         >
           {{ item.label }}
-        </span>
-        <span class="text-base font-bold tabular-nums leading-none">{{ item.dayNum }}</span>
-        <span class="flex h-1.5 items-center justify-center gap-0.5">
+        </Typography>
+
+        <Typography variant="h5" class="font-bold">
+          {{ item.dayNum }}
+        </Typography>
+        <span class="flex items-center justify-center gap-0.5">
           <span
             v-for="dot in appointmentDots(item.date)"
             :key="dot"
@@ -219,9 +227,7 @@ function isSameDay(a: Date, b: Date): boolean {
         type="button"
         color="neutral"
         variant="ghost"
-        :ui="{
-          base: 'flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-default px-1 py-3 text-center text-muted transition-colors hover:bg-elevated hover:text-default',
-        }"
+        :ui="buttonUI"
         :aria-label="t('home.upcoming.openCalendar')"
         @click="openCalendar"
       >
