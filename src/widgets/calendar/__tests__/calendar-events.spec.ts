@@ -14,6 +14,7 @@ const baseAppointment: Appointment = {
   duration: 45,
   price: null,
   status: 'confirmed',
+  source: 'manual',
   notes: null,
   created_at: '2026-05-01T09:00:00.000Z',
   updated_at: '2026-05-01T09:00:00.000Z',

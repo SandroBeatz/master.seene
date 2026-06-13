@@ -7,6 +7,7 @@ const APPOINTMENT_STATUSES: AppointmentStatus[] = [
   'completed',
   'cancelled',
   'no_show',
+  'expired',
 ]
 
 describe('APPOINTMENT_STATUS_VIEW', () => {

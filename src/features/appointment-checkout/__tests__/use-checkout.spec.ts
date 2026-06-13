@@ -13,6 +13,7 @@ const makeAppointment = (overrides?: Partial<Appointment>): Appointment => ({
   duration: 60,
   price: null,
   status: 'confirmed',
+  source: 'manual',
   notes: null,
   created_at: '2026-05-15T09:00:00Z',
   updated_at: '2026-05-15T09:00:00Z',

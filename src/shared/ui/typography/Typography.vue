@@ -20,17 +20,17 @@ defineOptions({ inheritAttrs: false })
 const variantClass = computed(() => {
   switch (props.variant) {
     case 'h1':
-      return 'text-5xl md:text-6xl'
-    case 'h2':
-      return 'text-3xl md:text-4xl'
-    case 'h3':
       return 'text-3xl'
-    case 'h4':
+    case 'h2':
       return 'text-2xl'
-    case 'h5':
+    case 'h3':
       return 'text-xl'
-    case 'h6':
+    case 'h4':
+      return 'text-lg'
+    case 'h5':
       return 'text-base'
+    case 'h6':
+      return 'text-sm'
     case 'body':
       return 'text-base'
     case 'blockquote':
@@ -38,9 +38,9 @@ const variantClass = computed(() => {
     case 'caption':
       return 'text-sm'
     case 'endnote':
-      return 'text-sm leading-snug'
+      return 'text-xs leading-snug'
     case 'footnote':
-      return 'text-xs'
+      return 'text-2xs'
     default:
       return ''
   }

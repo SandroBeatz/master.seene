@@ -15,20 +15,20 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
-    <div class="flex flex-col items-end mr-2">
+  <div class="flex items-center gap-3">
+    <div class="hidden flex-col items-end sm:flex">
       <Typography variant="endnote" class="text-muted">{{
         t('calendar.controls.today')
       }}</Typography>
-      <Typography class="font-semibold">{{ formattedDate }}</Typography>
+      <Typography class="font-semibold text-highlighted">{{ formattedDate }}</Typography>
     </div>
 
     <UButton
       color="neutral"
-      variant="ghost"
+      variant="solid"
       icon="i-lucide-bell"
       :aria-label="t('nav.notifications')"
-      class="rounded-full"
+      class="size-12 justify-center bg-default text-highlighted shadow-panel ring-1 ring-black/5 hover:bg-elevated dark:ring-white/5"
     />
   </div>
 </template>

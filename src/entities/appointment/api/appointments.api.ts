@@ -76,6 +76,11 @@ export async function listAppointmentDayCounts(
   return (data ?? []) as AppointmentDayCount[]
 }
 
+// How far back a past confirmed appointment stays in the "ready to check out"
+// feed. Beyond this it drops out of the widget so old un-closed records don't
+// pile up forever (the row itself stays in the DB).
+const CHECKOUT_WINDOW_DAYS = 14
+
 export async function listActionableAppointments(userId: string): Promise<Appointment[]> {
   const now = new Date()
   const { data, error } = await supabase
@@ -86,12 +91,15 @@ export async function listActionableAppointments(userId: string): Promise<Appoin
     .order('start_at')
   if (error) throw error
 
-  // Surface pending appointments for any day (they always need action), and
-  // confirmed appointments only once their end time (start + duration) has passed.
+  // Surface every pending appointment (they always need a response or a
+  // decision), and confirmed ones only once their end time has passed and they
+  // still fall within the checkout window.
   const nowMs = now.getTime()
+  const windowStartMs = nowMs - CHECKOUT_WINDOW_DAYS * 24 * 60 * 60 * 1000
   return (data as Appointment[]).filter((a) => {
     if (a.status === 'pending') return true
-    return new Date(a.start_at).getTime() + a.duration * 60_000 <= nowMs
+    const endMs = new Date(a.start_at).getTime() + a.duration * 60_000
+    return endMs <= nowMs && endMs >= windowStartMs
   })
 }
 

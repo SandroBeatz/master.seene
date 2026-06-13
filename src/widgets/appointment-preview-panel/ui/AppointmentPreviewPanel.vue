@@ -85,12 +85,7 @@ const nextStatusAction = computed<'confirm' | 'complete' | null>(() => {
           <p class="text-xl font-semibold">{{ clientName }}</p>
           <p class="mt-1 text-sm text-muted">{{ appointmentDateTime }}</p>
         </div>
-        <UBadge
-          :color="statusView.color"
-          :icon="statusView.icon"
-          variant="soft"
-          class="shrink-0"
-        >
+        <UBadge :color="statusView.color" :icon="statusView.icon" variant="soft" class="shrink-0">
           {{ $t(`appointments.status.${appointment.status}`) }}
         </UBadge>
       </div>

@@ -25,11 +25,13 @@ const greeting = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-4">
-    <UAvatar :src="avatarSrc" :alt="userName" size="3xl" />
-    <div class="flex flex-col gap-0.5">
+  <div class="flex min-w-0 items-center gap-4">
+    <UAvatar :src="avatarSrc" :alt="userName" size="3xl" class="ring-4 ring-default shadow-sm" />
+    <div class="flex min-w-0 flex-col gap-0.5">
       <Typography variant="caption" class="text-muted">{{ greeting }}</Typography>
-      <Typography variant="h5" class="font-bold">{{ userName }}</Typography>
+      <Typography variant="h5" class="truncate font-bold text-highlighted">{{
+        userName
+      }}</Typography>
     </div>
   </div>
 </template>

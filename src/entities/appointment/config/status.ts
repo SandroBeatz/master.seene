@@ -51,4 +51,12 @@ export const APPOINTMENT_STATUS_VIEW: Record<AppointmentStatus, AppointmentStatu
       backgroundColor: '#f8fafc',
     },
   },
+  expired: {
+    icon: 'i-lucide-hourglass',
+    color: 'neutral',
+    calendar: {
+      borderColor: '#94a3b8',
+      backgroundColor: '#f8fafc',
+    },
+  },
 }

@@ -88,7 +88,9 @@ const leadingIndex = ref(0)
 
 const monthYearLabel = computed(() => {
   const date = days.value[Math.min(leadingIndex.value, days.value.length - 1)]?.date ?? today
-  return new Intl.DateTimeFormat(localeStore.current, { month: 'long', year: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat(localeStore.current, { month: 'long', year: 'numeric' }).format(
+    date,
+  )
 })
 
 const carousel = useTemplateRef('carousel')
@@ -136,14 +138,20 @@ function isSameDay(a: Date, b: Date): boolean {
 </script>
 
 <template>
-  <UCard>
+  <UCard
+    :ui="{
+      root: 'rounded-3xl shadow-panel ring-0 divide-y-0',
+      header: 'px-5 pb-2 pt-5',
+      body: 'px-4 pb-5 pt-2',
+    }"
+  >
     <template #header>
       <div class="flex items-center justify-between">
-        <span class="text-sm font-semibold capitalize">{{ monthYearLabel }}</span>
+        <span class="text-lg font-bold capitalize text-highlighted">{{ monthYearLabel }}</span>
         <div class="flex items-center gap-1">
           <UButton
             color="neutral"
-            variant="ghost"
+            variant="soft"
             size="xs"
             icon="i-lucide-chevron-left"
             :disabled="selectedIndex <= 0"
@@ -152,7 +160,7 @@ function isSameDay(a: Date, b: Date): boolean {
           />
           <UButton
             color="neutral"
-            variant="ghost"
+            variant="soft"
             size="xs"
             icon="i-lucide-chevron-right"
             :disabled="selectedIndex === days.length - 1"
@@ -172,10 +180,14 @@ function isSameDay(a: Date, b: Date): boolean {
       :ui="{ item: 'basis-[calc(100%/7)] ps-1.5', container: 'ms-0' }"
       @select="onSelect"
     >
-      <button
+      <UButton
         v-if="item.kind === 'day'"
         type="button"
-        class="flex w-full flex-col items-center gap-1.5 rounded-2xl border px-1 py-3 text-center transition-colors"
+        color="neutral"
+        variant="ghost"
+        :ui="{
+          base: 'flex h-auto w-full flex-col items-center gap-1.5 rounded-2xl border px-1 py-3 text-center transition-colors',
+        }"
         :class="
           isSameDay(item.date, model)
             ? 'border-transparent bg-inverted text-inverted'
@@ -200,18 +212,22 @@ function isSameDay(a: Date, b: Date): boolean {
             :class="isSameDay(item.date, model) ? 'bg-current' : 'bg-violet-500'"
           />
         </span>
-      </button>
+      </UButton>
 
-      <button
+      <UButton
         v-else
         type="button"
-        class="flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-default px-1 py-3 text-center text-muted transition-colors hover:bg-elevated hover:text-default"
+        color="neutral"
+        variant="ghost"
+        :ui="{
+          base: 'flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-default px-1 py-3 text-center text-muted transition-colors hover:bg-elevated hover:text-default',
+        }"
         :aria-label="t('home.upcoming.openCalendar')"
         @click="openCalendar"
       >
         <UIcon name="i-lucide-calendar-days" class="size-5" />
         <span class="text-[0.625rem] font-medium leading-none">{{ t('home.upcoming.more') }}</span>
-      </button>
+      </UButton>
     </UCarousel>
   </UCard>
 </template>

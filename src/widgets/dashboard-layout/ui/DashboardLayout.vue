@@ -63,9 +63,9 @@ const footerItems = computed(() => [
 ])
 
 const navigationUI = {
-  root: 'bg-white dark:bg-neutral-800 rounded-4xl w-14 shadow-md',
-  link: 'cursor-pointer rounded-4xl justify-center size-14 text-neutral-400 hover:text-neutral-600 before:rounded-4xl aria-[current=page]:before:bg-neutral-900',
-  linkLeadingIcon: 'group-aria-[current=page]:text-neutral-50',
+  root: 'w-14 rounded-4xl bg-default p-1 shadow-panel ring-1 ring-black/5 dark:ring-white/5',
+  link: 'size-12 cursor-pointer justify-center rounded-full p-0 text-dimmed before:rounded-full hover:text-default aria-[current=page]:text-inverted aria-[current=page]:before:bg-inverted',
+  linkLeadingIcon: 'size-5 group-aria-[current=page]:text-inverted',
 }
 
 const notifications = ref([
@@ -80,9 +80,17 @@ const notifications = ref([
 
 <template>
   <UDashboardGroup storage="local" storage-key="dashboard">
-    <UDashboardSidebar collapsed :ui="{ root: 'min-w-24 w-(--width) border-none items-center' }">
+    <UDashboardSidebar
+      collapsed
+      :ui="{
+        root: 'min-w-24 w-(--width) items-center border-none bg-transparent',
+        header: 'h-auto justify-center px-5 pb-3 pt-8',
+        body: 'items-center gap-6 px-5 py-3',
+        footer: 'items-center px-5 pb-8 pt-3',
+      }"
+    >
       <template #header>
-        <AppLogo class="size-10" />
+        <AppLogo class="size-11" />
       </template>
 
       <template #default="{ collapsed }">
@@ -116,7 +124,7 @@ const notifications = ref([
       </template>
     </UDashboardSidebar>
 
-    <UDashboardPanel :ui="{ root: 'items-center overflow-auto' }">
+    <UDashboardPanel :ui="{ root: 'items-center overflow-auto bg-transparent' }">
       <RouterView />
     </UDashboardPanel>
 

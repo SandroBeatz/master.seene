@@ -1,4 +1,13 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+export type AppointmentStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show'
+  | 'expired'
+
+/** Where the appointment originated. */
+export type AppointmentSource = 'manual' | 'online_booking'
 
 export interface Appointment {
   id: string
@@ -9,6 +18,7 @@ export interface Appointment {
   duration: number
   price: number | null
   status: AppointmentStatus
+  source: AppointmentSource
   notes: string | null
   created_at: string
   updated_at: string
@@ -22,6 +32,7 @@ export interface CreateAppointmentDto {
   price?: number | null
   notes?: string | null
   status?: AppointmentStatus
+  source?: AppointmentSource
 }
 
 export interface UpdateAppointmentDto {

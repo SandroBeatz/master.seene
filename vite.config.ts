@@ -11,13 +11,38 @@ export default defineConfig({
     ui({
       ui: {
         colors: {
-          primary: 'amber',
+          primary: 'zinc',
+          secondary: 'violet',
+          accent: 'amber',
+          success: 'green',
           neutral: 'zinc',
+        },
+
+        card: {
+          slots: {
+            root: 'rounded-xl',
+          },
+          variants: {
+            variant: {
+              outline: {
+                root: 'bg-default ring ring-default divide-y divide-default',
+              },
+              soft: {
+                root: 'bg-elevated/70 divide-y divide-default',
+              },
+              subtle: {
+                root: 'bg-elevated/70 ring ring-default divide-y divide-default',
+              },
+            },
+          },
+          defaultVariants: {
+            variant: 'outline',
+          },
         },
 
         button: {
           slots: {
-            base: 'cursor-pointer rounded-3xl',
+            base: 'cursor-pointer rounded-full',
           },
           variants: {
             size: {
@@ -51,7 +76,7 @@ export default defineConfig({
 
         pageCard: {
           slots: {
-            root: 'rounded-3xl shadow-lg',
+            root: 'rounded-xl shadow-lg',
           },
           variants: {
             variant: {

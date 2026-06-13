@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-04-20
+version: 1.1
+date: 2026-06-12
 category: design
 ---
 
 # Themes and Variables (@nuxt/ui v4)
 
-> Version 1.0 · 2026-04-20 · [Design](../)
+> Version 1.1 · 2026-06-12 · [Design](../)
 
 ## Overview
 
@@ -28,8 +28,8 @@ Nuxt UI registers CSS variables via `@theme` and exposes them as Tailwind classe
 This mapping is activated in `src/app/styles/main.css` — import order is critical:
 
 ```css
-@import "tailwindcss";   /* Tailwind first */
-@import "@nuxt/ui";      /* then UI (registers --ui-* and utilities) */
+@import 'tailwindcss'; /* Tailwind first */
+@import '@nuxt/ui'; /* then UI (registers --ui-* and utilities) */
 ```
 
 Theme colors are configured in `vite.config.ts` (not `app.config.ts` — that's Nuxt only):
@@ -54,13 +54,13 @@ ui({
 ui({
   ui: {
     colors: {
-      primary: 'blue',       // main color — buttons, links, accents
-      secondary: 'violet',   // secondary color
+      primary: 'blue', // main color — buttons, links, accents
+      secondary: 'violet', // secondary color
       success: 'green',
       warning: 'yellow',
       error: 'red',
       info: 'sky',
-      neutral: 'slate',      // text, borders, backgrounds
+      neutral: 'slate', // text, borders, backgrounds
     },
   },
 })
@@ -72,8 +72,8 @@ Accepted values: any Tailwind palette color (`blue`, `red`, `emerald`, `zinc`, e
 
 ```css
 /* src/app/styles/main.css */
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
 :root {
   --ui-primary: var(--ui-color-primary-700);
@@ -83,28 +83,36 @@ Accepted values: any Tailwind palette color (`blue`, `red`, `emerald`, `zinc`, e
 }
 ```
 
-### Radius, container, header height
+### Canvas, radius, container, and elevation
 
 ```css
 :root {
-  --ui-radius: 0.375rem;       /* border radius, affects all rounded-* utilities */
-  --ui-container: 72rem;       /* width of <UContainer> */
-  --ui-header-height: 4rem;    /* height of <UHeader> */
+  --app-canvas: #efede9; /* background outside elevated surfaces */
+  --ui-radius: 0.75rem; /* base Nuxt UI radius */
+  --ui-container: 112rem; /* wide dashboard content */
+}
+
+@theme {
+  --shadow-panel: 0 1px 2px rgb(24 24 27 / 0.04), 0 12px 32px rgb(24 24 27 / 0.08);
 }
 ```
+
+Use `shadow-panel` for top-level dashboard surfaces only. Nested cards use borders without a heavy
+shadow. Put repeated Nuxt UI component structure in `vite.config.ts`; use the component `ui` prop
+for isolated layout or visual exceptions.
 
 ## Usage
 
 ### Text colors
 
-| Class              | CSS variable              | Value (light / dark)            |
-|--------------------|---------------------------|---------------------------------|
-| `text-dimmed`      | `--ui-text-dimmed`        | neutral-400 / neutral-500       |
-| `text-muted`       | `--ui-text-muted`         | neutral-500 / neutral-400       |
-| `text-toned`       | `--ui-text-toned`         | neutral-600 / neutral-300       |
-| `text-default`     | `--ui-text`               | neutral-700 / neutral-200       |
-| `text-highlighted` | `--ui-text-highlighted`   | neutral-900 / neutral-50        |
-| `text-inverted`    | `--ui-text-inverted`      | white / neutral-900             |
+| Class              | CSS variable            | Value (light / dark)      |
+| ------------------ | ----------------------- | ------------------------- |
+| `text-dimmed`      | `--ui-text-dimmed`      | neutral-400 / neutral-500 |
+| `text-muted`       | `--ui-text-muted`       | neutral-500 / neutral-400 |
+| `text-toned`       | `--ui-text-toned`       | neutral-600 / neutral-300 |
+| `text-default`     | `--ui-text`             | neutral-700 / neutral-200 |
+| `text-highlighted` | `--ui-text-highlighted` | neutral-900 / neutral-50  |
+| `text-inverted`    | `--ui-text-inverted`    | white / neutral-900       |
 
 ```html
 <!-- Correct -->
@@ -117,13 +125,13 @@ Accepted values: any Tailwind palette color (`blue`, `red`, `emerald`, `zinc`, e
 
 ### Background colors
 
-| Class          | CSS variable          | Value (light / dark)      |
-|----------------|-----------------------|---------------------------|
-| `bg-default`   | `--ui-bg`             | white / neutral-900       |
-| `bg-muted`     | `--ui-bg-muted`       | neutral-50 / neutral-800  |
-| `bg-elevated`  | `--ui-bg-elevated`    | white / neutral-800       |
-| `bg-accented`  | `--ui-bg-accented`    | neutral-100 / neutral-700 |
-| `bg-inverted`  | `--ui-bg-inverted`    | neutral-900 / white       |
+| Class         | CSS variable       | Value (light / dark)      |
+| ------------- | ------------------ | ------------------------- |
+| `bg-default`  | `--ui-bg`          | white / neutral-900       |
+| `bg-muted`    | `--ui-bg-muted`    | neutral-50 / neutral-800  |
+| `bg-elevated` | `--ui-bg-elevated` | white / neutral-800       |
+| `bg-accented` | `--ui-bg-accented` | neutral-100 / neutral-700 |
+| `bg-inverted` | `--ui-bg-inverted` | neutral-900 / white       |
 
 ```html
 <div class="bg-muted rounded-lg p-4">
@@ -133,12 +141,12 @@ Accepted values: any Tailwind palette color (`blue`, `red`, `emerald`, `zinc`, e
 
 ### Border colors
 
-| Class              | CSS variable            | Value (light / dark)      |
-|--------------------|-------------------------|---------------------------|
-| `border-default`   | `--ui-border`           | neutral-200 / neutral-800 |
-| `border-muted`     | `--ui-border-muted`     | neutral-200 / neutral-700 |
-| `border-accented`  | `--ui-border-accented`  | neutral-300 / neutral-700 |
-| `border-inverted`  | `--ui-border-inverted`  | neutral-900 / white       |
+| Class             | CSS variable           | Value (light / dark)      |
+| ----------------- | ---------------------- | ------------------------- |
+| `border-default`  | `--ui-border`          | neutral-200 / neutral-800 |
+| `border-muted`    | `--ui-border-muted`    | neutral-200 / neutral-700 |
+| `border-accented` | `--ui-border-accented` | neutral-300 / neutral-700 |
+| `border-inverted` | `--ui-border-inverted` | neutral-900 / white       |
 
 ### Semantic colors (primary, error, …)
 
@@ -163,8 +171,8 @@ All Tailwind modifiers are supported: `bg-primary/20`, `hover:bg-primary`, `dark
 
 ```css
 /* src/app/styles/main.css */
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
@@ -195,10 +203,10 @@ Used like standard breakpoints: `3xl:grid-cols-4`.
 src/app/styles/
 ├── main.css       # Entry point: @import "tailwindcss" + @import "@nuxt/ui"
 │                  # Override --ui-* variables and @theme tokens here
-└── base.css       # Legacy Vue template variables (--vt-c-*, --color-*)
-                   # Do not use in new components — replace with --ui-* utilities
+└── base.css       # Browser reset and body application of semantic tokens
 
 vite.config.ts     # ui({ ui: { colors: {...} } }) — semantic color configuration
 ```
 
-> **Note on `base.css`:** this file contains legacy variables from the Vue CLI template (`--vt-c-*`, `--color-background`, etc.). Do not use them in new components — write `text-default` instead of `var(--color-text)`.
+Legacy Vue template variables (`--vt-c-*`, `--color-background`, etc.) are not used. Prefer
+semantic utilities such as `text-default`, `bg-default`, and `border-default`.

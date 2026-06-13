@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { UpcomingAppointmentsWidget } from '@widgets/upcoming-appointments'
-import { HomeTodayWidget, HomeUserWidget, HomeOverviewWidget, HomeNextUpWidget } from '@widgets/home'
+import {
+  HomeTodayWidget,
+  HomeUserWidget,
+  HomeOverviewWidget,
+  HomeNextUpWidget,
+} from '@widgets/home'
 import { Page } from '@shared/ui'
 </script>
 
@@ -13,12 +18,12 @@ import { Page } from '@shared/ui'
       <HomeTodayWidget />
     </template>
 
-    <HomeOverviewWidget />
-    <div class="grid grid-cols-3 gap-10 mt-6">
-      <div class="col-span-2">
+    <div class="space-y-6">
+      <HomeOverviewWidget />
+      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.8fr)]">
         <HomeNextUpWidget />
+        <UpcomingAppointmentsWidget />
       </div>
-      <UpcomingAppointmentsWidget />
     </div>
   </Page>
 </template>

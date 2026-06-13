@@ -23,11 +23,11 @@ const { t } = useI18n()
 const masterStore = useMasterPreferencesStore()
 
 // Grid constants
-const SLOT_HEIGHT = 52    // px per 1-hour slot
-const SLOT_MIN = 60       // minutes per slot
-const GRID_PT = 10        // top padding so first label doesn't clip
-const LABEL_W = 40        // px reserved for time labels on the left
-const BLOCK_GAP = 5       // px gap between adjacent appointment blocks
+const SLOT_HEIGHT = 52 // px per 1-hour slot
+const SLOT_MIN = 60 // minutes per slot
+const GRID_PT = 10 // top padding so first label doesn't clip
+const LABEL_W = 40 // px reserved for time labels on the left
+const BLOCK_GAP = 5 // px gap between adjacent appointment blocks
 
 function minutesToLabel(min: number): string {
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
@@ -42,13 +42,19 @@ function dateToMinutes(d: Date): number {
   return d.getHours() * 60 + d.getMinutes()
 }
 
-function floor30(m: number): number { return Math.floor(m / 60) * 60 }
-function ceil30(m: number): number  { return Math.ceil(m / 60) * 60 }
+function floor30(m: number): number {
+  return Math.floor(m / 60) * 60
+}
+function ceil30(m: number): number {
+  return Math.ceil(m / 60) * 60
+}
 
 function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate()
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 const isToday = computed(() => isSameDay(props.selectedDate, new Date()))
@@ -65,7 +71,15 @@ const visibleAppointments = computed(() =>
 const workingHours = computed((): { start: number; end: number } | null => {
   const schedule = masterStore.preferences?.profile?.schedule
   if (!schedule?.days) return null
-  const keys: MasterScheduleDayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  const keys: MasterScheduleDayKey[] = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ]
   const key = keys[props.selectedDate.getDay()]
   if (!key) return null
   const day = schedule.days[key]
@@ -78,7 +92,8 @@ const gridRange = computed((): { start: number; end: number } | null => {
   const items = visibleAppointments.value
   if (!items.length) return null
 
-  let minStart = Infinity, maxEnd = -Infinity
+  let minStart = Infinity,
+    maxEnd = -Infinity
   for (const a of items) {
     const s = dateToMinutes(new Date(a.start_at))
     const e = s + a.duration
@@ -168,18 +183,26 @@ function statusStyle(appointment: Appointment): Record<string, string> {
 </script>
 
 <template>
-  <UCard>
+  <UCard
+    :ui="{
+      root: 'rounded-3xl shadow-panel ring-0 divide-y-0',
+      header: 'px-5 pb-2 pt-5',
+      body: 'px-5 pb-6 pt-3',
+    }"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
-          <h2 class="text-sm font-semibold leading-none">{{ t('home.schedule.title') }}</h2>
-          <p class="mt-0.5 text-xs text-muted truncate">
+          <h2 class="text-lg font-bold leading-none text-highlighted">
+            {{ t('home.schedule.title') }}
+          </h2>
+          <p class="mt-1 truncate text-sm text-muted">
             {{ t('home.schedule.subtitle', { date: subtitleDate, n: visibleAppointments.length }) }}
           </p>
         </div>
         <UButton
           color="neutral"
-          variant="ghost"
+          variant="soft"
           size="xs"
           icon="i-lucide-ellipsis"
           :aria-label="t('home.schedule.options')"
@@ -189,7 +212,7 @@ function statusStyle(appointment: Appointment): Record<string, string> {
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-2">
-      <div v-for="i in 3" :key="i" class="h-14 w-full animate-pulse rounded-lg bg-elevated" />
+      <div v-for="i in 3" :key="i" class="h-14 w-full animate-pulse rounded-xl bg-elevated" />
     </div>
 
     <!-- Empty -->
@@ -202,11 +225,7 @@ function statusStyle(appointment: Appointment): Record<string, string> {
     </div>
 
     <!-- Time grid -->
-    <div
-      v-else
-      class="relative overflow-hidden"
-      :style="{ height: totalHeight + 'px' }"
-    >
+    <div v-else class="relative overflow-hidden" :style="{ height: totalHeight + 'px' }">
       <!-- Grid lines + time labels -->
       <template v-for="slot in timeSlots" :key="slot.min">
         <!-- Horizontal line -->
@@ -228,7 +247,8 @@ function statusStyle(appointment: Appointment): Record<string, string> {
             width: LABEL_W + 'px',
             transform: 'translateY(-50%)',
           }"
-        >{{ slot.label }}</span>
+          >{{ slot.label }}</span
+        >
       </template>
 
       <!-- Appointment blocks -->
@@ -236,7 +256,7 @@ function statusStyle(appointment: Appointment): Record<string, string> {
         v-for="block in appointmentBlocks"
         :key="block.appointment.id"
         type="button"
-        class="absolute rounded-md border-l-4 px-2 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary overflow-hidden"
+        class="absolute overflow-hidden rounded-xl border-l-4 px-3 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         :style="{
           top: block.top + 'px',
           height: block.height + 'px',
@@ -250,12 +270,16 @@ function statusStyle(appointment: Appointment): Record<string, string> {
       >
         <div class="flex items-baseline justify-between gap-1">
           <span class="text-xs font-semibold truncate leading-tight">{{ block.clientName }}</span>
-          <span class="text-[10px] tabular-nums text-muted/80 shrink-0 leading-tight">{{ block.time }}</span>
+          <span class="text-[10px] tabular-nums text-muted/80 shrink-0 leading-tight">{{
+            block.time
+          }}</span>
         </div>
         <p
           v-if="block.height >= SLOT_HEIGHT"
           class="text-[10px] text-muted truncate leading-tight mt-0.5"
-        >{{ block.serviceNames }}</p>
+        >
+          {{ block.serviceNames }}
+        </p>
       </button>
 
       <!-- Now line -->
@@ -267,7 +291,8 @@ function statusStyle(appointment: Appointment): Record<string, string> {
         <span
           class="text-[10px] font-semibold tabular-nums text-primary leading-none shrink-0"
           :style="{ width: LABEL_W + 'px' }"
-        >{{ nowLine.label }}</span>
+          >{{ nowLine.label }}</span
+        >
         <div class="h-0.5 flex-1 bg-primary/70 rounded-full" />
         <div class="size-1.5 rounded-full bg-primary ml-1 shrink-0" />
       </div>
