@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
+import type { PageProps } from './types'
 
 defineOptions({ name: 'AppPage' })
 
-interface Props {
-  title?: string
-  description?: string
-}
-
-const props = defineProps<Props>()
+const props = defineProps<PageProps>()
 const slots = useSlots()
 
 const hasHeader = computed(
