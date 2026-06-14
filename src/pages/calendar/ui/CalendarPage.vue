@@ -17,6 +17,7 @@ import {
   type CalendarViewType,
   type CalendarWidgetExpose,
 } from '@widgets/calendar'
+import { Page } from '@shared/ui'
 
 const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
@@ -112,58 +113,47 @@ function openTimeBlockCreate() {
 </script>
 
 <template>
-  <UTheme
-    :ui="{
-      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
-      pageHeader: { root: 'border-none pb-2' },
-    }"
-  >
-    <UPage as="main">
-      <UPageHeader :title="t('calendar.title')">
-        <template #links>
-          <UTooltip :text="$t('calendar.create.open')">
-            <UButton
-              size="xl"
-              icon="i-lucide-plus"
-              color="neutral"
-              :aria-label="$t('calendar.create.open')"
-              @click="openCreateMenu"
-            />
-          </UTooltip>
-        </template>
-      </UPageHeader>
-      <UPageBody>
-        <CalendarToolbar
-          class="mb-3"
-          :title="calendarTitle"
-          :view-type="calendarViewType"
-          @previous="moveCalendarToPrevious"
-          @next="moveCalendarToNext"
-          @today="moveCalendarToToday"
-          @update:view-type="changeCalendarView"
+  <Page :title="t('calendar.title')">
+    <template #header-right>
+      <UTooltip :text="$t('calendar.create.open')">
+        <UButton
+          size="xl"
+          icon="i-lucide-plus"
+          color="neutral"
+          :aria-label="$t('calendar.create.open')"
+          @click="openCreateMenu"
         />
+      </UTooltip>
+    </template>
+    <template #header-bottom>
+      <CalendarToolbar
+        class="pt-6"
+        :title="calendarTitle"
+        :view-type="calendarViewType"
+        @previous="moveCalendarToPrevious"
+        @next="moveCalendarToNext"
+        @today="moveCalendarToToday"
+        @update:view-type="changeCalendarView"
+      />
+    </template>
 
-        <UPageCard>
-          <div class="min-h-[700px]">
-            <CalendarWidget
-              ref="calendarRef"
-              :events="calendarEvents"
-              :schedule="masterSchedule"
-              :time-format="masterPreferencesStore.timeFormat"
-              :time-zone="masterPreferencesStore.timeZone"
-              :first-day="masterPreferencesStore.calendarFirstDay"
-              :slot-step-minutes="masterPreferencesStore.calendarSlotStepMinutes"
-              :default-view="defaultCalendarView"
-              @slot-click="onSlotClick"
-              @event-click="onEventClick"
-              @time-block-click="onTimeBlockClick"
-              @dates-set="handleDatesSet"
-            />
-          </div>
-        </UPageCard>
-      </UPageBody>
-    </UPage>
-  </UTheme>
+    <div class="min-h-[700px]">
+      <CalendarWidget
+        ref="calendarRef"
+        :events="calendarEvents"
+        :schedule="masterSchedule"
+        :time-format="masterPreferencesStore.timeFormat"
+        :time-zone="masterPreferencesStore.timeZone"
+        :first-day="masterPreferencesStore.calendarFirstDay"
+        :slot-step-minutes="masterPreferencesStore.calendarSlotStepMinutes"
+        :default-view="defaultCalendarView"
+        @slot-click="onSlotClick"
+        @event-click="onEventClick"
+        @time-block-click="onTimeBlockClick"
+        @dates-set="handleDatesSet"
+      />
+    </div>
+  </Page>
 
   <AppointmentFormDialog
     :open="isFormOpen"
