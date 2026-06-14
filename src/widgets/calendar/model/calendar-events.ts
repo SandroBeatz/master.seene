@@ -3,11 +3,15 @@ import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import type { TimeBlock } from '@entities/time-block'
+import {
+  getAppointmentAccentColor,
+  getAppointmentStatusIcon,
+  isGroupAppointment,
+} from '@entities/appointment'
 import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 import {
-  CALENDAR_CONFIRMED_FALLBACK_COLOR,
   CALENDAR_EVENT_TEXT_COLOR,
-  CALENDAR_STATUS_COLORS,
+  CALENDAR_GROUP_NEUTRAL,
   type CalendarEventColorSet,
 } from '../config/event-colors'
 
@@ -58,22 +62,21 @@ export function getAppointmentEventColors(
   appointment: Appointment,
   serviceMap: Map<string, CalendarServiceSummary>,
 ): CalendarEventColorSet {
-  if (appointment.status === 'confirmed') {
-    const firstServiceId = appointment.service_ids[0]
-    const serviceColor = firstServiceId ? serviceMap.get(firstServiceId)?.color : undefined
-    const borderColor = serviceColor ?? CALENDAR_CONFIRMED_FALLBACK_COLOR
+  // Colour by service for every status (single → service colour; group of 2+ or
+  // a colourless service → neutral grey). Status is shown by an icon, not colour.
+  const accent = getAppointmentAccentColor(appointment, serviceMap)
 
+  if (accent) {
     return {
-      borderColor,
-      backgroundColor: `${borderColor}33`,
+      borderColor: accent,
+      // Solid (non-transparent) pale tint of the service colour.
+      backgroundColor: `color-mix(in srgb, ${accent} 14%, white)`,
       textColor: CALENDAR_EVENT_TEXT_COLOR,
     }
   }
 
-  const colors = CALENDAR_STATUS_COLORS[appointment.status]
-
   return {
-    ...colors,
+    ...CALENDAR_GROUP_NEUTRAL,
     textColor: CALENDAR_EVENT_TEXT_COLOR,
   }
 }
@@ -86,10 +89,11 @@ function buildAppointmentCalendarEvent(
   timeZone?: string,
 ): EventInput {
   const clientName = clientMap.get(appointment.client_id) ?? unknownClientLabel
-  const serviceNames = appointment.service_ids
-    .map((id) => serviceMap.get(id)?.name)
-    .filter((name): name is string => Boolean(name))
-    .join(', ')
+  const serviceList = appointment.service_ids
+    .map((id) => serviceMap.get(id))
+    .filter((service): service is CalendarServiceSummary => Boolean(service))
+    .map((service) => ({ name: service.name, color: service.color }))
+  const serviceNames = serviceList.map((service) => service.name).join(', ')
 
   const startMs = new Date(appointment.start_at).getTime()
   const endMs = startMs + appointment.duration * 60 * 1000
@@ -106,7 +110,14 @@ function buildAppointmentCalendarEvent(
     borderColor,
     backgroundColor,
     textColor,
-    extendedProps: { type: 'appointment', appointment },
+    extendedProps: {
+      type: 'appointment',
+      appointment,
+      statusIcon: getAppointmentStatusIcon(appointment.status),
+      clientName,
+      serviceList,
+      isGroup: isGroupAppointment(appointment),
+    },
   }
 }
 

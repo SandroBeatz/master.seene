@@ -5,6 +5,7 @@ import type {
   DatesSetArg,
   DayHeaderContentArg,
   EventClickArg,
+  EventContentArg,
   EventDropArg,
   EventInput,
   SlotLaneContentArg,
@@ -258,6 +259,10 @@ function renderDayHeaderContent(arg: DayHeaderContentArg) {
   return { domNodes: [root] }
 }
 
+function getEventClassNames(arg: EventContentArg): string[] {
+  return arg.event.extendedProps.type === 'appointment' ? ['app-appointment-event'] : []
+}
+
 function getDayHeaderClassNames(arg: DayHeaderContentArg): string[] {
   if (arg.view.type !== 'timeGridWeek') return []
 
@@ -334,6 +339,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     slotDuration: getCalendarSlotDuration(props.slotStepMinutes),
     slotLabelFormat: timeFormat,
     eventTimeFormat: timeFormat,
+    displayEventEnd: true,
     headerToolbar: false,
     dateClick: handleDateClick,
     eventClick: handleEventClick,
@@ -341,6 +347,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     datesSet: handleDatesSet,
     dayHeaderContent: renderDayHeaderContent,
     dayHeaderClassNames: getDayHeaderClassNames,
+    eventClassNames: getEventClassNames,
     slotLaneClassNames: getSlotLaneClassNames,
     slotLaneDidMount: handleSlotLaneMount,
     ...scheduleOptions,
@@ -379,6 +386,52 @@ defineExpose<CalendarWidgetExpose>({
 
 <template>
   <div class="w-full">
-    <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions" />
+    <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
+      <template #eventContent="arg">
+        <!-- Appointment: card-style body matching the home ScheduleTimeline. -->
+        <div
+          v-if="arg.event.extendedProps.type === 'appointment'"
+          class="flex h-full w-full flex-col gap-0.5 overflow-hidden px-1.5 py-1 text-left"
+        >
+          <div class="flex items-start justify-between gap-1">
+            <span class="truncate text-[11px] font-semibold tabular-nums leading-tight">{{
+              arg.timeText
+            }}</span>
+            <UIcon
+              v-if="arg.event.extendedProps.statusIcon"
+              :name="arg.event.extendedProps.statusIcon"
+              class="mt-px size-3 shrink-0 opacity-70"
+            />
+          </div>
+          <span class="truncate text-[11px] font-medium leading-tight">{{
+            arg.event.extendedProps.clientName
+          }}</span>
+          <ul class="space-y-px">
+            <li
+              v-for="(service, i) in arg.event.extendedProps.serviceList"
+              :key="i"
+              class="flex items-center gap-1"
+            >
+              <span
+                v-if="arg.event.extendedProps.isGroup"
+                class="size-1.5 shrink-0 rounded-full"
+                :style="{ backgroundColor: service.color }"
+              />
+              <span class="truncate text-[10px] leading-tight opacity-80">{{ service.name }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Time blocks / other: FullCalendar's default-style body. -->
+        <div v-else class="fc-event-main-frame">
+          <div v-if="arg.timeText" class="fc-event-time">{{ arg.timeText }}</div>
+          <div class="fc-event-title-container">
+            <div class="fc-event-title fc-sticky">
+              <span class="truncate">{{ arg.event.title || ' ' }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </FullCalendar>
   </div>
 </template>

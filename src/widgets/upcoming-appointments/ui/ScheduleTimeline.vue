@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { APPOINTMENT_STATUS_VIEW, type Appointment } from '@entities/appointment'
+import {
+  getAppointmentAccentColor,
+  getAppointmentStatusIcon,
+  isGroupAppointment,
+  type Appointment,
+} from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
 import type { MasterScheduleDayKey } from '@entities/master'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
+import { getCalendarDateTimeString } from '@shared/lib/time-zone'
+import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
+import { buildTimelineLayout, type TimelineConstants } from '../model/timeline-layout'
 
 const props = defineProps<{
   appointments: Appointment[]
@@ -22,6 +30,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const masterStore = useMasterPreferencesStore()
+const formats = useFormats()
+
+const serviceById = computed(() => new Map(props.services.map((s) => [s.id, s] as const)))
 
 // Grid constants
 const SLOT_HEIGHT = 52 // px per 1-hour slot
@@ -29,6 +40,20 @@ const SLOT_MIN = 60 // minutes per slot
 const GRID_PT = 10 // top padding so first label doesn't clip
 const LABEL_W = 40 // px reserved for time labels on the left
 const BLOCK_GAP = 5 // px gap between adjacent appointment blocks
+const GAP_THRESHOLD_MIN = 60 // empty stretches longer than this collapse into "···"
+const GAP_HEIGHT = 24 // px height of a collapsed gap
+const BOTTOM_PAD = 12 // px padding below the last segment
+
+const LAYOUT_CONSTANTS: TimelineConstants = {
+  slotHeight: SLOT_HEIGHT,
+  slotMin: SLOT_MIN,
+  gridPaddingTop: GRID_PT,
+  gapThresholdMin: GAP_THRESHOLD_MIN,
+  gapHeight: GAP_HEIGHT,
+  bottomPadding: BOTTOM_PAD,
+}
+
+const timeZone = computed(() => masterStore.timeZone)
 
 function minutesToLabel(min: number): string {
   return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
@@ -39,15 +64,10 @@ function timeStringToMinutes(s: string): number {
   return (parts[0] ?? 0) * 60 + (parts[1] ?? 0)
 }
 
-function dateToMinutes(d: Date): number {
-  return d.getHours() * 60 + d.getMinutes()
-}
-
-function floor30(m: number): number {
-  return Math.floor(m / 60) * 60
-}
-function ceil30(m: number): number {
-  return Math.ceil(m / 60) * 60
+/** Minutes-from-midnight of an ISO timestamp in the master's timezone. */
+function startMinInZone(startAt: string): number {
+  // getCalendarDateTimeString → "YYYY-MM-DDTHH:MM:SS" wall-clock in `timeZone`.
+  return timeStringToMinutes(getCalendarDateTimeString(startAt, timeZone.value).slice(11, 16))
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -88,99 +108,87 @@ const workingHours = computed((): { start: number; end: number } | null => {
   return { start: timeStringToMinutes(day.start), end: timeStringToMinutes(day.end) }
 })
 
-// Visible grid range in minutes-from-midnight
-const gridRange = computed((): { start: number; end: number } | null => {
-  const items = visibleAppointments.value
-  if (!items.length) return null
-
-  let minStart = Infinity,
-    maxEnd = -Infinity
-  for (const a of items) {
-    const s = dateToMinutes(new Date(a.start_at))
-    const e = s + a.duration
-    if (s < minStart) minStart = s
-    if (e > maxEnd) maxEnd = e
-  }
-
-  let gStart = floor30(minStart)
-  let gEnd = ceil30(maxEnd)
-
-  // Extend to include "now" only if today and within working hours (or no schedule configured)
-  if (isToday.value) {
-    const nowMin = dateToMinutes(new Date())
-    const wh = workingHours.value
-    const inWorkHours = !wh || (nowMin >= wh.start && nowMin <= wh.end)
-    if (inWorkHours) {
-      if (nowMin < gStart) gStart = floor30(nowMin)
-      if (nowMin > gEnd) gEnd = ceil30(nowMin)
-    }
-  }
-
-  return { start: gStart, end: gEnd }
+// "Now" in master-timezone minutes — only today and within working hours.
+const nowMinutes = computed<number | null>(() => {
+  if (!isToday.value) return null
+  const m = timeStringToMinutes(getCalendarDateTimeString(new Date(), timeZone.value).slice(11, 16))
+  const wh = workingHours.value
+  if (wh && (m < wh.start || m > wh.end)) return null
+  return m
 })
 
-// Total rendered height in px
-const totalHeight = computed(() => {
-  if (!gridRange.value) return 0
-  const slots = (gridRange.value.end - gridRange.value.start) / SLOT_MIN
-  return GRID_PT + slots * SLOT_HEIGHT + 12
-})
+// Segment-based layout: collapses long empty stretches into "···".
+const layout = computed(() =>
+  buildTimelineLayout({
+    appointments: visibleAppointments.value.map((a) => {
+      const from = startMinInZone(a.start_at)
+      return { from, to: from + a.duration }
+    }),
+    workingHours: workingHours.value,
+    nowMin: nowMinutes.value,
+    constants: LAYOUT_CONSTANTS,
+  }),
+)
 
-// Compute top for a minute value within the grid
-function topForMin(min: number): number {
-  return GRID_PT + ((min - (gridRange.value?.start ?? 0)) / SLOT_MIN) * SLOT_HEIGHT
-}
+const totalHeight = computed(() => layout.value.totalHeight)
 
-// Horizontal guide lines + time labels
-const timeSlots = computed(() => {
-  const range = gridRange.value
-  if (!range) return []
-  const out = []
-  for (let m = range.start; m <= range.end; m += SLOT_MIN) {
-    out.push({ min: m, label: minutesToLabel(m), top: topForMin(m) })
-  }
-  return out
-})
+const gapSegments = computed(() =>
+  layout.value.segments.filter((s): s is Extract<typeof s, { kind: 'gap' }> => s.kind === 'gap'),
+)
 
-// Appointment blocks
+// Horizontal guide lines + hour labels (only inside proportional ranges).
+const timeSlots = computed(() =>
+  layout.value.hourLabels.map((l) => ({ min: l.min, label: minutesToLabel(l.min), top: l.top })),
+)
+
+// Appointment blocks, positioned through the segment layout.
+// Single service → service-colored card; group (2+) → neutral card with a
+// dotted service list. Status is conveyed by icon, never by color.
 const appointmentBlocks = computed(() => {
-  const range = gridRange.value
-  if (!range) return []
-
+  const byId = serviceById.value
   return visibleAppointments.value.map((a) => {
     const client = props.clients.find((c) => c.id === a.client_id)
     const clientName = client
       ? [client.first_name, client.last_name].filter(Boolean).join(' ')
       : t('appointments.unknownClient')
-    const serviceNames =
-      a.service_ids
-        .map((id) => props.services.find((s) => s.id === id)?.name)
-        .filter((n): n is string => Boolean(n))
-        .join(', ') || '—'
-    const startMin = dateToMinutes(new Date(a.start_at))
-    const top = topForMin(startMin) + BLOCK_GAP / 2
+    const serviceList = a.service_ids
+      .map((id) => byId.get(id))
+      .filter((s): s is Service => Boolean(s))
+      .map((s) => ({ name: s.name, color: s.color }))
+    const serviceNames = serviceList.map((s) => s.name).join(', ') || '—'
+
+    const startMin = startMinInZone(a.start_at)
+    const endMin = startMin + a.duration
+    const top = (layout.value.topForMin(startMin) ?? 0) + BLOCK_GAP / 2
     const height = Math.max((a.duration / SLOT_MIN) * SLOT_HEIGHT, SLOT_HEIGHT * 0.8) - BLOCK_GAP
-    const time = minutesToLabel(startMin)
-    return { appointment: a, clientName, serviceNames, time, top, height }
+    const isGroup = isGroupAppointment(a)
+
+    return {
+      appointment: a,
+      clientName,
+      serviceList,
+      serviceNames,
+      isGroup,
+      accentColor: getAppointmentAccentColor(a, byId),
+      statusIcon: getAppointmentStatusIcon(a.status),
+      startLabel: formats.time(minutesToLabel(startMin)),
+      timeRange: `${formats.time(minutesToLabel(startMin))}–${formats.time(minutesToLabel(endMin))}`,
+      priceLabel: a.price == null ? null : formats.price(a.price),
+      compact: !isGroup && a.duration < 45,
+      top,
+      height,
+    }
   })
 })
 
-// "Now" line — only within grid range AND within working hours
+// "Now" line — positioned via the layout (sits just below a collapsed gap).
 const nowLine = computed((): { top: number; label: string } | null => {
-  if (!isToday.value || !gridRange.value) return null
-  const nowMin = dateToMinutes(new Date())
-  const wh = workingHours.value
-  if (wh && (nowMin < wh.start || nowMin > wh.end)) return null
-  const { start, end } = gridRange.value
-  if (nowMin < start || nowMin > end) return null
-  return { top: topForMin(nowMin), label: minutesToLabel(nowMin) }
+  const m = nowMinutes.value
+  if (m === null) return null
+  const top = layout.value.topForMin(m)
+  if (top === null) return null
+  return { top, label: minutesToLabel(m) }
 })
-
-function statusStyle(appointment: Appointment): Record<string, string> {
-  const cfg = APPOINTMENT_STATUS_VIEW[appointment.status]?.calendar
-  if (!cfg) return {}
-  return { borderLeftColor: cfg.borderColor, backgroundColor: cfg.backgroundColor }
-}
 
 // Nuxt UI overrides
 const hostUI = {
@@ -252,11 +260,28 @@ const hostUI = {
         >
       </template>
 
+      <!-- Collapsed empty stretches -->
+      <div
+        v-for="(gap, i) in gapSegments"
+        :key="'gap-' + i"
+        class="absolute flex items-center justify-center"
+        :style="{
+          top: gap.top + 'px',
+          height: gap.height + 'px',
+          left: LABEL_W + 8 + 'px',
+          right: '0px',
+        }"
+      >
+        <UIcon name="i-lucide-ellipsis-vertical" class="size-4 text-muted/50" />
+      </div>
+
       <!-- Appointment blocks -->
       <div
         v-for="block in appointmentBlocks"
         :key="block.appointment.id"
-        class="absolute overflow-hidden rounded-sm border-l-4 px-3 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        data-testid="appointment-block"
+        class="absolute overflow-hidden rounded-md px-2.5 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        :class="block.isGroup ? 'bg-elevated ring-1 ring-default' : 'border-l-4'"
         :style="{
           top: block.top + 'px',
           height: block.height + 'px',
@@ -264,21 +289,57 @@ const hostUI = {
           right: '0px',
           paddingTop: '5px',
           paddingBottom: '5px',
-          ...statusStyle(block.appointment),
+          ...(block.isGroup
+            ? {}
+            : block.accentColor
+              ? { borderLeftColor: block.accentColor, backgroundColor: block.accentColor + '14' }
+              : { borderLeftColor: 'var(--ui-border)' }),
         }"
         @click="emit('select', block.appointment)"
       >
-        <div class="flex items-baseline justify-between gap-1">
-          <span class="text-xs font-semibold truncate leading-tight">{{ block.clientName }}</span>
-          <span class="text-[10px] tabular-nums text-muted/80 shrink-0 leading-tight">{{
-            block.time
+        <!-- Compact single (very short appointment) -->
+        <div v-if="block.compact" class="flex items-center gap-1.5">
+          <span class="text-[11px] font-semibold tabular-nums shrink-0 leading-tight">{{
+            block.startLabel
           }}</span>
+          <span class="text-[11px] truncate leading-tight">{{ block.clientName }}</span>
+          <UIcon :name="block.statusIcon" class="size-3 text-muted shrink-0 ml-auto" />
         </div>
-        <p
-          class="text-[10px] text-muted truncate leading-tight mt-0.5"
-        >
-          {{ block.serviceNames }}
-        </p>
+
+        <!-- Full card -->
+        <template v-else>
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-[11px] font-semibold tabular-nums leading-tight">{{
+              block.timeRange
+            }}</span>
+            <UIcon :name="block.statusIcon" class="size-3.5 text-muted shrink-0" />
+          </div>
+          <p class="text-xs font-medium truncate leading-tight mt-0.5">{{ block.clientName }}</p>
+
+          <!-- Group: services as a dotted list -->
+          <ul v-if="block.isGroup" class="mt-1 space-y-0.5">
+            <li
+              v-for="(s, i) in block.serviceList"
+              :key="i"
+              class="flex items-center gap-1.5"
+            >
+              <span class="size-2 rounded-full shrink-0" :style="{ backgroundColor: s.color }" />
+              <span class="text-[10px] text-muted truncate leading-tight">{{ s.name }}</span>
+            </li>
+          </ul>
+          <p
+            v-if="block.isGroup && block.priceLabel"
+            class="text-[10px] font-medium text-muted mt-1 leading-tight"
+          >
+            {{ block.priceLabel }}
+          </p>
+
+          <!-- Single: services + price on one line -->
+          <p v-else class="text-[10px] text-muted truncate leading-tight mt-0.5">
+            {{ block.serviceNames
+            }}<template v-if="block.priceLabel"> · {{ block.priceLabel }}</template>
+          </p>
+        </template>
       </div>
 
       <!-- Now line -->

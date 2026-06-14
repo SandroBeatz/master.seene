@@ -65,7 +65,7 @@ const baseTimeBlock: TimeBlock = {
 }
 
 describe('buildCalendarEvents', () => {
-  it('maps appointment, client, service and confirmed service color to a calendar event', () => {
+  it('maps a single-service appointment to the service color and a status icon', () => {
     const [event] = buildCalendarEvents({
       appointments: [baseAppointment],
       clients,
@@ -81,13 +81,19 @@ describe('buildCalendarEvents', () => {
       end: '2026-05-01T10:45:00',
       title: 'Anna Smith — Haircut',
       borderColor: '#2563eb',
-      backgroundColor: '#2563eb33',
+      backgroundColor: 'color-mix(in srgb, #2563eb 14%, white)',
       textColor: '#1e293b',
-      extendedProps: { appointment: baseAppointment },
+      extendedProps: {
+        appointment: baseAppointment,
+        statusIcon: 'i-lucide-check',
+        clientName: 'Anna Smith',
+        isGroup: false,
+        serviceList: [{ name: 'Haircut', color: '#2563eb' }],
+      },
     })
   })
 
-  it('uses translated unknown client label and status colors when data is missing', () => {
+  it('uses the translated unknown client label and neutral color when data is missing', () => {
     const [event] = buildCalendarEvents({
       appointments: [
         {
@@ -106,20 +112,15 @@ describe('buildCalendarEvents', () => {
 
     expect(event).toMatchObject({
       title: 'Client inconnu',
-      borderColor: '#ef4444',
-      backgroundColor: '#fef2f2',
+      borderColor: '#94a3b8',
+      backgroundColor: '#f1f5f9',
       textColor: '#1e293b',
     })
   })
 
-  it('maps no-show appointments to the shared neutral status color', () => {
+  it('colors by service regardless of status (no_show keeps the service color)', () => {
     const [event] = buildCalendarEvents({
-      appointments: [
-        {
-          ...baseAppointment,
-          status: 'no_show',
-        },
-      ],
+      appointments: [{ ...baseAppointment, status: 'no_show' }],
       clients,
       services,
       unknownClientLabel: 'Unknown client',
@@ -128,9 +129,34 @@ describe('buildCalendarEvents', () => {
     })
 
     expect(event).toMatchObject({
-      borderColor: '#64748b',
-      backgroundColor: '#f8fafc',
+      borderColor: '#2563eb',
+      backgroundColor: 'color-mix(in srgb, #2563eb 14%, white)',
       textColor: '#1e293b',
+      extendedProps: { statusIcon: 'i-lucide-ban' },
+    })
+  })
+
+  it('maps a group appointment (2+ services) to the neutral color', () => {
+    const [event] = buildCalendarEvents({
+      appointments: [{ ...baseAppointment, service_ids: ['service-1', 'service-2'] }],
+      clients,
+      services: [...services, { ...services[0]!, id: 'service-2', name: 'Color', color: '#16a34a' }],
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+      timeZone: 'UTC',
+    })
+
+    expect(event).toMatchObject({
+      borderColor: '#94a3b8',
+      backgroundColor: '#f1f5f9',
+      textColor: '#1e293b',
+      extendedProps: {
+        isGroup: true,
+        serviceList: [
+          { name: 'Haircut', color: '#2563eb' },
+          { name: 'Color', color: '#16a34a' },
+        ],
+      },
     })
   })
 

@@ -239,3 +239,15 @@ html.dark {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
+
+/* FullCalendar — appointment events styled like the home ScheduleTimeline cards:
+   solid background (inline), a saturated 4px left accent border (inline color). */
+.fc .fc-event.app-appointment-event {
+  border-width: 0 0 0 4px;
+  border-radius: 6px;
+  padding: 0;
+}
+
+.fc .fc-event.app-appointment-event .fc-event-main {
+  padding: 0;
+}

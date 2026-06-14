@@ -30,3 +30,10 @@ export {
 export type { AppointmentDayCount } from './api/appointments.api'
 export { APPOINTMENT_STATUS_VIEW } from './config/status'
 export type { AppointmentStatusViewConfig } from './config/status'
+export {
+  isGroupAppointment,
+  getAppointmentServiceColors,
+  getAppointmentAccentColor,
+  getAppointmentStatusIcon,
+} from './lib/appearance'
+export type { ServiceColorRef } from './lib/appearance'
