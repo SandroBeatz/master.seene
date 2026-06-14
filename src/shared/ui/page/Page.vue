@@ -21,8 +21,8 @@ const hasHeader = computed(
 </script>
 
 <template>
-  <div class="flex w-full flex-1 flex-col">
-    <div v-if="hasHeader" class="py-6 lg:py-8">
+  <div class="flex w-full flex-1 flex-col" :class="{ 'min-h-0': fill }">
+    <div v-if="hasHeader" class="py-6 lg:py-8" :class="{ 'shrink-0': fill }">
       <UContainer>
         <slot name="header-top" />
         <div class="flex items-center justify-between gap-6">
@@ -41,8 +41,8 @@ const hasHeader = computed(
         <slot name="header-bottom" />
       </UContainer>
     </div>
-    <div class="pb-8 lg:pb-12">
-      <UContainer>
+    <div :class="fill ? 'flex min-h-0 flex-1 flex-col pb-6 lg:pb-8' : 'pb-8 lg:pb-12'">
+      <UContainer :class="{ 'flex min-h-0 flex-1 flex-col': fill }">
         <slot />
       </UContainer>
     </div>

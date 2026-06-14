@@ -136,6 +136,14 @@ export default {
     },
     allDay: 'All day',
     dragError: 'Failed to update calendar event time',
+    event: {
+      onlineHint: 'Booked online',
+    },
+    loading: 'Loading calendar…',
+    empty: {
+      title: 'No appointments',
+      description: 'Nothing scheduled for this period. Create an appointment to get started.',
+    },
   },
   services: {
     title: 'Services',

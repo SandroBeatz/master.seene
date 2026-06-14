@@ -117,6 +117,7 @@ function buildAppointmentCalendarEvent(
       clientName,
       serviceList,
       isGroup: isGroupAppointment(appointment),
+      isOnline: appointment.source === 'online_booking',
     },
   }
 }

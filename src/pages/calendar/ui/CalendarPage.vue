@@ -17,7 +17,7 @@ import {
   type CalendarViewType,
   type CalendarWidgetExpose,
 } from '@widgets/calendar'
-import { Page } from '@shared/ui'
+import { Page, Typography } from '@shared/ui'
 
 const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
@@ -28,7 +28,7 @@ const userId = computed(() => sessionStore.session?.user.id ?? '')
 const unknownClientLabel = computed(() => t('appointments.unknownClient'))
 const timeBlockLabel = computed(() => t('timeBlocks.calendarTitle'))
 
-const { calendarEvents, onDatesSet } = useCalendarEvents(
+const { calendarEvents, onDatesSet, isPending, isEmpty } = useCalendarEvents(
   userId,
   unknownClientLabel,
   timeBlockLabel,
@@ -110,49 +110,97 @@ function openTimeBlockCreate() {
   selectedTimeBlock.value = undefined
   isTimeBlockFormOpen.value = true
 }
+
+// Nuxt UI overrides
+const hostUI = {
+  root: 'flex flex-1 min-h-0 flex-col rounded-xl shadow-panel ring-0 divide-y-0',
+  header: 'pb-0',
+  body: 'flex flex-1 min-h-0 flex-col overflow-hidden',
+}
 </script>
 
 <template>
-  <Page :title="t('calendar.title')">
+  <Page :title="t('calendar.title')" fill>
+    <template #header-left>
+      <Typography as="h1" variant="h2" class="font-bold text-highlighted">
+        {{ t('calendar.title') }}
+      </Typography>
+    </template>
     <template #header-right>
       <UTooltip :text="$t('calendar.create.open')">
         <UButton
           size="xl"
           icon="i-lucide-plus"
           color="neutral"
+          variant="solid"
+          class="rounded-full"
           :aria-label="$t('calendar.create.open')"
           @click="openCreateMenu"
         />
       </UTooltip>
     </template>
-    <template #header-bottom>
-      <CalendarToolbar
-        class="pt-6"
-        :title="calendarTitle"
-        :view-type="calendarViewType"
-        @previous="moveCalendarToPrevious"
-        @next="moveCalendarToNext"
-        @today="moveCalendarToToday"
-        @update:view-type="changeCalendarView"
-      />
-    </template>
 
-    <div class="min-h-[700px]">
-      <CalendarWidget
-        ref="calendarRef"
-        :events="calendarEvents"
-        :schedule="masterSchedule"
-        :time-format="masterPreferencesStore.timeFormat"
-        :time-zone="masterPreferencesStore.timeZone"
-        :first-day="masterPreferencesStore.calendarFirstDay"
-        :slot-step-minutes="masterPreferencesStore.calendarSlotStepMinutes"
-        :default-view="defaultCalendarView"
-        @slot-click="onSlotClick"
-        @event-click="onEventClick"
-        @time-block-click="onTimeBlockClick"
-        @dates-set="handleDatesSet"
-      />
-    </div>
+    <UCard :ui="hostUI">
+      <template #header>
+        <CalendarToolbar
+          :title="calendarTitle"
+          :view-type="calendarViewType"
+          @previous="moveCalendarToPrevious"
+          @next="moveCalendarToNext"
+          @today="moveCalendarToToday"
+          @update:view-type="changeCalendarView"
+        />
+      </template>
+      <div class="relative flex flex-1 flex-col min-h-0">
+        <CalendarWidget
+          ref="calendarRef"
+          :events="calendarEvents"
+          :schedule="masterSchedule"
+          :time-format="masterPreferencesStore.timeFormat"
+          :time-zone="masterPreferencesStore.timeZone"
+          :first-day="masterPreferencesStore.calendarFirstDay"
+          :slot-step-minutes="masterPreferencesStore.calendarSlotStepMinutes"
+          :default-view="defaultCalendarView"
+          @slot-click="onSlotClick"
+          @event-click="onEventClick"
+          @time-block-click="onTimeBlockClick"
+          @dates-set="handleDatesSet"
+        />
+
+        <!-- Loading overlay -->
+        <div
+          v-if="isPending"
+          class="absolute inset-0 z-10 flex flex-col gap-2 bg-default/70 p-4 backdrop-blur-sm"
+          role="status"
+          :aria-label="$t('calendar.loading')"
+        >
+          <USkeleton v-for="i in 8" :key="i" class="h-10 w-full rounded-lg" />
+        </div>
+
+        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events -->
+        <div
+          v-else-if="isEmpty"
+          class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4"
+        >
+          <UEmpty
+            variant="naked"
+            icon="i-lucide-calendar-plus"
+            :title="$t('calendar.empty.title')"
+            :description="$t('calendar.empty.description')"
+            class="pointer-events-auto rounded-xl bg-default/90 p-6 shadow-panel backdrop-blur-sm"
+          >
+            <UButton
+              leading-icon="i-lucide-plus"
+              color="primary"
+              class="mt-4"
+              @click="openAppointmentCreate"
+            >
+              {{ $t('calendar.create.appointment') }}
+            </UButton>
+          </UEmpty>
+        </div>
+      </div>
+    </UCard>
   </Page>
 
   <AppointmentFormDialog

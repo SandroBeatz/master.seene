@@ -88,9 +88,23 @@ describe('buildCalendarEvents', () => {
         statusIcon: 'i-lucide-check',
         clientName: 'Anna Smith',
         isGroup: false,
+        isOnline: false,
         serviceList: [{ name: 'Haircut', color: '#2563eb' }],
       },
     })
+  })
+
+  it('flags online-booking appointments via the isOnline extended prop', () => {
+    const [event] = buildCalendarEvents({
+      appointments: [{ ...baseAppointment, source: 'online_booking' }],
+      clients,
+      services,
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+      timeZone: 'UTC',
+    })
+
+    expect(event).toMatchObject({ extendedProps: { isOnline: true } })
   })
 
   it('uses the translated unknown client label and neutral color when data is missing', () => {

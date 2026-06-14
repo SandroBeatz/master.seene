@@ -79,6 +79,8 @@ const { t, locale } = useI18n()
 const toast = useToast()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
 const currentViewType = ref<CalendarViewType>(props.defaultView)
+// Open the time grid scrolled to ~1h before the current time so "now" is in view.
+const initialScrollTime = getInitialScrollTime(props.timeZone)
 const currentFullCalendarLocale = computed(() => normalizeCalendarLocale(locale.value))
 const scheduleDisplay = computed(() => buildCalendarScheduleDisplay(props.schedule))
 const timeGridScheduleDisplay = computed(() =>
@@ -297,6 +299,24 @@ function getCalendarDateParts(date: Date) {
   }
 }
 
+function getInitialScrollTime(timeZone: string): string {
+  const now = new Date()
+  let hour = now.getHours()
+
+  if (timeZone && timeZone !== DEFAULT_TIME_ZONE) {
+    try {
+      hour = Number(
+        new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone }).format(now),
+      )
+    } catch {
+      hour = now.getHours()
+    }
+  }
+
+  const start = Math.max(0, hour - 1)
+  return `${padDatePart(start)}:00:00`
+}
+
 function getCalendarSlotDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
@@ -332,6 +352,9 @@ const calendarOptions = computed<CalendarOptions>(() => {
     locale: currentFullCalendarLocale.value,
     initialView: props.defaultView,
     firstDay: props.firstDay,
+    height: '100%',
+    nowIndicator: true,
+    scrollTime: initialScrollTime,
     editable: true,
     allDaySlot: true,
     allDayText: t('calendar.allDay'),
@@ -385,7 +408,7 @@ defineExpose<CalendarWidgetExpose>({
 </script>
 
 <template>
-  <div class="w-full">
+  <div class="h-full min-h-0 w-full">
     <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
       <template #eventContent="arg">
         <!-- Appointment: card-style body matching the home ScheduleTimeline. -->
@@ -397,11 +420,20 @@ defineExpose<CalendarWidgetExpose>({
             <span class="truncate text-[11px] font-semibold tabular-nums leading-tight">{{
               arg.timeText
             }}</span>
-            <UIcon
-              v-if="arg.event.extendedProps.statusIcon"
-              :name="arg.event.extendedProps.statusIcon"
-              class="mt-px size-3 shrink-0 opacity-70"
-            />
+            <div class="mt-px flex shrink-0 items-center gap-0.5">
+              <UIcon
+                v-if="arg.event.extendedProps.isOnline"
+                name="i-lucide-globe"
+                class="size-3 opacity-70"
+                :aria-label="$t('calendar.event.onlineHint')"
+                :title="$t('calendar.event.onlineHint')"
+              />
+              <UIcon
+                v-if="arg.event.extendedProps.statusIcon"
+                :name="arg.event.extendedProps.statusIcon"
+                class="size-3 opacity-70"
+              />
+            </div>
           </div>
           <span class="truncate text-[11px] font-medium leading-tight">{{
             arg.event.extendedProps.clientName

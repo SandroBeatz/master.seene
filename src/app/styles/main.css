@@ -251,3 +251,34 @@ html.dark {
 .fc .fc-event.app-appointment-event .fc-event-main {
   padding: 0;
 }
+
+/* FullCalendar — round the grid itself (border follows the radius, not clipped) */
+.fc .fc-scrollgrid {
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* FullCalendar — compact time axis + all-day section */
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  font-size: 0.625rem; /* 10px */
+  font-weight: 500;
+  color: var(--color-zinc-500);
+  text-transform: none;
+}
+
+.dark .fc .fc-timegrid-slot-label-cushion,
+.dark .fc .fc-timegrid-axis-cushion {
+  color: var(--color-zinc-400);
+}
+
+.fc .fc-daygrid-event {
+  font-size: 0.6875rem; /* 11px */
+  padding: 0 0.25rem;
+  margin-top: 1px;
+}
+
+.fc .fc-timegrid-allday .fc-daygrid-day-events {
+  margin-bottom: 0.125rem;
+  min-height: 0;
+}

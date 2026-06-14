@@ -14,10 +14,14 @@ export function useCalendarEvents(
 ) {
   const dateRange = ref<AppointmentDateRange>(createInitialAppointmentDateRange())
 
-  const { data: appointments } = useAppointmentsQuery(userId, dateRange)
+  const { data: appointments, isPending } = useAppointmentsQuery(userId, dateRange)
   const { data: timeBlocks } = useTimeBlocksQuery(userId, dateRange)
   const { data: clients } = useClientsQuery(userId)
   const { data: services } = useServicesQuery(userId)
+
+  // Empty == no real appointments in the visible range (time-blocks and the
+  // background schedule don't count as "scheduled work").
+  const isEmpty = computed(() => (appointments.value?.length ?? 0) === 0)
 
   const calendarEvents = computed(() =>
     buildCalendarEvents({
@@ -39,6 +43,8 @@ export function useCalendarEvents(
     calendarEvents,
     dateRange,
     onDatesSet,
+    isPending,
+    isEmpty,
   }
 }
 

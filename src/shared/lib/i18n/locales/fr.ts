@@ -136,6 +136,14 @@ export default {
     },
     allDay: 'Toute la journée',
     dragError: "Impossible de mettre à jour l'heure de l'événement",
+    event: {
+      onlineHint: 'Réservé en ligne',
+    },
+    loading: 'Chargement du calendrier…',
+    empty: {
+      title: 'Aucun rendez-vous',
+      description: 'Rien de prévu pour cette période. Créez un rendez-vous pour commencer.',
+    },
   },
   services: {
     title: 'Services',
