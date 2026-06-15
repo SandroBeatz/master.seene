@@ -18,6 +18,7 @@ export default {
     edit: 'Edit',
     delete: 'Delete',
     cancel: 'Cancel',
+    close: 'Close',
     confirm: 'Confirm',
     ok: 'OK',
     validation: {
@@ -106,7 +107,8 @@ export default {
       complete: 'Complete',
       noShow: 'No-show',
       noShowConfirmTitle: 'Mark as no-show?',
-      noShowConfirmDescription: 'We’ll log that {name} didn’t show up. No payment will be recorded.',
+      noShowConfirmDescription:
+        'We’ll log that {name} didn’t show up. No payment will be recorded.',
       noShowConfirm: 'Mark no-show',
       today: 'Today',
       tomorrow: 'Tomorrow',
@@ -502,11 +504,11 @@ export default {
   },
   appointments: {
     status: {
-      pending: 'Pending',
+      pending: 'Awaiting confirmation',
       confirmed: 'Confirmed',
       completed: 'Completed',
       cancelled: 'Cancelled',
-      no_show: 'No show',
+      no_show: 'No-show',
       expired: 'Expired',
     },
     form: {
@@ -559,9 +561,27 @@ export default {
       cancelConfirmTitle: 'Cancel appointment',
       cancelConfirmMessage: 'Cancel this appointment? The client will no longer be expected.',
       keepAppointment: 'Keep appointment',
-      confirmAppointment: 'Confirm',
+      confirmAppointment: 'Confirm appointment',
       completeAppointment: 'Complete',
+      completeCheckout: 'Complete & checkout',
+      declineRequest: 'Decline request',
+      declineConfirmTitle: 'Decline request',
+      declineConfirmMessage:
+        'Decline this booking request? The client will be notified it was not accepted.',
+      keepRequest: 'Keep request',
+      markNoShow: 'Mark as no-show',
+      noShowConfirmTitle: 'Mark as no-show',
+      noShowConfirmMessage:
+        'Mark this appointment as a no-show? It will be recorded as a missed visit.',
       noNextAction: 'No action',
+      total: 'Total',
+      durationHours: '{n}h',
+      riskNote: 'Important note',
+      tags: {
+        onlineBooking: 'Online booking',
+        newClient: 'New client',
+        paid: 'Paid · {amount}',
+      },
       statusUpdateSuccess: 'Appointment status updated',
       statusUpdateError: 'Failed to update appointment status',
     },

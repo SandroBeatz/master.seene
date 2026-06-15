@@ -146,7 +146,7 @@ describe('buildCalendarEvents', () => {
       borderColor: '#2563eb',
       backgroundColor: 'color-mix(in srgb, #2563eb 14%, white)',
       textColor: '#1e293b',
-      extendedProps: { statusIcon: 'i-lucide-ban' },
+      extendedProps: { statusIcon: 'i-lucide-user-x' },
     })
   })
 
@@ -154,7 +154,10 @@ describe('buildCalendarEvents', () => {
     const [event] = buildCalendarEvents({
       appointments: [{ ...baseAppointment, service_ids: ['service-1', 'service-2'] }],
       clients,
-      services: [...services, { ...services[0]!, id: 'service-2', name: 'Color', color: '#16a34a' }],
+      services: [
+        ...services,
+        { ...services[0]!, id: 'service-2', name: 'Color', color: '#16a34a' },
+      ],
       unknownClientLabel: 'Unknown client',
       timeBlockLabel: 'Blocked time',
       timeZone: 'UTC',

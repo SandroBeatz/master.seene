@@ -17,6 +17,7 @@ export default {
     edit: 'Редактировать',
     delete: 'Удалить',
     cancel: 'Отмена',
+    close: 'Закрыть',
     confirm: 'Подтвердить',
     ok: 'ОК',
     validation: {
@@ -104,7 +105,8 @@ export default {
       complete: 'Завершить',
       noShow: 'Не пришёл',
       noShowConfirmTitle: 'Отметить, что клиент не пришёл?',
-      noShowConfirmDescription: 'Запишем, что {name} не пришёл(ла). Оплата при этом не учитывается.',
+      noShowConfirmDescription:
+        'Запишем, что {name} не пришёл(ла). Оплата при этом не учитывается.',
       noShowConfirm: 'Отметить',
       today: 'Сегодня',
       tomorrow: 'Завтра',
@@ -497,7 +499,7 @@ export default {
   },
   appointments: {
     status: {
-      pending: 'Ожидает',
+      pending: 'Ожидает подтверждения',
       confirmed: 'Подтверждена',
       completed: 'Завершена',
       cancelled: 'Отменена',
@@ -554,9 +556,27 @@ export default {
       cancelConfirmTitle: 'Отменить запись',
       cancelConfirmMessage: 'Отменить эту запись? Клиент больше не будет ожидаться.',
       keepAppointment: 'Оставить запись',
-      confirmAppointment: 'Подтвердить',
+      confirmAppointment: 'Подтвердить запись',
       completeAppointment: 'Завершить',
+      completeCheckout: 'Завершить и оплатить',
+      declineRequest: 'Отклонить заявку',
+      declineConfirmTitle: 'Отклонить заявку',
+      declineConfirmMessage:
+        'Отклонить эту заявку на запись? Клиент получит уведомление, что она не принята.',
+      keepRequest: 'Оставить заявку',
+      markNoShow: 'Отметить неявку',
+      noShowConfirmTitle: 'Отметить неявку',
+      noShowConfirmMessage:
+        'Отметить эту запись как неявку? Она будет учтена как пропущенный визит.',
       noNextAction: 'Нет действия',
+      total: 'Итого',
+      durationHours: '{n} ч',
+      riskNote: 'Важная заметка',
+      tags: {
+        onlineBooking: 'Онлайн-запись',
+        newClient: 'Новый клиент',
+        paid: 'Оплачено · {amount}',
+      },
       statusUpdateSuccess: 'Статус записи обновлён',
       statusUpdateError: 'Не удалось обновить статус записи',
     },

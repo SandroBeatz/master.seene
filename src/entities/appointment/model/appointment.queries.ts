@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
 import {
+  countClientAppointments,
   createAppointment,
   getNextAppointment,
   listActionableAppointments,
@@ -79,6 +80,17 @@ export const useNextAppointmentQuery = (userId: Ref<string>) =>
   useQuery({
     key: () => ['appointment-next', userId.value],
     query: () => getNextAppointment(userId.value),
+  })
+
+/**
+ * Number of appointments belonging to a client. Disabled until a client id is
+ * available. Consumers derive "new client" as `count <= 1`.
+ */
+export const useClientAppointmentsCountQuery = (clientId: Ref<string>) =>
+  useQuery({
+    key: () => ['appointments-client-count', clientId.value],
+    query: () => countClientAppointments(clientId.value),
+    enabled: () => Boolean(clientId.value),
   })
 
 export const useAppointmentDayCountsQuery = (

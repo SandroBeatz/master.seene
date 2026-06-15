@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   useUpdateAppointmentMutation,
+  useRemoveAppointmentMutation,
+  useClientAppointmentsCountQuery,
   type Appointment,
   type AppointmentStatus,
 } from '@entities/appointment'
@@ -40,13 +42,21 @@ const userId = computed(() => sessionStore.session?.user.id ?? '')
 const current = ref<Appointment>(props.appointment)
 const currentId = computed(() => current.value.id)
 
+const clientId = computed(() => current.value.client_id)
+
 const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
 const { data: paymentTypes } = usePaymentTypesQuery(userId)
 const { data: sale } = useSaleByAppointmentQuery(currentId)
+const { data: clientAppointmentsCount } = useClientAppointmentsCountQuery(clientId)
 
 const updateMutation = useUpdateAppointmentMutation(userId)
+const removeMutation = useRemoveAppointmentMutation(userId)
 const completeSaleMutation = useCompleteSaleMutation(userId)
+
+// "New client" = this appointment is the client's only one (their first visit).
+const isNew = computed(() => (clientAppointmentsCount.value ?? 0) <= 1)
+const isBusy = computed(() => updateMutation.isLoading.value || removeMutation.isLoading.value)
 
 const isFormOpen = ref(false)
 const isCheckoutOpen = ref(false)
@@ -81,6 +91,51 @@ async function handleCancel() {
   await updateStatus('cancelled')
 }
 
+async function handleDecline() {
+  const confirmed = await confirm({
+    title: t('appointments.preview.declineConfirmTitle'),
+    description: t('appointments.preview.declineConfirmMessage'),
+    confirmLabel: t('appointments.preview.declineRequest'),
+    cancelLabel: t('appointments.preview.keepRequest'),
+    color: 'error',
+    icon: 'i-lucide-triangle-alert',
+  })
+  if (!confirmed) return
+  await updateStatus('cancelled')
+}
+
+async function handleNoShow() {
+  const confirmed = await confirm({
+    title: t('appointments.preview.noShowConfirmTitle'),
+    description: t('appointments.preview.noShowConfirmMessage'),
+    confirmLabel: t('appointments.preview.markNoShow'),
+    cancelLabel: t('common.cancel'),
+    color: 'error',
+    icon: 'i-lucide-user-x',
+  })
+  if (!confirmed) return
+  await updateStatus('no_show')
+}
+
+async function handleDelete() {
+  const confirmed = await confirm({
+    title: t('appointments.delete.title'),
+    description: t('appointments.delete.message'),
+    confirmLabel: t('appointments.delete.confirm'),
+    cancelLabel: t('appointments.delete.cancel'),
+    color: 'error',
+    icon: 'i-lucide-triangle-alert',
+  })
+  if (!confirmed) return
+  try {
+    await removeMutation.mutateAsync(current.value.id)
+    toast.add({ title: t('appointments.form.successDelete'), color: 'success' })
+    open.value = false
+  } catch {
+    toast.add({ title: t('appointments.form.errorDelete'), color: 'error' })
+  }
+}
+
 function handleSaved() {
   isFormOpen.value = false
   open.value = false
@@ -109,7 +164,8 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
     v-model:open="open"
     side="right"
     :title="$t('appointments.preview.title')"
-    :ui="{ body: 'p-0 sm:p-0' }"
+    :close="false"
+    :ui="{ body: 'p-0 sm:p-0', header: 'sr-only' }"
     @after:leave="emit('after:leave')"
   >
     <template #body>
@@ -118,13 +174,18 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
         :client="client"
         :services="selectedServices"
         :sale="sale"
+        :is-new="isNew"
         :time-zone="masterPreferencesStore.timeZone"
         :time-format="masterPreferencesStore.timeFormat"
-        :loading="updateMutation.isLoading.value"
+        :loading="isBusy"
         @edit="isFormOpen = true"
         @cancel="handleCancel"
         @confirm="updateStatus('confirmed')"
         @complete="isCheckoutOpen = true"
+        @decline="handleDecline"
+        @no_show="handleNoShow"
+        @delete="handleDelete"
+        @close="open = false"
       />
     </template>
   </USlideover>

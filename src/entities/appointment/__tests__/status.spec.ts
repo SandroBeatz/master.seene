@@ -15,10 +15,16 @@ describe('APPOINTMENT_STATUS_VIEW', () => {
     expect(Object.keys(APPOINTMENT_STATUS_VIEW).sort()).toEqual([...APPOINTMENT_STATUSES].sort())
   })
 
-  it('uses the expected no-show icon and neutral UI color', () => {
+  it('uses the expected no-show icon and error UI color', () => {
     expect(APPOINTMENT_STATUS_VIEW.no_show).toMatchObject({
-      icon: 'i-lucide-ban',
-      color: 'neutral',
+      icon: 'i-lucide-user-x',
+      color: 'error',
     })
+  })
+
+  it('exposes an i18n label key for every status', () => {
+    for (const status of APPOINTMENT_STATUSES) {
+      expect(APPOINTMENT_STATUS_VIEW[status].labelKey).toBe(`appointments.status.${status}`)
+    }
   })
 })

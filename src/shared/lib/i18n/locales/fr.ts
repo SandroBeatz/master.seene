@@ -17,6 +17,7 @@ export default {
     edit: 'Modifier',
     delete: 'Supprimer',
     cancel: 'Annuler',
+    close: 'Fermer',
     confirm: 'Confirmer',
     ok: 'OK',
     validation: {
@@ -506,7 +507,7 @@ export default {
   },
   appointments: {
     status: {
-      pending: 'En attente',
+      pending: 'En attente de confirmation',
       confirmed: 'Confirmé',
       completed: 'Terminé',
       cancelled: 'Annulé',
@@ -563,9 +564,27 @@ export default {
       cancelConfirmTitle: 'Annuler le rendez-vous',
       cancelConfirmMessage: 'Annuler ce rendez-vous ? Le client ne sera plus attendu.',
       keepAppointment: 'Garder le rendez-vous',
-      confirmAppointment: 'Confirmer',
+      confirmAppointment: 'Confirmer le rendez-vous',
       completeAppointment: 'Terminer',
+      completeCheckout: 'Terminer et encaisser',
+      declineRequest: 'Refuser la demande',
+      declineConfirmTitle: 'Refuser la demande',
+      declineConfirmMessage:
+        "Refuser cette demande de rendez-vous ? Le client sera informé qu'elle n'a pas été acceptée.",
+      keepRequest: 'Garder la demande',
+      markNoShow: 'Marquer comme absent',
+      noShowConfirmTitle: 'Marquer comme absent',
+      noShowConfirmMessage:
+        'Marquer ce rendez-vous comme une absence ? Il sera enregistré comme une visite manquée.',
       noNextAction: 'Aucune action',
+      total: 'Total',
+      durationHours: '{n} h',
+      riskNote: 'Note importante',
+      tags: {
+        onlineBooking: 'Réservation en ligne',
+        newClient: 'Nouveau client',
+        paid: 'Payé · {amount}',
+      },
       statusUpdateSuccess: 'Statut du rendez-vous mis à jour',
       statusUpdateError: 'Impossible de mettre à jour le statut du rendez-vous',
     },

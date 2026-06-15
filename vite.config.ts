@@ -87,6 +87,28 @@ export default defineConfig({
             },
           },
         },
+
+        // Dark, dimmed scrim behind every overlay. The Nuxt UI default
+        // (`bg-elevated/75`) is near-white in light mode and reads as a washed-out
+        // backdrop — a black scrim gives proper contrast in both color schemes.
+        // The `!` marker is required: the app-config slot value is *merged* with the
+        // default, and tailwind-merge doesn't treat the semantic `bg-elevated`
+        // utility as conflicting with `bg-black`, so without `!` the default wins.
+        modal: {
+          slots: {
+            overlay: 'fixed inset-0 bg-black/60!',
+          },
+        },
+        slideover: {
+          slots: {
+            overlay: 'fixed inset-0 bg-black/60!',
+          },
+        },
+        drawer: {
+          slots: {
+            overlay: 'fixed inset-0 bg-black/60!',
+          },
+        },
       },
     }),
     vue(),

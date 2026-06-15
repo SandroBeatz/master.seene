@@ -103,6 +103,21 @@ export async function listActionableAppointments(userId: string): Promise<Appoin
   })
 }
 
+/**
+ * Total number of appointments for a client (any status). Used to flag a
+ * "new client" in the appointment preview — `count <= 1` means this is their
+ * only appointment, i.e. their first visit. Uses a head-only `count: 'exact'`
+ * request so no rows are transferred.
+ */
+export async function countClientAppointments(clientId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .eq('client_id', clientId)
+  if (error) throw error
+  return count ?? 0
+}
+
 export async function getNextAppointment(userId: string): Promise<Appointment | null> {
   const now = new Date().toISOString()
   const { data, error } = await supabase
