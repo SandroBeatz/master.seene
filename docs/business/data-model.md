@@ -1,12 +1,12 @@
 ---
-version: 2.0
-date: 2026-05-05
+version: 2.1
+date: 2026-06-15
 category: business
 ---
 
 # Data Model
 
-> Version 2.0 · 2026-05-05 · [Business](../)
+> Version 2.1 · 2026-06-15 · [Business](../)
 
 ## Overview
 
@@ -296,6 +296,7 @@ A booking — one master, one client, one or more services, at a specific time.
 | `duration` | `integer` | NO | — | — | Total duration in minutes |
 | `price` | `numeric` | YES | `null` | — | Override price; `null` means use sum of services |
 | `status` | `text` | NO | `'pending'` | enum check | See status values below |
+| `source` | `text` | NO | `'manual'` | enum check | `manual` or `online_booking` — where the booking originated |
 | `notes` | `text` | YES | `null` | — | Master's notes for this appointment |
 | `created_at` | `timestamptz` | NO | `now()` | — | — |
 | `updated_at` | `timestamptz` | NO | `now()` | — | Application-maintained |
@@ -307,8 +308,9 @@ A booking — one master, one client, one or more services, at a specific time.
 | `pending` | Created but not yet confirmed |
 | `confirmed` | Master has confirmed the booking |
 | `completed` | Appointment took place |
-| `cancelled` | Cancelled by master or client |
+| `cancelled` | Cancelled by master or client (or an online request declined) |
 | `no_show` | Client did not appear |
+| `expired` | A `pending` request left unanswered past its grace period (set by a background job) |
 
 ### `service_ids` — denormalized array
 

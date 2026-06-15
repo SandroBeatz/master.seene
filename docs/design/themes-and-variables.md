@@ -1,12 +1,12 @@
 ---
-version: 1.1
-date: 2026-06-12
+version: 1.2
+date: 2026-06-15
 category: design
 ---
 
 # Themes and Variables (@nuxt/ui v4)
 
-> Version 1.1 · 2026-06-12 · [Design](../)
+> Version 1.2 · 2026-06-15 · [Design](../)
 
 ## Overview
 
@@ -100,6 +100,28 @@ Accepted values: any Tailwind palette color (`blue`, `red`, `emerald`, `zinc`, e
 Use `shadow-panel` for top-level dashboard surfaces only. Nested cards use borders without a heavy
 shadow. Put repeated Nuxt UI component structure in `vite.config.ts`; use the component `ui` prop
 for isolated layout or visual exceptions.
+
+### Global component overrides (`vite.config.ts`)
+
+The `ui({ ui: { … } })` block also holds per-component slot overrides applied app-wide. Example: the
+overlay backdrop. Nuxt UI's default scrim is `bg-elevated/75`, which is near-white in light mode and
+reads as a washed-out dim. All overlay components are darkened to a proper scrim:
+
+```ts
+// vite.config.ts
+modal: { slots: { overlay: 'fixed inset-0 bg-black/60!' } },
+slideover: { slots: { overlay: 'fixed inset-0 bg-black/60!' } },
+drawer: { slots: { overlay: 'fixed inset-0 bg-black/60!' } },
+```
+
+This covers every overlay at once — `UModal`, `USlideover`, `UDrawer`, and anything built on them
+(confirm/alert dialogs, the appointment preview, checkout, forms).
+
+> **Gotcha — the `!` is required.** App-config slot values are *merged* with the component default,
+> not replaced. `tailwind-merge` does not treat the semantic `bg-elevated` utility as conflicting
+> with `bg-black`, so without the `!` important marker both classes survive and the default wins by
+> stylesheet order. Tailwind v4's important marker is the trailing `!` (`bg-black/60!`). Changes to
+> `vite.config.ts` also require a dev-server restart to take effect.
 
 ## Usage
 
@@ -196,6 +218,7 @@ Used like standard breakpoints: `3xl:grid-cols-4`.
 ## Cross-references
 
 - [Nuxt UI Components](../ui/nuxt-ui-components.md) — component library that consumes these design tokens via `color`, `variant`, and `size` props
+- [Global Overlays](../ui/overlays.md) — overlay components affected by the global backdrop scrim override
 
 ## File Structure
 

@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-05-15
+version: 1.1
+date: 2026-06-15
 category: business
 ---
 
 # Appointments
 
-> Version 1.0 · 2026-05-15 · [Business](../)
+> Version 1.1 · 2026-06-15 · [Business](../)
 
 ## Overview
 
@@ -33,13 +33,15 @@ The primary table. One row = one scheduled session.
 | `start_at` | `timestamptz` | NO | UTC start time |
 | `duration` | `integer` | YES | Duration in minutes |
 | `price` | `numeric(10,2)` | YES | Expected total price |
-| `status` | `text` | NO | Enum: `pending`, `confirmed`, `completed`, `cancelled`, `no_show` |
+| `status` | `text` | NO | Enum: `pending`, `confirmed`, `completed`, `cancelled`, `no_show`, `expired` |
+| `source` | `text` | NO | Enum: `manual`, `online_booking`. Default `manual` — where the booking originated |
 | `notes` | `text` | YES | Free-text notes |
 | `created_at` | `timestamptz` | NO | Auto-set on insert |
 | `updated_at` | `timestamptz` | NO | Auto-maintained by trigger |
 
 **Constraints:**
-- `status` is enforced by a `CHECK` constraint on the five allowed values
+- `status` is enforced by a `CHECK` constraint on the six allowed values (`expired` was added in `20260613130000_expire_stale_pending_appointments.sql`)
+- `source` is enforced by a `CHECK` constraint on `manual` / `online_booking` (added in `20260613120000_add_appointment_source.sql`)
 - `client_id` uses `ON DELETE RESTRICT` — a client cannot be deleted while they have appointments
 
 **Indexes:** `user_id`, `client_id`, `start_at` (calendar queries), `status`
@@ -98,9 +100,9 @@ auth.users
 ```
              [create]
                 │
-             pending
+             pending ───[grace period elapses]──→ expired
             /       \
-       confirm     cancel
+       confirm     cancel / decline
           │            │
        confirmed   cancelled
        /     \
@@ -111,11 +113,16 @@ auth.users
 
 | Status | Meaning | Allowed transitions |
 |---|---|---|
-| `pending` | Newly created, awaiting confirmation | → `confirmed`, `cancelled` |
+| `pending` | Newly created, awaiting confirmation | → `confirmed`, `cancelled`, `expired` |
 | `confirmed` | Master confirmed the appointment | → `completed`, `cancelled`, `no_show` |
 | `completed` | Appointment done; sale recorded | Terminal |
-| `cancelled` | Cancelled by master or client | Terminal |
+| `cancelled` | Cancelled by master, or an online request declined | Terminal |
 | `no_show` | Client did not show up | Terminal |
+| `expired` | A `pending` request left unanswered past its grace period | Terminal |
+
+`expired` is set automatically by the `expire_stale_pending_appointments` background job
+(`20260613130000_expire_stale_pending_appointments.sql`) — pending appointments that are never
+answered drop out of the actionable feed instead of lingering forever.
 
 **Actionable appointments** — a concept used in the dashboard — are those requiring the master's immediate attention:
 - Status is `pending`, OR
@@ -168,6 +175,22 @@ If the appointment does not exist, the RPC raises `appointment_not_found`.
 
 Cancellation is a status update (`status = 'cancelled'`). No sale is created. A cancelled appointment cannot be uncancelled; the master must create a new appointment if rescheduling is needed.
 
+### Online booking and new clients
+
+`source` records where an appointment came from: `manual` (created by the master) or `online_booking`
+(submitted by the client through the public booking flow). The preview popup surfaces an
+**Online booking** tag when `source = 'online_booking'`.
+
+A **new client** is derived, not stored: a client is "new" when this appointment is their only one.
+The check uses `countClientAppointments(clientId)` (head-only `count: 'exact'`) and treats
+`count <= 1` as new. The popup shows a **New client** tag accordingly.
+
+### Declining a request
+
+Declining an online request (the secondary action on a `pending` appointment) is a cancellation —
+it sets `status = 'cancelled'`. It is distinct from `expired` (which the background job sets for
+unanswered requests) and carries its own confirmation copy.
+
 ---
 
 ## Query Patterns
@@ -214,6 +237,7 @@ All functions are in `src/entities/appointment/api/appointments.api.ts` and `src
 | `updateAppointment(dto)` | Update fields; `id` required |
 | `removeAppointment(id)` | Delete appointment (blocked if sale exists) |
 | `listActionableAppointments(userId)` | Appointments needing attention (dashboard) |
+| `countClientAppointments(clientId)` | Total appointments for a client — backs the "new client" flag |
 
 ### Time Blocks
 
@@ -246,6 +270,10 @@ useAppointmentsQuery(userId, dateRange?)
 useActionableAppointmentsQuery(userId)
 // Cache key: ['appointments-actionable', userId]
 
+// Count a client's appointments — drives the "new client" flag in the preview
+useClientAppointmentsCountQuery(clientId) // enabled only when clientId is set
+// Cache key: ['appointments-client-count', clientId]
+
 // Mutations — all invalidate ['appointments', userId] on success
 useCreateAppointmentMutation(userId)
 useUpdateAppointmentMutation(userId)
@@ -264,7 +292,7 @@ Completing a sale (`useCompleteSaleMutation`) invalidates both `['appointments',
 | `AppointmentCheckoutModal` | `src/features/appointment-checkout/ui/` | Collect payment and complete appointment |
 | `TimeBlockFormDialog` | `src/features/time-block-form/ui/` | Create / edit / delete time block |
 | `CalendarWidget` | `src/widgets/calendar/ui/` | FullCalendar view with appointments + time blocks |
-| `AppointmentPreviewPanel` | `src/widgets/appointment-preview-panel/ui/` | Read-only appointment details with action buttons |
+| `AppointmentPreviewPanel` | `src/widgets/appointment-preview-panel/ui/` | Status-aware appointment detail popup; actions and visuals driven by status |
 
 ### AppointmentFormDialog
 
@@ -282,11 +310,42 @@ Completing a sale (`useCompleteSaleMutation`) invalidates both `['appointments',
 
 ### AppointmentPreviewPanel
 
-- Read-only panel showing client, services, status, duration, price, notes
-- Action buttons based on current status:
-  - `pending` → Confirm button
-  - `confirmed` → Complete (opens checkout modal), Cancel
-  - Terminal statuses → no actions
+A single popup serving every status. What it shows — the status pill, contextual tags, the footer
+CTA and the header overflow (`…`) menu — is driven by status, not branched ad-hoc. Two declarative
+maps are the source of truth:
+
+- `APPOINTMENT_STATUS_VIEW` (`@entities/appointment`) — per-status pill icon, color and `labelKey`.
+- `APPOINTMENT_ACTION_CONFIG` (widget `config/action-config.ts`) — per-status `tags`, `primary` /
+  `secondary` footer actions, and `menu` items.
+
+**Layout (top to bottom):** custom header (close ✕ / centered status pill / `…` menu) · client
+avatar with initials + inline **New client** badge · accent date/time card with a duration chip ·
+contextual tags · client notes · contact (Call / WhatsApp) · service list with a **Total** · payment
+info (completed only).
+
+**Status → actions matrix:**
+
+| Status | Tags | Primary | Secondary | `…` menu |
+|---|---|---|---|---|
+| `pending` | Online booking, New client | Confirm appointment | Decline request | Edit, Delete |
+| `confirmed` | Online booking, New client | Complete & checkout | Cancel | Edit, Mark no-show, Delete |
+| `completed` | Paid · amount | — | — | Edit, Delete |
+| `cancelled` | — | — | — | Delete |
+| `no_show` | New client | — | — | Delete |
+| `expired` | Online booking | — | — | Delete |
+
+- Tags render only when their data condition holds: **Online booking** (`source = 'online_booking'`),
+  **New client** (`isNew`, from `countClientAppointments`), **Paid · amount** (a `sale` exists).
+- There is no deposit/prepayment concept — payment exists only as a `sale` after completion, so
+  "not paid" is never shown; completed appointments show **Paid · amount** instead.
+- **Client notes** are lifted above the fold for actionable statuses (`pending` / `confirmed`); when
+  the text matches a risk pattern (`/allerg|аллерг/i`) they get a ⚠ warning treatment, so safety
+  notes such as allergies are seen before confirming.
+- The duration chip / service durations use `formatDurationChip` (widget `lib/format-duration.ts`):
+  `45 min` · `2h` · `1h 30 min`.
+- `AppointmentPreviewOverlay` wires the panel to data and mutations (status updates, decline → cancel,
+  no-show, delete, checkout) and follows the multi-root overlay contract — see
+  [Global Overlays](../ui/overlays.md).
 
 ---
 
@@ -295,7 +354,7 @@ Completing a sale (`useCompleteSaleMutation`) invalidates both `['appointments',
 ```
 src/entities/appointment/
 ├── api/appointments.api.ts       — Supabase CRUD + actionable query
-├── config/status.ts              — Status display config (icon, color, calendar style)
+├── config/status.ts              — Status display config (icon, color, labelKey, calendar style)
 ├── model/
 │   ├── types.ts                  — Appointment, CreateAppointmentDto, UpdateAppointmentDto
 │   └── appointment.queries.ts    — Pinia Colada query/mutation hooks
@@ -330,11 +389,20 @@ src/features/time-block-form/
 
 src/widgets/calendar/             — Full calendar integration (see calendar.md)
 src/widgets/appointment-preview-panel/
+├── ui/
+│   ├── AppointmentPreviewPanel.vue    — Presentational status-aware panel
+│   └── AppointmentPreviewOverlay.vue  — Slideover host: data + mutations wiring
+├── config/action-config.ts           — APPOINTMENT_ACTION_CONFIG status matrix
+├── lib/format-duration.ts            — formatDurationChip helper
+├── model/use-appointment-preview.ts   — useAppointmentPreview() programmatic opener
+└── index.ts
 
 supabase/migrations/
 ├── 20260430000000_create_appointments.sql
 ├── 20260502010000_create_time_blocks.sql
-└── 20260515120000_create_sale_tables.sql
+├── 20260515120000_create_sale_tables.sql
+├── 20260613120000_add_appointment_source.sql           — source column (manual / online_booking)
+└── 20260613130000_expire_stale_pending_appointments.sql — expired status + background job
 ```
 
 ---
@@ -345,3 +413,4 @@ supabase/migrations/
 - [Services](./services.md) — Service and category management; pricing and duration that feed into appointment defaults
 - [Payment Types](./payment-types.md) — Available payment methods selected during checkout
 - [Calendar Architecture](../architecture/calendar.md) — How appointments and time blocks are rendered in FullCalendar
+- [Global Overlays](../ui/overlays.md) — Programmatic overlay pattern the preview popup follows, plus the dark backdrop scrim

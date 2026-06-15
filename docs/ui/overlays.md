@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-06-13
+version: 1.1
+date: 2026-06-15
 category: ui
 ---
 
 # Global Overlays — Confirm & Alert Dialogs
 
-> Version 1.0 · 2026-06-13 · [UI](../)
+> Version 1.1 · 2026-06-15 · [UI](../)
 
 ## Overview
 
@@ -177,7 +177,15 @@ src/shared/ui/overlays/
   index.ts            # public API (re-exported from @shared/ui)
 ```
 
+## Backdrop scrim
+
+The dimmed backdrop behind every overlay (these dialogs included) is darkened globally in
+`vite.config.ts` to `bg-black/60!`, overriding Nuxt UI's near-white `bg-elevated/75` default. See
+[Global component overrides](../design/themes-and-variables.md#global-component-overrides-viteconfigts)
+for the rationale and the `!`-marker gotcha.
+
 ## Related docs
 
 - [`nuxt-ui-components.md`](./nuxt-ui-components.md) — full component catalog
-- [`themes-and-variables.md`](../design/themes-and-variables.md) — color utilities used by the dialogs
+- [`themes-and-variables.md`](../design/themes-and-variables.md) — color utilities used by the dialogs, and the global overlay scrim override
+- [`appointments.md`](../business/appointments.md) — the appointment preview popup built on this overlay pattern
