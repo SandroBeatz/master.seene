@@ -10,6 +10,7 @@ import {
 } from '@entities/master'
 import type { MasterProfile } from '@entities/master'
 import { useDirtyForm } from '@shared/lib/forms'
+import { PUBLIC_BOOKING_HOST, bookingPageUrl } from '@shared/config'
 import { FormSaveBar, Typography } from '@shared/ui'
 import { SPECIALIZATION_CODES } from '../config/specializations'
 
@@ -134,7 +135,7 @@ watchDebounced(
   { debounce: 400 },
 )
 
-const publicUrl = computed(() => `https://seene.app/${state.value.username || loadedUsername.value}`)
+const publicUrl = computed(() => bookingPageUrl(state.value.username || loadedUsername.value))
 
 const canSave = computed(
   () => isDirty.value && usernameStatus.value !== 'taken' && usernameStatus.value !== 'invalid',
@@ -192,17 +193,20 @@ const hostUI = {
         <Typography variant="h5" class="text-highlighted font-bold">
           {{ t('settings.profile.title') }}
         </Typography>
-        <p class="text-sm text-muted">{{ t('settings.profile.subtitle') }}</p>
+        <Typography variant="caption" class="text-muted">
+          {{ t('settings.profile.subtitle') }}
+        </Typography>
       </div>
     </template>
 
     <div class="flex flex-col gap-6">
       <!-- Avatar -->
       <div class="flex items-center gap-4">
-        <UAvatar :src="avatarUrl ?? undefined" icon="i-lucide-user" size="2xl" />
+        <UAvatar :src="avatarUrl ?? undefined" icon="i-lucide-user" size="3xl" />
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <UButton
+              size="sm"
               color="neutral"
               variant="outline"
               leading-icon="i-lucide-upload"
@@ -212,6 +216,7 @@ const hostUI = {
             </UButton>
             <UButton
               v-if="avatarUrl"
+              size="sm"
               color="neutral"
               variant="ghost"
               leading-icon="i-lucide-trash-2"
@@ -220,7 +225,9 @@ const hostUI = {
               {{ t('settings.profile.avatar.remove') }}
             </UButton>
           </div>
-          <p class="text-xs text-dimmed">{{ t('settings.profile.avatar.hint') }}</p>
+          <Typography variant="endnote" class="text-dimmed">
+            {{ t('settings.profile.avatar.hint') }}
+          </Typography>
         </div>
         <input
           ref="fileInput"
@@ -279,7 +286,9 @@ const hostUI = {
           class="w-full"
         />
         <template #hint>
-          <span class="text-xs text-dimmed">{{ state.bio.length }}/500</span>
+          <Typography as="span" variant="endnote" class="text-dimmed">
+            {{ state.bio.length }}/500
+          </Typography>
         </template>
       </UFormField>
 
@@ -289,33 +298,37 @@ const hostUI = {
         :description="t('settings.profile.usernameHint')"
         :error="usernameStatus === 'invalid' ? t('settings.profile.usernameInvalid') : undefined"
       >
-        <UInput v-model="state.username" class="w-full">
-          <template #leading>
-            <span class="text-sm text-dimmed">seene.app/</span>
-          </template>
-          <template #trailing>
-            <span
-              v-if="usernameStatus === 'checking'"
-              class="flex items-center gap-1 text-xs text-dimmed"
-            >
-              <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-            </span>
-            <span
-              v-else-if="usernameStatus === 'available'"
-              class="flex items-center gap-1 text-xs text-success"
-            >
-              <UIcon name="i-lucide-check" class="size-3.5" />
-              {{ t('settings.profile.usernameAvailable') }}
-            </span>
-            <span
-              v-else-if="usernameStatus === 'taken'"
-              class="flex items-center gap-1 text-xs text-error"
-            >
-              <UIcon name="i-lucide-x" class="size-3.5" />
-              {{ t('settings.profile.usernameTaken') }}
-            </span>
-          </template>
-        </UInput>
+        <UFieldGroup class="w-full">
+          <UButton color="neutral" variant="subtle" tabindex="-1" class="pointer-events-none">
+            <Typography as="span" variant="caption" class="text-dimmed">
+              {{ PUBLIC_BOOKING_HOST }}/
+            </Typography>
+          </UButton>
+          <UInput v-model="state.username" class="flex-1">
+            <template #trailing>
+              <span
+                v-if="usernameStatus === 'checking'"
+                class="flex items-center gap-1 text-xs text-dimmed"
+              >
+                <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+              </span>
+              <span
+                v-else-if="usernameStatus === 'available'"
+                class="flex items-center gap-1 text-xs text-success"
+              >
+                <UIcon name="i-lucide-check" class="size-3.5" />
+                {{ t('settings.profile.usernameAvailable') }}
+              </span>
+              <span
+                v-else-if="usernameStatus === 'taken'"
+                class="flex items-center gap-1 text-xs text-error"
+              >
+                <UIcon name="i-lucide-x" class="size-3.5" />
+                {{ t('settings.profile.usernameTaken') }}
+              </span>
+            </template>
+          </UInput>
+        </UFieldGroup>
       </UFormField>
 
       <!-- Public page actions -->
@@ -323,12 +336,7 @@ const hostUI = {
         <UButton color="neutral" leading-icon="i-lucide-external-link" @click="openPage">
           {{ t('settings.profile.openPage') }}
         </UButton>
-        <UButton
-          color="neutral"
-          variant="outline"
-          leading-icon="i-lucide-link"
-          @click="copyLink"
-        >
+        <UButton color="neutral" variant="outline" leading-icon="i-lucide-link" @click="copyLink">
           {{ t('settings.profile.copyLink') }}
         </UButton>
       </div>

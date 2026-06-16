@@ -44,7 +44,7 @@ const { t } = useI18n()
               {{ message ?? t('common.unsavedChanges') }}
             </span>
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-2">
             <UButton
               variant="ghost"
               size="md"
