@@ -2,7 +2,8 @@
 import { computed, useSlots } from 'vue'
 import type { PageProps } from './types'
 
-defineOptions({ name: 'AppPage' })
+// eslint-disable-next-line vue/multi-word-component-names
+defineOptions({ name: 'Page' })
 
 const props = defineProps<PageProps>()
 const slots = useSlots()
@@ -43,7 +44,17 @@ const hasHeader = computed(
     </div>
     <div :class="fill ? 'flex min-h-0 flex-1 flex-col pb-6 lg:pb-8' : 'pb-8 lg:pb-12'">
       <UContainer :class="{ 'flex min-h-0 flex-1 flex-col': fill }">
-        <slot />
+        <template v-if="router">
+          <div class="grid grid-cols-8 gap-6">
+            <div class="col-span-2">
+              <slot name="sidebar" />
+            </div>
+            <div class="col-span-6">
+              <router-view />
+            </div>
+          </div>
+        </template>
+        <slot v-else />
       </UContainer>
     </div>
   </div>

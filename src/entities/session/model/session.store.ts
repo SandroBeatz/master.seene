@@ -22,6 +22,12 @@ export const useSessionStore = defineStore('session', () => {
     profile.value = await fetchSessionProfile(userId)
   }
 
+  /** Re-fetch the current user's profile (e.g. after editing it in settings). */
+  async function refreshProfile(): Promise<void> {
+    const userId = session.value?.user.id
+    if (userId) await fetchProfile(userId)
+  }
+
   function waitForReady(): Promise<void> {
     return _processingPromise ?? Promise.resolve()
   }
@@ -85,5 +91,5 @@ export const useSessionStore = defineStore('session', () => {
     return _initPromise
   }
 
-  return { session, profile, isInitialized, init, waitForReady }
+  return { session, profile, isInitialized, init, waitForReady, refreshProfile }
 })

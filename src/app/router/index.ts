@@ -84,33 +84,50 @@ const router = createRouter({
           component: async () => (await import('@pages/analytics')).AnalyticsPage,
         },
         {
-          path: 'profile',
-          name: 'profile',
-          redirect: '/profile/info',
-          component: async () => (await import('@pages/profile')).ProfilePage,
-          children: [
-            {
-              path: 'info',
-              name: 'profile-info',
-              component: async () => (await import('@pages/profile')).ProfileInfoPage,
-            },
-          ],
-        },
-        {
           path: 'settings',
           name: 'settings',
-          redirect: '/settings/general',
-          component: async () => (await import('@pages/settings')).SettingsPage,
+          redirect: '/settings/profile',
+          component: async () => (await import('@pages/settings')).EntryPage,
           children: [
             {
-              path: 'general',
-              name: 'settings-general',
-              component: async () => (await import('@pages/settings')).SettingsGeneralPage,
+              path: 'profile',
+              name: 'settings-profile',
+              component: async () => (await import('@pages/settings')).SettingsProfilePage,
+            },
+            {
+              path: 'contacts',
+              name: 'settings-contacts',
+              component: async () => (await import('@pages/settings')).SettingsContactsPage,
+            },
+            {
+              path: 'working-hours',
+              name: 'settings-working-hours',
+              component: async () => (await import('@pages/settings')).SettingsWorkingHoursPage,
+            },
+            {
+              path: 'booking',
+              name: 'settings-booking',
+              component: async () => (await import('@pages/settings')).SettingsBookingPage,
             },
             {
               path: 'payment-types',
               name: 'settings-payment-types',
               component: async () => (await import('@pages/settings')).SettingsPaymentTypesPage,
+            },
+            {
+              path: 'notifications',
+              name: 'settings-notifications',
+              component: async () => (await import('@pages/settings')).SettingsNotificationsPage,
+            },
+            {
+              path: 'system-region',
+              name: 'settings-system-region',
+              component: async () => (await import('@pages/settings')).SettingsSystemRegionPage,
+            },
+            {
+              path: 'account',
+              name: 'settings-account',
+              component: async () => (await import('@pages/settings')).SettingsAccountPage,
             },
           ],
         },

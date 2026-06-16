@@ -1,7 +1,8 @@
-import { useQuery, useQueryCache } from '@pinia/colada'
+import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
 import { createMasterPreferences } from './master-preferences'
-import { getMasterPreferences } from '../api/master.api'
+import { getMasterPreferences, updateMasterProfile } from '../api/master.api'
+import type { MasterProfileUpdate } from './types'
 
 export const masterPreferencesQueryKey = (userId: string) =>
   ['master', 'preferences', userId] as const
@@ -20,4 +21,13 @@ export const useInvalidateMasterPreferences = (userId: Ref<string>) => {
   const cache = useQueryCache()
 
   return () => cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
+}
+
+export const useUpdateMasterProfileMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: (payload: MasterProfileUpdate) => updateMasterProfile(userId.value, payload),
+    onSettled: () => cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) }),
+  })
 }

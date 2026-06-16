@@ -7,4 +7,5 @@ export interface PageProps {
    * full-height child whose own internals scroll, while the page itself doesn't.
    */
   fill?: boolean
+  router?: boolean
 }

@@ -11,6 +11,7 @@ import {
 } from '@entities/payment-type'
 import { useSessionStore } from '@entities/session'
 import { PaymentTypeFormModal } from '@features/payment-type-form'
+import { Typography } from '@shared/ui'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -49,7 +50,9 @@ async function onDragEnd() {
   if (updates.length === 0) return
 
   try {
-    await updatePaymentTypeSortOrders(sortedList.value.map((pt, i) => ({ id: pt.id, sort_order: i })))
+    await updatePaymentTypeSortOrders(
+      sortedList.value.map((pt, i) => ({ id: pt.id, sort_order: i })),
+    )
   } catch {
     toast.add({ title: t('settings.paymentTypes.deleteError'), color: 'error' })
     // revert
@@ -94,95 +97,85 @@ async function confirmDelete() {
     isDeleting.value = false
   }
 }
+
+// Nuxt UI overrides
+const hostUI = {
+  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
+  header: 'pb-0',
+}
 </script>
 
 <template>
-  <UTheme
-    :ui="{
-      page: {
-        root: 'p-0',
-      },
-      pageHeader: {
-        root: 'pt-0 pb-4 border-none',
-      },
-    }"
-  >
-    <UPage>
-      <UPageHeader :title="$t('settings.paymentTypes.title')">
-        <template #links>
-          <UButton leading-icon="i-lucide-plus" color="primary" @click="openCreate">
-            {{ $t('settings.paymentTypes.addButton') }}
-          </UButton>
-        </template>
-      </UPageHeader>
+  <UCard :ui="hostUI">
+    <template #header>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Typography variant="h5" class="text-highlighted font-bold">{{
+          t('settings.paymentTypes.title')
+        }}</Typography>
 
-      <UPageBody>
-        <div v-if="sortedList.length > 0" class="flex flex-col gap-2">
-          <draggable
-            v-model="sortedList"
-            item-key="id"
-            handle=".drag-handle"
-            class="flex flex-col gap-2"
-            @end="onDragEnd"
+        <UButton leading-icon="i-lucide-plus" color="primary" @click="openCreate">
+          {{ $t('settings.paymentTypes.addButton') }}
+        </UButton>
+      </div>
+    </template>
+
+    <div v-if="sortedList.length > 0" class="flex flex-col gap-2">
+      <draggable
+        v-model="sortedList"
+        item-key="id"
+        handle=".drag-handle"
+        class="flex flex-col gap-2"
+        @end="onDragEnd"
+      >
+        <template #item="{ element: pt }">
+          <div
+            class="flex items-center gap-3 p-3 rounded-lg border border-default bg-background hover:bg-elevated transition-colors"
           >
-            <template #item="{ element: pt }">
-              <div
-                class="flex items-center gap-3 p-3 rounded-lg border border-default bg-background hover:bg-elevated transition-colors"
+            <UIcon
+              name="i-lucide-grip-vertical"
+              class="drag-handle cursor-grab text-muted shrink-0"
+            />
+            <div class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: pt.color }" />
+            <span class="flex-1 text-sm font-medium">{{ pt.name }}</span>
+            <UBadge v-if="pt.is_default" variant="soft" color="neutral" size="sm">
+              {{ $t('settings.paymentTypes.defaultBadge') }}
+            </UBadge>
+            <div class="flex items-center gap-1">
+              <UButton
+                icon="i-lucide-pencil"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="openEdit(pt)"
+              />
+              <UTooltip
+                :text="pt.is_default ? $t('settings.paymentTypes.deleteDisabledTooltip') : ''"
+                :disabled="!pt.is_default"
               >
-                <UIcon
-                  name="i-lucide-grip-vertical"
-                  class="drag-handle cursor-grab text-muted shrink-0"
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="sm"
+                  :disabled="pt.is_default"
+                  @click="openDelete(pt)"
                 />
-                <div
-                  class="w-4 h-4 rounded-full shrink-0"
-                  :style="{ backgroundColor: pt.color }"
-                />
-                <span class="flex-1 text-sm font-medium">{{ pt.name }}</span>
-                <UBadge v-if="pt.is_default" variant="soft" color="neutral" size="sm">
-                  {{ $t('settings.paymentTypes.defaultBadge') }}
-                </UBadge>
-                <div class="flex items-center gap-1">
-                  <UButton
-                    icon="i-lucide-pencil"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    @click="openEdit(pt)"
-                  />
-                  <UTooltip
-                    :text="pt.is_default ? $t('settings.paymentTypes.deleteDisabledTooltip') : ''"
-                    :disabled="!pt.is_default"
-                  >
-                    <UButton
-                      icon="i-lucide-trash-2"
-                      color="error"
-                      variant="ghost"
-                      size="sm"
-                      :disabled="pt.is_default"
-                      @click="openDelete(pt)"
-                    />
-                  </UTooltip>
-                </div>
-              </div>
-            </template>
-          </draggable>
-        </div>
-
-        <UCard v-else variant="soft">
-          <div class="flex flex-col items-center gap-2 py-8 text-center">
-            <UIcon name="i-lucide-credit-card" class="text-4xl text-muted" />
-            <p class="font-medium">{{ $t('settings.paymentTypes.emptyTitle') }}</p>
-            <p class="text-sm text-muted">{{ $t('settings.paymentTypes.emptyDescription') }}</p>
+              </UTooltip>
+            </div>
           </div>
-        </UCard>
-      </UPageBody>
-    </UPage>
-  </UTheme>
+        </template>
+      </draggable>
+    </div>
 
-  <PaymentTypeFormModal
-    v-model="isFormOpen"
-    :payment-type="editingPaymentType"
-  />
+    <UEmpty
+      v-else
+      icon="i-lucide-credit-card"
+      :title="$t('settings.paymentTypes.emptyTitle')"
+      :description="$t('settings.paymentTypes.emptyDescription')"
+    />
+  </UCard>
+
+  <PaymentTypeFormModal v-model="isFormOpen" :payment-type="editingPaymentType" />
 
   <UModal
     v-model:open="isDeleteOpen"

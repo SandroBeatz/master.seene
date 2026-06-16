@@ -58,7 +58,7 @@ const footerItems = computed(() => [
       src: 'https://i.pravatar.cc/200?img=47',
       alt: t('common.userAvatarAlt'),
     },
-    to: '/profile',
+    to: '/settings/profile',
   },
 ])
 

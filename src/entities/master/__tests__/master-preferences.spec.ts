@@ -42,6 +42,11 @@ describe('master preferences helpers', () => {
       {
         id: 'profile-1',
         user_id: 'user-1',
+        first_name: 'Karina',
+        last_name: 'Mi',
+        username: 'karinami',
+        specializations: [],
+        bio: null,
         schedule: { timezone: 'Asia/Bishkek' },
       },
       null,

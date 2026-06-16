@@ -16,13 +16,20 @@ export {
   masterPreferencesQueryKey,
   useInvalidateMasterPreferences,
   useMasterPreferencesQuery,
+  useUpdateMasterProfileMutation,
 } from './model/master.queries'
+export {
+  getMasterProfile,
+  updateMasterProfile,
+  isUsernameAvailable,
+} from './api/master.api'
 export { useMasterPreferencesStore } from './model/master-preferences.store'
 export type {
   CalendarFirstDay,
   MasterPreferences,
   MasterCalendarViewType,
   MasterProfile,
+  MasterProfileUpdate,
   MasterSchedule,
   MasterScheduleBreak,
   MasterScheduleDay,
