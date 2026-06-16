@@ -408,6 +408,8 @@ export default {
     title: 'Paramètres',
     description: 'Gérez votre profil, votre planning et la façon dont les clients réservent.',
     nav: {
+      groupGeneral: 'Général',
+      groupSystem: 'Système',
       profile: 'Profil',
       contacts: 'Contacts et réseaux',
       workingHours: 'Heures de travail',

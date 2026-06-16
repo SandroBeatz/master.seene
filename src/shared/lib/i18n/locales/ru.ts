@@ -400,6 +400,8 @@ export default {
     title: 'Настройки',
     description: 'Управляйте профилем, расписанием и тем, как клиенты записываются к вам.',
     nav: {
+      groupGeneral: 'Основное',
+      groupSystem: 'Система',
       profile: 'Профиль',
       contacts: 'Контакты и соцсети',
       workingHours: 'Рабочие часы',

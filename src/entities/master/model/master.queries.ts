@@ -1,11 +1,26 @@
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
 import { createMasterPreferences } from './master-preferences'
-import { getMasterPreferences, updateMasterProfile } from '../api/master.api'
+import { getMasterPreferences, getMasterProfile, updateMasterProfile } from '../api/master.api'
 import type { MasterProfileUpdate } from './types'
 
 export const masterPreferencesQueryKey = (userId: string) =>
   ['master', 'preferences', userId] as const
+
+export const masterProfileQueryKey = (userId: string) => ['master', 'profile', userId] as const
+
+/**
+ * Cached fetch of the full master profile (name, username, specializations, bio).
+ * Backs the Profile settings form — keeps data in the colada cache so revisiting
+ * the page is instant instead of refetching every mount.
+ */
+export const useMasterProfileQuery = (userId: Ref<string>) =>
+  useQuery({
+    key: () => masterProfileQueryKey(userId.value),
+    enabled: () => Boolean(userId.value),
+    query: () => getMasterProfile(userId.value),
+    staleTime: 5 * 60_000,
+  })
 
 export const useMasterPreferencesQuery = (userId: Ref<string>) =>
   useQuery({
@@ -28,6 +43,13 @@ export const useUpdateMasterProfileMutation = (userId: Ref<string>) => {
 
   return useMutation({
     mutation: (payload: MasterProfileUpdate) => updateMasterProfile(userId.value, payload),
-    onSettled: () => cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) }),
+    onSuccess: (updated) => {
+      // Seed the cache with the server response so no refetch is needed.
+      cache.setQueryData(masterProfileQueryKey(userId.value), updated)
+    },
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
+      cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+    },
   })
 }

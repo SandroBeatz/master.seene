@@ -405,6 +405,8 @@ export default {
     title: 'Settings',
     description: 'Manage your profile, schedule and how clients book you.',
     nav: {
+      groupGeneral: 'General',
+      groupSystem: 'System',
       profile: 'Profile',
       contacts: 'Contacts & social',
       workingHours: 'Working hours',

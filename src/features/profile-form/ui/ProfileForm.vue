@@ -4,10 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { watchDebounced } from '@vueuse/core'
 import { useSessionStore } from '@entities/session'
 import {
-  getMasterProfile,
   isUsernameAvailable,
+  useMasterProfileQuery,
   useUpdateMasterProfileMutation,
 } from '@entities/master'
+import type { MasterProfile } from '@entities/master'
 import { useDirtyForm } from '@shared/lib/forms'
 import { FormSaveBar, Typography } from '@shared/ui'
 import { SPECIALIZATION_CODES } from '../config/specializations'
@@ -20,6 +21,7 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
+const { data: profileData } = useMasterProfileQuery(userId)
 const updateMutation = useUpdateMasterProfileMutation(userId)
 
 interface ProfileFormState {
@@ -45,13 +47,9 @@ const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
 // The username the profile was loaded with — counts as "available".
 const loadedUsername = ref('')
 
-// Load the current profile and seed the form. Fetched directly (rather than via
-// the shared preferences query, which uses initialData + staleTime and would not
-// refetch) so we always reflect the latest stored values.
-async function loadProfile() {
-  if (!userId.value) return
-  const profile = await getMasterProfile(userId.value)
-  if (!profile) return
+// Seed the form from the cached profile query. Re-seeds when the cache updates
+// (e.g. after saving), but never clobbers in-progress edits.
+function seed(profile: MasterProfile) {
   state.value = {
     first_name: profile.first_name ?? '',
     last_name: profile.last_name ?? '',
@@ -66,7 +64,14 @@ async function loadProfile() {
   reset()
 }
 
-watch(userId, loadProfile, { immediate: true })
+watch(
+  profileData,
+  (profile) => {
+    if (!profile || isDirty.value) return
+    seed(profile)
+  },
+  { immediate: true },
+)
 
 // --- Avatar (local-only preview, not persisted) -------------------------------
 const fileInput = ref<HTMLInputElement | null>(null)

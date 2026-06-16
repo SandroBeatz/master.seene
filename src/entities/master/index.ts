@@ -14,8 +14,10 @@ export {
 } from './model/master-preferences'
 export {
   masterPreferencesQueryKey,
+  masterProfileQueryKey,
   useInvalidateMasterPreferences,
   useMasterPreferencesQuery,
+  useMasterProfileQuery,
   useUpdateMasterProfileMutation,
 } from './model/master.queries'
 export {
