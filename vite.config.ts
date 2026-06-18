@@ -18,6 +18,16 @@ export default defineConfig({
           neutral: 'zinc',
         },
 
+        avatar: {
+          variants: {
+            size: {
+              '4xl': {
+                root: 'size-18 text-2xl',
+              },
+            },
+          },
+        },
+
         card: {
           slots: {
             root: 'rounded-xl',

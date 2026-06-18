@@ -108,7 +108,7 @@ function isSpecializationSelected(code: string) {
 }
 
 // --- Username availability -----------------------------------------------------
-const USERNAME_PATTERN = /^[a-z0-9.]+$/
+const USERNAME_PATTERN = /^[a-z0-9._-]+$/
 type UsernameStatus = 'idle' | 'invalid' | 'checking' | 'available' | 'taken'
 const usernameStatus = ref<UsernameStatus>('idle')
 
@@ -137,9 +137,47 @@ watchDebounced(
 
 const publicUrl = computed(() => bookingPageUrl(state.value.username || loadedUsername.value))
 
-const canSave = computed(
-  () => isDirty.value && usernameStatus.value !== 'taken' && usernameStatus.value !== 'invalid',
+// The static `https://host/` prefix shown inside the username input. Its length
+// drives the input's start padding so the typed value never overlaps the prefix.
+const usernamePrefix = `https://${PUBLIC_BOOKING_HOST}/`
+
+// --- Required-field validation ------------------------------------------------
+// Errors only surface once the form is dirty, so a freshly-loaded (or empty)
+// profile doesn't greet the user with a wall of red.
+const isFirstNameFilled = computed(() => state.value.first_name.trim().length > 0)
+const isLastNameFilled = computed(() => state.value.last_name.trim().length > 0)
+const isUsernameFilled = computed(() => state.value.username.trim().length > 0)
+const hasSpecialization = computed(() => state.value.specializations.length > 0)
+
+const requiredMsg = computed(() => t('settings.profile.requiredField'))
+
+const firstNameError = computed(() =>
+  isDirty.value && !isFirstNameFilled.value ? requiredMsg.value : undefined,
 )
+const lastNameError = computed(() =>
+  isDirty.value && !isLastNameFilled.value ? requiredMsg.value : undefined,
+)
+const specializationError = computed(() =>
+  isDirty.value && !hasSpecialization.value ? t('settings.profile.specializationRequired') : undefined,
+)
+const usernameError = computed(() => {
+  if (usernameStatus.value === 'invalid') return t('settings.profile.usernameInvalid')
+  if (usernameStatus.value === 'taken') return t('settings.profile.usernameTaken')
+  if (isDirty.value && !isUsernameFilled.value) return requiredMsg.value
+  return undefined
+})
+
+const isFormValid = computed(
+  () =>
+    isFirstNameFilled.value &&
+    isLastNameFilled.value &&
+    isUsernameFilled.value &&
+    hasSpecialization.value &&
+    usernameStatus.value !== 'taken' &&
+    usernameStatus.value !== 'invalid',
+)
+
+const canSave = computed(() => isDirty.value && isFormValid.value)
 
 // --- Actions ------------------------------------------------------------------
 async function onSave() {
@@ -202,7 +240,7 @@ const hostUI = {
     <div class="flex flex-col gap-6">
       <!-- Avatar -->
       <div class="flex items-center gap-4">
-        <UAvatar :src="avatarUrl ?? undefined" icon="i-lucide-user" size="3xl" />
+        <UAvatar :src="avatarUrl ?? undefined" icon="i-lucide-user" size="4xl" />
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <UButton
@@ -240,14 +278,14 @@ const hostUI = {
 
       <!-- Name -->
       <div class="grid gap-4 sm:grid-cols-2">
-        <UFormField :label="t('settings.profile.firstName')">
+        <UFormField required :label="t('settings.profile.firstName')" :error="firstNameError">
           <UInput
             v-model="state.first_name"
             :placeholder="t('settings.profile.firstNamePlaceholder')"
             class="w-full"
           />
         </UFormField>
-        <UFormField :label="t('settings.profile.lastName')">
+        <UFormField required :label="t('settings.profile.lastName')" :error="lastNameError">
           <UInput
             v-model="state.last_name"
             :placeholder="t('settings.profile.lastNamePlaceholder')"
@@ -258,8 +296,10 @@ const hostUI = {
 
       <!-- Specialization -->
       <UFormField
+        required
         :label="t('settings.profile.specialization')"
         :description="t('settings.profile.specializationHint')"
+        :error="specializationError"
       >
         <div class="flex flex-wrap gap-2">
           <UButton
@@ -294,41 +334,47 @@ const hostUI = {
 
       <!-- Username -->
       <UFormField
+        required
         :label="t('settings.profile.username')"
         :description="t('settings.profile.usernameHint')"
-        :error="usernameStatus === 'invalid' ? t('settings.profile.usernameInvalid') : undefined"
+        :error="usernameError"
       >
-        <UFieldGroup class="w-full">
-          <UButton color="neutral" variant="subtle" tabindex="-1" class="pointer-events-none">
-            <Typography as="span" variant="caption" class="text-dimmed">
-              {{ PUBLIC_BOOKING_HOST }}/
-            </Typography>
-          </UButton>
-          <UInput v-model="state.username" class="flex-1">
-            <template #trailing>
-              <span
-                v-if="usernameStatus === 'checking'"
-                class="flex items-center gap-1 text-xs text-dimmed"
-              >
-                <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-              </span>
-              <span
-                v-else-if="usernameStatus === 'available'"
-                class="flex items-center gap-1 text-xs text-success"
-              >
-                <UIcon name="i-lucide-check" class="size-3.5" />
-                {{ t('settings.profile.usernameAvailable') }}
-              </span>
-              <span
-                v-else-if="usernameStatus === 'taken'"
-                class="flex items-center gap-1 text-xs text-error"
-              >
-                <UIcon name="i-lucide-x" class="size-3.5" />
-                {{ t('settings.profile.usernameTaken') }}
-              </span>
-            </template>
-          </UInput>
-        </UFieldGroup>
+        <UInput
+          v-model="state.username"
+          class="w-full"
+          :style="{ '--username-prefix-length': `${usernamePrefix.length * 0.695 + 2}ch` }"
+          :ui="{
+            base: 'ps-(--username-prefix-length)',
+            leading: 'pointer-events-none',
+          }"
+        >
+          <template #leading>
+            <UIcon name="i-lucide-globe" class="size-3.5 text-muted mr-1.5" />
+            <Typography variant="endnote" class="text-muted">{{ usernamePrefix }}</Typography>
+          </template>
+          <template #trailing>
+            <span
+              v-if="usernameStatus === 'checking'"
+              class="flex items-center gap-1 text-xs text-dimmed"
+            >
+              <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+            </span>
+            <span
+              v-else-if="usernameStatus === 'available'"
+              class="flex items-center gap-1 text-xs text-success"
+            >
+              <UIcon name="i-lucide-check" class="size-3.5" />
+              {{ t('settings.profile.usernameAvailable') }}
+            </span>
+            <span
+              v-else-if="usernameStatus === 'taken'"
+              class="flex items-center gap-1 text-xs text-error"
+            >
+              <UIcon name="i-lucide-x" class="size-3.5" />
+              {{ t('settings.profile.usernameTaken') }}
+            </span>
+          </template>
+        </UInput>
       </UFormField>
 
       <!-- Public page actions -->
