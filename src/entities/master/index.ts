@@ -18,16 +18,19 @@ export {
   useInvalidateMasterPreferences,
   useMasterPreferencesQuery,
   useMasterProfileQuery,
+  useUpdateMasterContactsMutation,
   useUpdateMasterProfileMutation,
 } from './model/master.queries'
 export {
   getMasterProfile,
+  updateMasterContacts,
   updateMasterProfile,
   isUsernameAvailable,
 } from './api/master.api'
 export { useMasterPreferencesStore } from './model/master-preferences.store'
 export type {
   CalendarFirstDay,
+  MasterContactsUpdate,
   MasterPreferences,
   MasterCalendarViewType,
   MasterProfile,

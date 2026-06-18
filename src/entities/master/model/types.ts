@@ -37,6 +37,22 @@ export interface MasterProfile {
   specializations: string[]
   bio: string | null
   schedule: MasterSchedule | null
+  // Contact & social channels (Settings → Contacts & social).
+  phone: string
+  whatsapp: string | null
+  telegram: string | null
+  instagram: string | null
+  tiktok: string | null
+  contact_email: string | null
+  // Studio / address.
+  country: string
+  address: string | null
+  house_number: string | null
+  zip_code: string | null
+  city: string | null
+  place_id: string | null
+  works_at_place: boolean
+  can_travel: boolean
 }
 
 /** Fields editable from the Profile settings form. */
@@ -46,6 +62,24 @@ export interface MasterProfileUpdate {
   username: string
   specializations: string[]
   bio: string | null
+}
+
+/** Fields editable from the Contacts & social settings form. */
+export interface MasterContactsUpdate {
+  phone: string
+  whatsapp: string | null
+  telegram: string | null
+  instagram: string | null
+  tiktok: string | null
+  contact_email: string | null
+  country: string
+  address: string | null
+  house_number: string | null
+  zip_code: string | null
+  city: string | null
+  place_id: string | null
+  works_at_place: boolean
+  can_travel: boolean
 }
 
 export interface MasterSettings {

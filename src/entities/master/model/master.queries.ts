@@ -1,8 +1,13 @@
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
 import { createMasterPreferences } from './master-preferences'
-import { getMasterPreferences, getMasterProfile, updateMasterProfile } from '../api/master.api'
-import type { MasterProfileUpdate } from './types'
+import {
+  getMasterPreferences,
+  getMasterProfile,
+  updateMasterContacts,
+  updateMasterProfile,
+} from '../api/master.api'
+import type { MasterContactsUpdate, MasterProfileUpdate } from './types'
 
 export const masterPreferencesQueryKey = (userId: string) =>
   ['master', 'preferences', userId] as const
@@ -43,6 +48,22 @@ export const useUpdateMasterProfileMutation = (userId: Ref<string>) => {
 
   return useMutation({
     mutation: (payload: MasterProfileUpdate) => updateMasterProfile(userId.value, payload),
+    onSuccess: (updated) => {
+      // Seed the cache with the server response so no refetch is needed.
+      cache.setQueryData(masterProfileQueryKey(userId.value), updated)
+    },
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
+      cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+    },
+  })
+}
+
+export const useUpdateMasterContactsMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: (payload: MasterContactsUpdate) => updateMasterContacts(userId.value, payload),
     onSuccess: (updated) => {
       // Seed the cache with the server response so no refetch is needed.
       cache.setQueryData(masterProfileQueryKey(userId.value), updated)
