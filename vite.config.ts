@@ -68,8 +68,10 @@ export default defineConfig({
 
         switch: {
           slots: {
+            root: 'relative flex items-center',
             base: 'border-0 p-1 data-[state=checked]:bg-accent! focus-visible:outline-accent!',
             thumb: 'bg-white! shadow-sm',
+            wrapper: 'ms-4',
           },
           variants: {
             size: {
