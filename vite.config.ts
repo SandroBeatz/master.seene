@@ -66,6 +66,28 @@ export default defineConfig({
           },
         },
 
+        switch: {
+          slots: {
+            base: 'border-0 data-[state=checked]:bg-accent! focus-visible:outline-accent!',
+            thumb: 'bg-white! shadow-sm',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'w-[68px]',
+                container: 'h-10',
+                thumb: 'size-8 data-[state=checked]:translate-x-8 data-[state=checked]:rtl:-translate-x-8',
+              },
+            },
+            color: {
+              primary: {
+                base: 'data-[state=checked]:bg-accent! focus-visible:outline-accent!',
+                icon: 'group-data-[state=checked]:text-accent!',
+              },
+            },
+          },
+        },
+
         input: {
           slots: {
             base: 'rounded-md',
