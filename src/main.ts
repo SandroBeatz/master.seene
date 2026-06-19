@@ -1,3 +1,4 @@
+import 'vue-tel-input/vue-tel-input.css'
 import './app/styles/main.css'
 import './app/styles/base.css'
 
@@ -7,7 +8,6 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import { PiniaColada } from '@pinia/colada'
 import ui from '@nuxt/ui/vue-plugin'
 import VueTelInput from 'vue-tel-input'
-import 'vue-tel-input/vue-tel-input.css'
 
 import App from './App.vue'
 import router from './app/router'
