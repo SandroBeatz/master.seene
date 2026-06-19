@@ -68,15 +68,15 @@ export default defineConfig({
 
         switch: {
           slots: {
-            base: 'border-0 data-[state=checked]:bg-accent! focus-visible:outline-accent!',
+            base: 'border-0 p-1 data-[state=checked]:bg-accent! focus-visible:outline-accent!',
             thumb: 'bg-white! shadow-sm',
           },
           variants: {
             size: {
               md: {
-                base: 'w-[68px]',
-                container: 'h-10',
-                thumb: 'size-8 data-[state=checked]:translate-x-8 data-[state=checked]:rtl:-translate-x-8',
+                base: 'w-12',
+                container: 'h-7',
+                thumb: 'size-5 data-[state=checked]:translate-x-5 data-[state=checked]:rtl:-translate-x-5',
               },
             },
             color: {
