@@ -66,9 +66,79 @@ export default defineConfig({
           },
         },
 
+        toaster: {
+          slots: {
+            viewport:
+              'top-8! left-1/2! right-auto! w-full! max-w-[calc(100vw-2rem)] -translate-x-1/2! items-center',
+            base: 'w-fit! max-w-[calc(100vw-2rem)] mx-auto',
+          },
+        },
+
+        toast: {
+          slots: {
+            root: "min-h-0 w-fit max-w-[calc(100vw-2rem)] rounded-full bg-zinc-950! px-5 py-4 shadow-2xl shadow-zinc-950/15 ring-0 gap-3 text-white before:flex before:size-7 before:shrink-0 before:items-center before:justify-center before:rounded-full before:text-base before:font-bold before:leading-none before:text-white before:content-['\\2713'] dark:bg-white! dark:text-zinc-950 dark:shadow-black/25",
+            wrapper: 'w-auto min-w-0 flex-none',
+            title: 'truncate text-base font-semibold leading-none text-white dark:text-zinc-950',
+            description: 'mt-1 text-sm leading-5 text-zinc-300 dark:text-zinc-600',
+            icon: 'hidden',
+            actions: 'hidden',
+            close: 'hidden',
+            progress: 'hidden',
+          },
+          variants: {
+            color: {
+              primary: {
+                root: 'before:bg-zinc-600 dark:before:bg-zinc-500',
+              },
+              secondary: {
+                root: 'before:bg-violet-500',
+              },
+              success: {
+                root: 'before:bg-emerald-500',
+              },
+              info: {
+                root: "before:bg-sky-500 before:content-['i']",
+              },
+              warning: {
+                root: "before:bg-amber-500 before:content-['!']",
+              },
+              error: {
+                root: "before:bg-rose-500 before:content-['\\00D7']",
+              },
+              neutral: {
+                root: 'before:bg-zinc-600 dark:before:bg-zinc-500',
+              },
+            },
+          },
+        },
+
+        switch: {
+          slots: {
+            root: 'relative flex items-center',
+            base: 'border-0 p-1 data-[state=checked]:bg-accent! focus-visible:outline-accent!',
+            thumb: 'bg-white! shadow-sm',
+            wrapper: 'ms-4',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'w-12',
+                container: 'h-7',
+                thumb: 'size-5 data-[state=checked]:translate-x-5 data-[state=checked]:rtl:-translate-x-5',
+              },
+            },
+            color: {
+              primary: {
+                base: 'data-[state=checked]:bg-accent! focus-visible:outline-accent!',
+                icon: 'group-data-[state=checked]:text-accent!',
+              },
+            },
+          },
+        },
+
         input: {
           slots: {
-            base: 'rounded-3xl',
+            base: 'rounded-md',
           },
           variants: {
             size: {
@@ -81,6 +151,99 @@ export default defineConfig({
                 trailingIcon: 'size-5',
               },
             },
+          },
+        },
+
+        textarea: {
+          slots: {
+            base: 'rounded-md',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'px-3 py-2.5 text-base gap-1.5',
+                leading: 'ps-2.5 inset-y-2.5',
+                trailing: 'pe-2.5 inset-y-2.5',
+                leadingIcon: 'size-5',
+                leadingAvatarSize: '2xs',
+                trailingIcon: 'size-5',
+              },
+            },
+          },
+        },
+
+        select: {
+          slots: {
+            base: 'w-full rounded-md',
+            content: 'rounded-md',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'px-3 py-2.5 text-base gap-1.5',
+                leading: 'ps-2.5',
+                trailing: 'pe-2.5',
+                leadingIcon: 'size-5',
+                leadingAvatarSize: '2xs',
+                trailingIcon: 'size-5',
+              },
+            },
+          },
+        },
+
+        selectMenu: {
+          slots: {
+            base: 'w-full rounded-md',
+            content: 'rounded-md',
+          },
+          variants: {
+            size: {
+              md: {
+                base: 'px-3 py-2.5 text-base gap-1.5',
+                leading: 'ps-2.5',
+                trailing: 'pe-2.5',
+                leadingIcon: 'size-5',
+                leadingAvatarSize: '2xs',
+                trailingIcon: 'size-5',
+              },
+            },
+          },
+        },
+
+        inputMenu: {
+          slots: {
+            base: 'rounded-md',
+            content: 'rounded-md',
+          },
+        },
+
+        inputNumber: {
+          slots: {
+            base: 'rounded-md',
+          },
+        },
+
+        inputDate: {
+          slots: {
+            base: 'rounded-md',
+          },
+        },
+
+        inputTime: {
+          slots: {
+            base: 'rounded-md',
+          },
+        },
+
+        inputTags: {
+          slots: {
+            base: 'rounded-md',
+          },
+        },
+
+        pinInput: {
+          slots: {
+            base: 'rounded-md',
           },
         },
 

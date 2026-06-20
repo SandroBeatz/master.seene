@@ -11,6 +11,7 @@ import type {
   MasterPreferences,
   MasterProfile,
   MasterProfileUpdate,
+  MasterSchedule,
   MasterSettings,
 } from '../model/types'
 
@@ -73,6 +74,21 @@ export async function updateMasterContacts(
       works_at_place: payload.works_at_place,
       can_travel: payload.can_travel,
     })
+    .eq('user_id', userId)
+    .select(MASTER_PROFILE_COLUMNS)
+    .single()
+
+  if (error) throw error
+  return data as MasterProfile
+}
+
+export async function updateMasterSchedule(
+  userId: string,
+  schedule: MasterSchedule,
+): Promise<MasterProfile> {
+  const { data, error } = await supabase
+    .from('master_profile')
+    .update({ schedule })
     .eq('user_id', userId)
     .select(MASTER_PROFILE_COLUMNS)
     .single()

@@ -13,6 +13,24 @@ export {
   normalizeTimeFormat,
 } from './model/master-preferences'
 export {
+  DAY_ORDER,
+  DEFAULT_DAY_END,
+  DEFAULT_DAY_START,
+  createDefaultSchedule,
+  isValidHHmm,
+  normalizeSchedule,
+  toMinutes,
+  validateSchedule,
+  validateScheduleDay,
+} from './model/master-schedule'
+export type {
+  NormalizedSchedule,
+  NormalizedScheduleDay,
+  ScheduleDayError,
+  ScheduleDayErrorCode,
+  ScheduleValidationResult,
+} from './model/master-schedule'
+export {
   masterPreferencesQueryKey,
   masterProfileQueryKey,
   useInvalidateMasterPreferences,
@@ -20,11 +38,13 @@ export {
   useMasterProfileQuery,
   useUpdateMasterContactsMutation,
   useUpdateMasterProfileMutation,
+  useUpdateMasterScheduleMutation,
 } from './model/master.queries'
 export {
   getMasterProfile,
   updateMasterContacts,
   updateMasterProfile,
+  updateMasterSchedule,
   isUsernameAvailable,
 } from './api/master.api'
 export { useMasterPreferencesStore } from './model/master-preferences.store'
