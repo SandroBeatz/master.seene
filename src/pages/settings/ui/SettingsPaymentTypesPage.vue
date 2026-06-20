@@ -3,11 +3,13 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
 import {
-  ensureDefaultPaymentType,
+  ensureSystemPaymentTypes,
   updatePaymentTypeSortOrders,
   useDeletePaymentTypeMutation,
   usePaymentTypesQuery,
+  useSetPaymentTypeActiveMutation,
   type PaymentType,
+  type PaymentTypeKind,
 } from '@entities/payment-type'
 import { useSessionStore } from '@entities/session'
 import { PaymentTypeFormModal } from '@features/payment-type-form'
@@ -19,16 +21,40 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: paymentTypes } = usePaymentTypesQuery(userId)
+const { data: paymentTypes, isLoading } = usePaymentTypesQuery(userId)
 const deleteMutation = useDeletePaymentTypeMutation(userId)
+const setActiveMutation = useSetPaymentTypeActiveMutation(userId)
 
 onMounted(async () => {
   if (userId.value) {
-    await ensureDefaultPaymentType(userId.value)
+    await ensureSystemPaymentTypes(userId.value)
   }
 })
 
-// Local copy for drag-and-drop reordering
+// --- Display helpers -------------------------------------------------------
+const KIND_ICON: Record<PaymentTypeKind, string> = {
+  cash: 'i-lucide-banknote',
+  card: 'i-lucide-credit-card',
+  custom: 'i-lucide-circle-dollar-sign',
+}
+
+function methodIcon(pt: PaymentType): string {
+  return KIND_ICON[pt.kind]
+}
+
+function methodName(pt: PaymentType): string {
+  if (pt.kind === 'cash') return t('settings.paymentTypes.system.cash.name')
+  if (pt.kind === 'card') return t('settings.paymentTypes.system.card.name')
+  return pt.name
+}
+
+function methodSubtitle(pt: PaymentType): string {
+  if (pt.kind === 'cash') return t('settings.paymentTypes.system.cash.subtitle')
+  if (pt.kind === 'card') return t('settings.paymentTypes.system.card.subtitle')
+  return ''
+}
+
+// Local copy of the full list so drag-and-drop can reorder any method optimistically.
 const sortedList = ref<PaymentType[]>([])
 
 watch(
@@ -40,26 +66,30 @@ watch(
 )
 
 async function onDragEnd() {
-  const updates = sortedList.value
-    .map((pt, index) => ({ id: pt.id, sort_order: index }))
-    .filter((item, index) => {
-      const original = paymentTypes.value?.[index]
-      return !original || original.id !== item.id || original.sort_order !== item.sort_order
-    })
+  // Skip if the order didn't actually change (vuedraggable fires @end on any drop).
+  const current = sortedList.value.map((pt) => pt.id).join()
+  const original = (paymentTypes.value ?? []).map((pt) => pt.id).join()
+  if (current === original) return
 
-  if (updates.length === 0) return
-
+  const updates = sortedList.value.map((pt, i) => ({ id: pt.id, sort_order: i }))
   try {
-    await updatePaymentTypeSortOrders(
-      sortedList.value.map((pt, i) => ({ id: pt.id, sort_order: i })),
-    )
+    await updatePaymentTypeSortOrders(updates)
+    toast.add({ title: t('settings.paymentTypes.reorderSuccess'), color: 'success' })
   } catch {
-    toast.add({ title: t('settings.paymentTypes.deleteError'), color: 'error' })
-    // revert
+    toast.add({ title: t('settings.paymentTypes.saveError'), color: 'error' })
     if (paymentTypes.value) sortedList.value = [...paymentTypes.value]
   }
 }
 
+async function onToggle(pt: PaymentType, value: boolean) {
+  try {
+    await setActiveMutation.mutateAsync({ id: pt.id, is_active: value })
+  } catch {
+    toast.add({ title: t('settings.paymentTypes.saveError'), color: 'error' })
+  }
+}
+
+// --- Create / edit ---------------------------------------------------------
 const isFormOpen = ref(false)
 const editingPaymentType = ref<PaymentType | null>(null)
 
@@ -73,7 +103,7 @@ function openEdit(pt: PaymentType) {
   isFormOpen.value = true
 }
 
-// Delete confirmation
+// --- Delete (custom only) --------------------------------------------------
 const isDeleteOpen = ref(false)
 const deletingPaymentType = ref<PaymentType | null>(null)
 const isDeleting = ref(false)
@@ -108,19 +138,32 @@ const hostUI = {
 <template>
   <UCard :ui="hostUI">
     <template #header>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Typography variant="h5" class="text-highlighted font-bold">{{
-          t('settings.paymentTypes.title')
-        }}</Typography>
-
-        <UButton leading-icon="i-lucide-plus" color="primary" @click="openCreate">
-          {{ $t('settings.paymentTypes.addButton') }}
-        </UButton>
-      </div>
+      <Typography variant="h5" class="text-highlighted font-bold">
+        {{ t('settings.paymentTypes.title') }}
+      </Typography>
+      <p class="mt-1 text-sm text-muted">{{ t('settings.paymentTypes.subtitle') }}</p>
     </template>
 
-    <div v-if="sortedList.length > 0" class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2">
+      <!-- Loading skeletons -->
+      <template v-if="isLoading">
+        <div
+          v-for="i in 3"
+          :key="i"
+          class="flex items-center gap-3 rounded-lg border border-default bg-background p-3"
+        >
+          <USkeleton class="size-4 shrink-0 rounded" />
+          <USkeleton class="size-12 shrink-0 rounded-xl" />
+          <div class="flex-1 space-y-2">
+            <USkeleton class="h-4 w-1/3" />
+            <USkeleton class="h-3 w-1/4" />
+          </div>
+          <USkeleton class="h-6 w-11 shrink-0 rounded-full" />
+        </div>
+      </template>
+
       <draggable
+        v-else
         v-model="sortedList"
         item-key="id"
         handle=".drag-handle"
@@ -129,50 +172,72 @@ const hostUI = {
       >
         <template #item="{ element: pt }">
           <div
-            class="flex items-center gap-3 p-3 rounded-lg border border-default bg-background hover:bg-elevated transition-colors"
+            class="flex items-center gap-3 rounded-lg border border-default bg-background p-3 transition-colors hover:bg-elevated"
           >
             <UIcon
               name="i-lucide-grip-vertical"
-              class="drag-handle cursor-grab text-muted shrink-0"
+              class="drag-handle shrink-0 cursor-grab text-muted"
             />
-            <div class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: pt.color }" />
-            <span class="flex-1 text-sm font-medium">{{ pt.name }}</span>
-            <UBadge v-if="pt.is_default" variant="soft" color="neutral" size="sm">
-              {{ $t('settings.paymentTypes.defaultBadge') }}
-            </UBadge>
-            <div class="flex items-center gap-1">
-              <UButton
-                icon="i-lucide-pencil"
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                @click="openEdit(pt)"
-              />
-              <UTooltip
-                :text="pt.is_default ? $t('settings.paymentTypes.deleteDisabledTooltip') : ''"
-                :disabled="!pt.is_default"
+
+            <!-- Custom method: tile + name are clickable to edit -->
+            <button
+              v-if="pt.kind === 'custom'"
+              type="button"
+              class="flex min-w-0 flex-1 items-center gap-3 text-left"
+              @click="openEdit(pt)"
+            >
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-opacity"
+                :class="{ 'opacity-50': !pt.is_active }"
+                :style="{ backgroundColor: `${pt.color}1a` }"
               >
-                <UButton
-                  icon="i-lucide-trash-2"
-                  color="error"
-                  variant="ghost"
-                  size="sm"
-                  :disabled="pt.is_default"
-                  @click="openDelete(pt)"
-                />
-              </UTooltip>
+                <UIcon name="i-lucide-circle-dollar-sign" class="size-5" :style="{ color: pt.color }" />
+              </div>
+              <span
+                class="min-w-0 flex-1 truncate text-sm font-bold transition-opacity"
+                :class="{ 'opacity-50': !pt.is_active }"
+                >{{ pt.name }}</span
+              >
+            </button>
+
+            <!-- System method: neutral tile, fixed i18n name + subtitle -->
+            <div v-else class="flex min-w-0 flex-1 items-center gap-3">
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-elevated transition-opacity"
+                :class="{ 'opacity-50': !pt.is_active }"
+              >
+                <UIcon :name="methodIcon(pt)" class="size-5 text-muted" />
+              </div>
+              <div class="min-w-0 flex-1 transition-opacity" :class="{ 'opacity-50': !pt.is_active }">
+                <p class="truncate text-sm font-bold">{{ methodName(pt) }}</p>
+                <p class="truncate text-xs text-muted">{{ methodSubtitle(pt) }}</p>
+              </div>
             </div>
+
+            <UButton
+              v-if="pt.kind === 'custom'"
+              icon="i-lucide-trash-2"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              @click="openDelete(pt)"
+            />
+            <USwitch :model-value="pt.is_active" @update:model-value="onToggle(pt, $event)" />
           </div>
         </template>
       </draggable>
-    </div>
 
-    <UEmpty
-      v-else
-      icon="i-lucide-credit-card"
-      :title="$t('settings.paymentTypes.emptyTitle')"
-      :description="$t('settings.paymentTypes.emptyDescription')"
-    />
+      <UButton
+        v-if="!isLoading"
+        leading-icon="i-lucide-plus"
+        color="primary"
+        variant="link"
+        class="mt-1 self-start"
+        @click="openCreate"
+      >
+        {{ t('settings.paymentTypes.addCustomButton') }}
+      </UButton>
+    </div>
   </UCard>
 
   <PaymentTypeFormModal v-model="isFormOpen" :payment-type="editingPaymentType" />

@@ -17,8 +17,10 @@ export function useCheckout(
 
   const total = computed(() => serviceAmounts.value.reduce((sum, a) => sum + a, 0))
 
+  // Only active methods can be used to pay; pick the default among them, else the first active.
+  const activePaymentTypes = paymentTypes.filter((pt) => pt.is_active)
   const defaultPaymentType =
-    paymentTypes.find((pt) => pt.is_default) ?? paymentTypes[0] ?? null
+    activePaymentTypes.find((pt) => pt.is_default) ?? activePaymentTypes[0] ?? null
   const selectedPaymentTypeId = ref<string | null>(defaultPaymentType?.id ?? null)
 
   const canSubmit = computed(

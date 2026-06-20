@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
 import type { PaymentType } from '@entities/payment-type'
@@ -28,6 +29,15 @@ const { serviceAmounts, total, selectedPaymentTypeId, canSubmit, buildPayload } 
   props.services,
   props.paymentTypes,
 )
+
+// Only active methods can be used to pay.
+const activePaymentTypes = computed(() => props.paymentTypes.filter((pt) => pt.is_active))
+
+function methodLabel(pt: PaymentType): string {
+  if (pt.kind === 'cash') return t('settings.paymentTypes.system.cash.name')
+  if (pt.kind === 'card') return t('settings.paymentTypes.system.card.name')
+  return pt.name
+}
 
 function handleConfirm() {
   if (!canSubmit.value) return
@@ -93,9 +103,9 @@ function handleConfirm() {
           <p class="text-xs font-semibold uppercase text-muted">
             {{ $t('checkout.paymentMethod') }}
           </p>
-          <div v-if="paymentTypes.length" class="flex flex-wrap gap-2">
+          <div v-if="activePaymentTypes.length" class="flex flex-wrap gap-2">
             <button
-              v-for="pt in paymentTypes"
+              v-for="pt in activePaymentTypes"
               :key="pt.id"
               type="button"
               class="rounded-md border px-4 py-2 text-sm font-medium transition-colors"
@@ -110,7 +120,7 @@ function handleConfirm() {
                 class="mr-1.5 inline-block h-2 w-2 rounded-full"
                 :style="{ backgroundColor: pt.color }"
               />
-              {{ pt.name }}
+              {{ methodLabel(pt) }}
             </button>
           </div>
           <p v-else class="text-sm text-muted">

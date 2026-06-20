@@ -35,7 +35,13 @@ export async function updatePaymentType(dto: UpdatePaymentTypeDto): Promise<Paym
 }
 
 export async function deletePaymentType(id: string): Promise<void> {
-  const { error } = await supabase.from('payment_type').delete().eq('id', id).eq('is_default', false)
+  // Only custom methods are deletable; system methods (cash/card) are protected here and in the UI.
+  const { error } = await supabase.from('payment_type').delete().eq('id', id).eq('kind', 'custom')
+  if (error) throw error
+}
+
+export async function setPaymentTypeActive(id: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from('payment_type').update({ is_active: isActive }).eq('id', id)
   if (error) throw error
 }
 
@@ -51,19 +57,44 @@ export async function updatePaymentTypeSortOrders(
   }
 }
 
-export async function ensureDefaultPaymentType(userId: string): Promise<void> {
+/**
+ * Guarantees the two system methods (cash + card) exist for the user.
+ * Idempotent: only inserts the methods that are missing, so repeated calls do nothing.
+ */
+export async function ensureSystemPaymentTypes(userId: string): Promise<void> {
   const { data } = await supabase
     .from('payment_type')
-    .select('id')
+    .select('kind')
     .eq('user_id', userId)
-    .limit(1)
-  if (data && data.length === 0) {
-    await supabase.from('payment_type').insert({
+    .in('kind', ['cash', 'card'])
+
+  const kinds = new Set((data ?? []).map((row) => row.kind))
+  const toInsert: Array<Omit<PaymentType, 'id' | 'created_at' | 'updated_at'>> = []
+
+  if (!kinds.has('cash')) {
+    toInsert.push({
       user_id: userId,
-      name: 'Наличка',
-      color: '#4ade80',
+      name: 'Cash',
+      color: '#94a3b8',
+      kind: 'cash',
       is_default: true,
+      is_active: true,
       sort_order: 0,
     })
+  }
+  if (!kinds.has('card')) {
+    toInsert.push({
+      user_id: userId,
+      name: 'Card',
+      color: '#94a3b8',
+      kind: 'card',
+      is_default: false,
+      is_active: true,
+      sort_order: 1,
+    })
+  }
+
+  if (toInsert.length > 0) {
+    await supabase.from('payment_type').insert(toInsert)
   }
 }

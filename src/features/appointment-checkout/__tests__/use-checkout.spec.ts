@@ -35,12 +35,14 @@ const makeService = (id: string, price: number): Service => ({
   updated_at: '2026-05-15T09:00:00Z',
 })
 
-const makePaymentType = (id: string, isDefault = false): PaymentType => ({
+const makePaymentType = (id: string, isDefault = false, isActive = true): PaymentType => ({
   id,
   user_id: 'user-1',
   name: `Type ${id}`,
   color: '#4ade80',
+  kind: 'custom',
   is_default: isDefault,
+  is_active: isActive,
   sort_order: 0,
   created_at: '2026-05-15T09:00:00Z',
   updated_at: '2026-05-15T09:00:00Z',
@@ -114,6 +116,25 @@ describe('useCheckout', () => {
   it('selectedPaymentTypeId is null when no payment types exist', () => {
     const { selectedPaymentTypeId } = useCheckout(makeAppointment(), [], [])
     expect(selectedPaymentTypeId.value).toBeNull()
+  })
+
+  it('skips an inactive default and pre-selects the first active type', () => {
+    const { selectedPaymentTypeId } = useCheckout(
+      makeAppointment(),
+      [],
+      [makePaymentType('pt-1', true, false), makePaymentType('pt-2', false, true)],
+    )
+    expect(selectedPaymentTypeId.value).toBe('pt-2')
+  })
+
+  it('selectedPaymentTypeId is null when every payment type is inactive', () => {
+    const { selectedPaymentTypeId, canSubmit } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1000)],
+      [makePaymentType('pt-1', true, false), makePaymentType('pt-2', false, false)],
+    )
+    expect(selectedPaymentTypeId.value).toBeNull()
+    expect(canSubmit.value).toBe(false)
   })
 
   it('canSubmit is false when total is 0', () => {

@@ -99,25 +99,24 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
     const dto: CreatePaymentTypeDto = {
       name: event.data.name,
       color: state.color,
+      kind: 'custom',
       is_default: false,
+      is_active: props.paymentType?.is_active ?? true,
       sort_order: props.paymentType?.sort_order ?? 0,
     }
 
     if (isEdit.value && props.paymentType) {
       await updateMutation.mutateAsync({ ...dto, id: props.paymentType.id })
+      toast.add({ title: t('settings.paymentTypes.updateSuccess'), color: 'success' })
     } else {
       await createMutation.mutateAsync(dto)
+      toast.add({ title: t('settings.paymentTypes.createSuccess'), color: 'success' })
     }
 
     isOpen.value = false
     emit('success')
   } catch {
-    toast.add({
-      title: isEdit.value
-        ? t('settings.paymentTypes.deleteError')
-        : t('settings.paymentTypes.deleteError'),
-      color: 'error',
-    })
+    toast.add({ title: t('settings.paymentTypes.saveError'), color: 'error' })
   }
 }
 
@@ -145,18 +144,31 @@ function submitForm() {
         </UFormField>
 
         <UFormField :label="$t('settings.paymentTypes.form.color')" name="color">
-          <div class="flex flex-wrap gap-2 pt-1">
-            <button
-              v-for="c in COLOR_PALETTE"
-              :key="c"
-              type="button"
-              class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
-              :style="{
-                backgroundColor: c,
-                boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
-              }"
-              @click="state.color = c"
-            />
+          <div class="flex items-center gap-4 pt-1">
+            <div
+              class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 transition-colors"
+              :style="{ backgroundColor: `${state.color}1a` }"
+              :aria-label="$t('settings.paymentTypes.form.preview')"
+            >
+              <UIcon
+                name="i-lucide-circle-dollar-sign"
+                class="size-5"
+                :style="{ color: state.color }"
+              />
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="c in COLOR_PALETTE"
+                :key="c"
+                type="button"
+                class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
+                :style="{
+                  backgroundColor: c,
+                  boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+                }"
+                @click="state.color = c"
+              />
+            </div>
           </div>
         </UFormField>
       </UForm>
