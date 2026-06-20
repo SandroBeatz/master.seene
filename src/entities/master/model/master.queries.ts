@@ -6,8 +6,9 @@ import {
   getMasterProfile,
   updateMasterContacts,
   updateMasterProfile,
+  updateMasterSchedule,
 } from '../api/master.api'
-import type { MasterContactsUpdate, MasterProfileUpdate } from './types'
+import type { MasterContactsUpdate, MasterProfileUpdate, MasterSchedule } from './types'
 
 export const masterPreferencesQueryKey = (userId: string) =>
   ['master', 'preferences', userId] as const
@@ -64,6 +65,22 @@ export const useUpdateMasterContactsMutation = (userId: Ref<string>) => {
 
   return useMutation({
     mutation: (payload: MasterContactsUpdate) => updateMasterContacts(userId.value, payload),
+    onSuccess: (updated) => {
+      // Seed the cache with the server response so no refetch is needed.
+      cache.setQueryData(masterProfileQueryKey(userId.value), updated)
+    },
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
+      cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+    },
+  })
+}
+
+export const useUpdateMasterScheduleMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: (schedule: MasterSchedule) => updateMasterSchedule(userId.value, schedule),
     onSuccess: (updated) => {
       // Seed the cache with the server response so no refetch is needed.
       cache.setQueryData(masterProfileQueryKey(userId.value), updated)
