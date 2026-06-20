@@ -1,14 +1,7 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
-import { ComingSoon } from '@shared/ui'
-
-const { t } = useI18n()
+import { BookingSettingsForm } from '@features/booking-settings-form'
 </script>
 
 <template>
-  <ComingSoon
-    :title="t('settings.booking.title')"
-    :description="t('settings.booking.comingSoon')"
-    icon="i-lucide-calendar-check"
-  />
+  <BookingSettingsForm />
 </template>

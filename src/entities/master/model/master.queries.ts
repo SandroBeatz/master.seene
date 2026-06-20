@@ -4,11 +4,17 @@ import { createMasterPreferences } from './master-preferences'
 import {
   getMasterPreferences,
   getMasterProfile,
+  updateMasterBookingSettings,
   updateMasterContacts,
   updateMasterProfile,
   updateMasterSchedule,
 } from '../api/master.api'
-import type { MasterContactsUpdate, MasterProfileUpdate, MasterSchedule } from './types'
+import type {
+  MasterBookingSettingsUpdate,
+  MasterContactsUpdate,
+  MasterProfileUpdate,
+  MasterSchedule,
+} from './types'
 
 export const masterPreferencesQueryKey = (userId: string) =>
   ['master', 'preferences', userId] as const
@@ -72,6 +78,18 @@ export const useUpdateMasterContactsMutation = (userId: Ref<string>) => {
     onSettled: () => {
       cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
       cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+    },
+  })
+}
+
+export const useUpdateMasterBookingSettingsMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: (payload: MasterBookingSettingsUpdate) =>
+      updateMasterBookingSettings(userId.value, payload),
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
     },
   })
 }

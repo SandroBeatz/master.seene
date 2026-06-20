@@ -2,6 +2,14 @@ export type TimeFormat = 12 | 24
 export type CalendarFirstDay = 0 | 1 | 2 | 3 | 4 | 5 | 6
 export type MasterCalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
 
+/**
+ * Status applied to a new online booking.
+ *   'confirmed' = auto-confirmed (lands straight in the calendar)
+ *   'pending'   = needs the master's confirmation first
+ * Mirrors the matching values of `AppointmentStatus` in the appointment entity.
+ */
+export type BookingDefaultStatus = 'pending' | 'confirmed'
+
 export type MasterScheduleDayKey =
   | 'monday'
   | 'tuesday'
@@ -88,6 +96,19 @@ export interface MasterSettings {
   calendar_first_day: CalendarFirstDay
   calendar_slot_step_minutes: number
   default_calendar_view: MasterCalendarViewType
+  // Online booking (Settings → Booking).
+  online_booking_enabled: boolean
+  booking_default_status: BookingDefaultStatus
+  booking_buffer_minutes: number
+  booking_min_notice_minutes: number
+}
+
+/** Fields editable from the Booking settings form. */
+export interface MasterBookingSettingsUpdate {
+  online_booking_enabled: boolean
+  booking_default_status: BookingDefaultStatus
+  booking_buffer_minutes: number
+  booking_min_notice_minutes: number
 }
 
 export interface MasterPreferences {
@@ -98,4 +119,8 @@ export interface MasterPreferences {
   calendarFirstDay: CalendarFirstDay
   calendarSlotStepMinutes: number
   defaultCalendarView: MasterCalendarViewType
+  onlineBookingEnabled: boolean
+  bookingDefaultStatus: BookingDefaultStatus
+  bookingBufferMinutes: number
+  bookingMinNoticeMinutes: number
 }

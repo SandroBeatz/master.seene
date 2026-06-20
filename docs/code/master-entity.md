@@ -148,6 +148,8 @@ after saving `master_settings` or profile schedule data so the global cache and 
 - [Supabase](../integrations/supabase.md) — Supabase client and RLS usage patterns.
 - [Services](../business/services.md) — services and appointment data that calendar events combine
   with master display preferences.
+- [Online Booking Settings & Their Application](../business/online-booking.md) — how the
+  `master_settings` booking fields should drive slot search and appointment creation.
 
 ## File Structure
 

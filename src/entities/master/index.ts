@@ -1,15 +1,24 @@
 export {
+  DEFAULT_BOOKING_BUFFER_MINUTES,
+  DEFAULT_BOOKING_MIN_NOTICE_MINUTES,
+  DEFAULT_BOOKING_STATUS,
   DEFAULT_CALENDAR_FIRST_DAY,
   DEFAULT_CALENDAR_SLOT_STEP_MINUTES,
   DEFAULT_CALENDAR_VIEW,
+  DEFAULT_ONLINE_BOOKING_ENABLED,
   DEFAULT_TIME_FORMAT,
   DEFAULT_TIME_ZONE,
+  MAX_BOOKING_BUFFER_MINUTES,
   createMasterPreferences,
   getDefaultTimeZone,
   getTimeZoneFromSchedule,
+  normalizeBookingBufferMinutes,
+  normalizeBookingDefaultStatus,
+  normalizeBookingMinNoticeMinutes,
   normalizeCalendarFirstDay,
   normalizeCalendarSlotStepMinutes,
   normalizeDefaultCalendarView,
+  normalizeOnlineBookingEnabled,
   normalizeTimeFormat,
 } from './model/master-preferences'
 export {
@@ -36,12 +45,14 @@ export {
   useInvalidateMasterPreferences,
   useMasterPreferencesQuery,
   useMasterProfileQuery,
+  useUpdateMasterBookingSettingsMutation,
   useUpdateMasterContactsMutation,
   useUpdateMasterProfileMutation,
   useUpdateMasterScheduleMutation,
 } from './model/master.queries'
 export {
   getMasterProfile,
+  updateMasterBookingSettings,
   updateMasterContacts,
   updateMasterProfile,
   updateMasterSchedule,
@@ -49,7 +60,9 @@ export {
 } from './api/master.api'
 export { useMasterPreferencesStore } from './model/master-preferences.store'
 export type {
+  BookingDefaultStatus,
   CalendarFirstDay,
+  MasterBookingSettingsUpdate,
   MasterContactsUpdate,
   MasterPreferences,
   MasterCalendarViewType,
