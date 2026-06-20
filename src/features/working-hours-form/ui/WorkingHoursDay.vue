@@ -31,7 +31,9 @@ const { t } = useI18n()
 const dayName = computed(() => t(`settings.workingHours.days.${props.dayKey}`))
 
 // Day-level errors (e.g. end before start) carry no break index.
-const dayLevelErrors = computed(() => props.errors.filter((error) => error.breakIndex === undefined))
+const dayLevelErrors = computed(() =>
+  props.errors.filter((error) => error.breakIndex === undefined),
+)
 
 function breakErrors(index: number): ScheduleDayError[] {
   return props.errors.filter((error) => error.breakIndex === index)
@@ -73,33 +75,35 @@ function errorMessage(error: ScheduleDayError): string {
       </div>
       <span v-else class="text-muted">{{ t('settings.workingHours.dayOff') }}</span>
 
-      <div v-if="day.enabled" class="flex sm:justify-end">
-        <UButton
-          variant="outline"
-          color="neutral"
-          size="sm"
-          leading-icon="i-lucide-plus"
-          class="border-dashed"
-          @click="emit('add-break')"
-        >
-          {{ t('settings.workingHours.addBreak') }}
-        </UButton>
+      <div v-if="day.enabled" class="flex justify-end gap-3">
+        <UTooltip :text="t('settings.workingHours.addBreak')">
+          <UButton
+            variant="soft"
+            color="info"
+            leading-icon="i-lucide-plus"
+            @click="emit('add-break')"
+          />
+        </UTooltip>
+        <UTooltip :text="t('settings.workingHours.copyToAll')">
+          <UButton
+            variant="soft"
+            color="primary"
+            leading-icon="i-lucide-copy"
+            @click="emit('copy-to-all')"
+          />
+        </UTooltip>
       </div>
     </div>
 
     <template v-if="day.enabled">
-      <p
-        v-for="error in dayLevelErrors"
-        :key="error.code"
-        class="text-xs text-error sm:ml-40"
-      >
+      <p v-for="error in dayLevelErrors" :key="error.code" class="text-xs text-error sm:ml-40">
         {{ errorMessage(error) }}
       </p>
 
       <div class="flex flex-col gap-2">
         <div v-for="(brk, index) in day.breaks" :key="index" class="flex flex-col gap-1">
-          <div class="grid gap-2 sm:grid-cols-[10rem_15rem_auto] sm:items-center">
-            <span class="pl-[3.75rem] text-sm font-medium text-toned sm:pl-[3.75rem]">
+          <div class="grid gap-2 sm:grid-cols-[10.23rem_15rem_auto] sm:items-center">
+            <span class="pl-[5rem] text-sm font-medium text-toned">
               {{ t('settings.workingHours.break') }}
             </span>
             <div class="grid grid-cols-[7rem_auto_7rem] items-center gap-2">
@@ -139,17 +143,6 @@ function errorMessage(error: ScheduleDayError): string {
             {{ errorMessage(error) }}
           </p>
         </div>
-
-        <UButton
-          variant="link"
-          color="accent"
-          size="sm"
-          leading-icon="i-lucide-copy"
-          class="w-fit px-0 sm:ml-40"
-          @click="emit('copy-to-all')"
-        >
-          {{ t('settings.workingHours.copyToAll') }}
-        </UButton>
       </div>
     </template>
   </div>
