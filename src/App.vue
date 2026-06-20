@@ -23,7 +23,7 @@ watch(
 </script>
 
 <template>
-  <UApp>
+  <UApp :toaster="{ position: 'top-center', progress: false, expand: false }">
     <RouterView />
   </UApp>
 
