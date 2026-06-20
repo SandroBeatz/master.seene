@@ -66,6 +66,52 @@ export default defineConfig({
           },
         },
 
+        toaster: {
+          slots: {
+            viewport:
+              'top-8! left-1/2! right-auto! w-full! max-w-[calc(100vw-2rem)] -translate-x-1/2! items-center',
+            base: 'w-fit! max-w-[calc(100vw-2rem)] mx-auto',
+          },
+        },
+
+        toast: {
+          slots: {
+            root: "min-h-0 w-fit max-w-[calc(100vw-2rem)] rounded-full bg-zinc-950! px-5 py-4 shadow-2xl shadow-zinc-950/15 ring-0 gap-3 text-white before:flex before:size-7 before:shrink-0 before:items-center before:justify-center before:rounded-full before:text-base before:font-bold before:leading-none before:text-white before:content-['\\2713'] dark:bg-white! dark:text-zinc-950 dark:shadow-black/25",
+            wrapper: 'w-auto min-w-0 flex-none',
+            title: 'truncate text-base font-semibold leading-none text-white dark:text-zinc-950',
+            description: 'mt-1 text-sm leading-5 text-zinc-300 dark:text-zinc-600',
+            icon: 'hidden',
+            actions: 'hidden',
+            close: 'hidden',
+            progress: 'hidden',
+          },
+          variants: {
+            color: {
+              primary: {
+                root: 'before:bg-zinc-600 dark:before:bg-zinc-500',
+              },
+              secondary: {
+                root: 'before:bg-violet-500',
+              },
+              success: {
+                root: 'before:bg-emerald-500',
+              },
+              info: {
+                root: "before:bg-sky-500 before:content-['i']",
+              },
+              warning: {
+                root: "before:bg-amber-500 before:content-['!']",
+              },
+              error: {
+                root: "before:bg-rose-500 before:content-['\\00D7']",
+              },
+              neutral: {
+                root: 'before:bg-zinc-600 dark:before:bg-zinc-500',
+              },
+            },
+          },
+        },
+
         switch: {
           slots: {
             root: 'relative flex items-center',
