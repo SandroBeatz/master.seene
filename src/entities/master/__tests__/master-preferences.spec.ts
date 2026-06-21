@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_ALERT_UPCOMING_OFFSET_MINUTES,
   DEFAULT_BOOKING_BUFFER_MINUTES,
   DEFAULT_BOOKING_MIN_NOTICE_MINUTES,
   DEFAULT_BOOKING_STATUS,
   DEFAULT_CALENDAR_FIRST_DAY,
   DEFAULT_CALENDAR_SLOT_STEP_MINUTES,
   DEFAULT_CALENDAR_VIEW,
+  DEFAULT_CLIENT_REMINDER_OFFSETS,
   DEFAULT_TIME_FORMAT,
   createMasterPreferences,
   getTimeZoneFromSchedule,
+  normalizeAlertUpcomingOffsetMinutes,
   normalizeBookingBufferMinutes,
   normalizeBookingDefaultStatus,
   normalizeBookingMinNoticeMinutes,
+  normalizeBool,
   normalizeCalendarFirstDay,
   normalizeCalendarSlotStepMinutes,
+  normalizeClientReminderOffsets,
   normalizeDefaultCalendarView,
   normalizeOnlineBookingEnabled,
   normalizeTimeFormat,
@@ -108,6 +113,13 @@ describe('master preferences helpers', () => {
       booking_default_status: 'pending',
       booking_buffer_minutes: 0,
       booking_min_notice_minutes: 0,
+      client_reminder_whatsapp_enabled: false,
+      client_reminder_offsets_minutes: [1440, 120],
+      alert_new_booking_enabled: true,
+      alert_awaiting_confirmation_enabled: true,
+      alert_cancellation_enabled: true,
+      alert_upcoming_appointment_enabled: false,
+      alert_upcoming_offset_minutes: 60,
     })
     expect(preferences.timeFormat).toBe(24)
     expect(preferences.timeZone).toBe('Asia/Bishkek')
@@ -118,6 +130,14 @@ describe('master preferences helpers', () => {
     expect(preferences.bookingDefaultStatus).toBe('pending')
     expect(preferences.bookingBufferMinutes).toBe(0)
     expect(preferences.bookingMinNoticeMinutes).toBe(0)
+    // Notification defaults when no row exists.
+    expect(preferences.clientReminderWhatsappEnabled).toBe(false)
+    expect(preferences.clientReminderOffsetsMinutes).toEqual([1440, 120])
+    expect(preferences.alertNewBookingEnabled).toBe(true)
+    expect(preferences.alertAwaitingConfirmationEnabled).toBe(true)
+    expect(preferences.alertCancellationEnabled).toBe(true)
+    expect(preferences.alertUpcomingAppointmentEnabled).toBe(false)
+    expect(preferences.alertUpcomingOffsetMinutes).toBe(60)
   })
 
   it('uses saved calendar settings when master_settings exists', () => {
@@ -131,6 +151,13 @@ describe('master preferences helpers', () => {
       booking_default_status: 'confirmed',
       booking_buffer_minutes: 15,
       booking_min_notice_minutes: 120,
+      client_reminder_whatsapp_enabled: true,
+      client_reminder_offsets_minutes: [60],
+      alert_new_booking_enabled: false,
+      alert_awaiting_confirmation_enabled: false,
+      alert_cancellation_enabled: true,
+      alert_upcoming_appointment_enabled: true,
+      alert_upcoming_offset_minutes: 30,
     })
 
     expect(preferences.settings).toEqual({
@@ -143,6 +170,13 @@ describe('master preferences helpers', () => {
       booking_default_status: 'confirmed',
       booking_buffer_minutes: 15,
       booking_min_notice_minutes: 120,
+      client_reminder_whatsapp_enabled: true,
+      client_reminder_offsets_minutes: [60],
+      alert_new_booking_enabled: false,
+      alert_awaiting_confirmation_enabled: false,
+      alert_cancellation_enabled: true,
+      alert_upcoming_appointment_enabled: true,
+      alert_upcoming_offset_minutes: 30,
     })
     expect(preferences.timeFormat).toBe(12)
     expect(preferences.calendarFirstDay).toBe(0)
@@ -152,5 +186,46 @@ describe('master preferences helpers', () => {
     expect(preferences.bookingDefaultStatus).toBe('confirmed')
     expect(preferences.bookingBufferMinutes).toBe(15)
     expect(preferences.bookingMinNoticeMinutes).toBe(120)
+    expect(preferences.clientReminderWhatsappEnabled).toBe(true)
+    expect(preferences.clientReminderOffsetsMinutes).toEqual([60])
+    expect(preferences.alertNewBookingEnabled).toBe(false)
+    expect(preferences.alertAwaitingConfirmationEnabled).toBe(false)
+    expect(preferences.alertCancellationEnabled).toBe(true)
+    expect(preferences.alertUpcomingAppointmentEnabled).toBe(true)
+    expect(preferences.alertUpcomingOffsetMinutes).toBe(30)
+  })
+
+  it('normalizes notification booleans with safe fallbacks', () => {
+    expect(normalizeBool(true, false)).toBe(true)
+    expect(normalizeBool(false, true)).toBe(false)
+    expect(normalizeBool('true', false)).toBe(false)
+    expect(normalizeBool(undefined, true)).toBe(true)
+    expect(normalizeBool(null, false)).toBe(false)
+  })
+
+  it('normalizes client reminder offsets (whitelist, dedupe, ordering)', () => {
+    // Valid values are kept and re-ordered largest-first.
+    expect(normalizeClientReminderOffsets([60, 1440])).toEqual([1440, 60])
+    // Duplicates collapse.
+    expect(normalizeClientReminderOffsets([120, 120, 60])).toEqual([120, 60])
+    // String numbers are coerced.
+    expect(normalizeClientReminderOffsets(['1440', '120'])).toEqual([1440, 120])
+    // Unsupported values are dropped, keeping the valid ones.
+    expect(normalizeClientReminderOffsets([1440, 90, 5])).toEqual([1440])
+    // An empty array is an intentional, valid "no timings" selection.
+    expect(normalizeClientReminderOffsets([])).toEqual([])
+    // Entirely invalid input falls back to the default set.
+    expect(normalizeClientReminderOffsets([90, 5])).toEqual(DEFAULT_CLIENT_REMINDER_OFFSETS)
+    expect(normalizeClientReminderOffsets(null)).toEqual(DEFAULT_CLIENT_REMINDER_OFFSETS)
+    expect(normalizeClientReminderOffsets('1440')).toEqual(DEFAULT_CLIENT_REMINDER_OFFSETS)
+  })
+
+  it('normalizes the master upcoming-appointment offset', () => {
+    expect(normalizeAlertUpcomingOffsetMinutes(30)).toBe(30)
+    expect(normalizeAlertUpcomingOffsetMinutes('120')).toBe(120)
+    expect(normalizeAlertUpcomingOffsetMinutes(0)).toBe(0)
+    expect(normalizeAlertUpcomingOffsetMinutes(-5)).toBe(DEFAULT_ALERT_UPCOMING_OFFSET_MINUTES)
+    expect(normalizeAlertUpcomingOffsetMinutes(12.5)).toBe(DEFAULT_ALERT_UPCOMING_OFFSET_MINUTES)
+    expect(normalizeAlertUpcomingOffsetMinutes('abc')).toBe(DEFAULT_ALERT_UPCOMING_OFFSET_MINUTES)
   })
 })

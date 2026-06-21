@@ -1,18 +1,27 @@
 import { supabase } from '@shared/lib/supabase'
 import {
   createMasterPreferences,
+  normalizeAlertUpcomingOffsetMinutes,
   normalizeBookingBufferMinutes,
   normalizeBookingDefaultStatus,
   normalizeBookingMinNoticeMinutes,
+  normalizeBool,
   normalizeCalendarFirstDay,
   normalizeCalendarSlotStepMinutes,
+  normalizeClientReminderOffsets,
   normalizeDefaultCalendarView,
   normalizeOnlineBookingEnabled,
   normalizeTimeFormat,
+  DEFAULT_ALERT_AWAITING_CONFIRMATION_ENABLED,
+  DEFAULT_ALERT_CANCELLATION_ENABLED,
+  DEFAULT_ALERT_NEW_BOOKING_ENABLED,
+  DEFAULT_ALERT_UPCOMING_APPOINTMENT_ENABLED,
+  DEFAULT_CLIENT_REMINDER_WHATSAPP_ENABLED,
 } from '../model/master-preferences'
 import type {
   MasterBookingSettingsUpdate,
   MasterContactsUpdate,
+  MasterNotificationSettingsUpdate,
   MasterPreferences,
   MasterProfile,
   MasterProfileUpdate,
@@ -21,7 +30,7 @@ import type {
 } from '../model/types'
 
 const MASTER_SETTINGS_COLUMNS =
-  'user_id,time_format,calendar_first_day,calendar_slot_step_minutes,default_calendar_view,online_booking_enabled,booking_default_status,booking_buffer_minutes,booking_min_notice_minutes'
+  'user_id,time_format,calendar_first_day,calendar_slot_step_minutes,default_calendar_view,online_booking_enabled,booking_default_status,booking_buffer_minutes,booking_min_notice_minutes,client_reminder_whatsapp_enabled,client_reminder_offsets_minutes,alert_new_booking_enabled,alert_awaiting_confirmation_enabled,alert_cancellation_enabled,alert_upcoming_appointment_enabled,alert_upcoming_offset_minutes'
 
 function toMasterSettings(data: Record<string, unknown>): MasterSettings {
   return {
@@ -34,6 +43,32 @@ function toMasterSettings(data: Record<string, unknown>): MasterSettings {
     booking_default_status: normalizeBookingDefaultStatus(data.booking_default_status),
     booking_buffer_minutes: normalizeBookingBufferMinutes(data.booking_buffer_minutes),
     booking_min_notice_minutes: normalizeBookingMinNoticeMinutes(data.booking_min_notice_minutes),
+    client_reminder_whatsapp_enabled: normalizeBool(
+      data.client_reminder_whatsapp_enabled,
+      DEFAULT_CLIENT_REMINDER_WHATSAPP_ENABLED,
+    ),
+    client_reminder_offsets_minutes: normalizeClientReminderOffsets(
+      data.client_reminder_offsets_minutes,
+    ),
+    alert_new_booking_enabled: normalizeBool(
+      data.alert_new_booking_enabled,
+      DEFAULT_ALERT_NEW_BOOKING_ENABLED,
+    ),
+    alert_awaiting_confirmation_enabled: normalizeBool(
+      data.alert_awaiting_confirmation_enabled,
+      DEFAULT_ALERT_AWAITING_CONFIRMATION_ENABLED,
+    ),
+    alert_cancellation_enabled: normalizeBool(
+      data.alert_cancellation_enabled,
+      DEFAULT_ALERT_CANCELLATION_ENABLED,
+    ),
+    alert_upcoming_appointment_enabled: normalizeBool(
+      data.alert_upcoming_appointment_enabled,
+      DEFAULT_ALERT_UPCOMING_APPOINTMENT_ENABLED,
+    ),
+    alert_upcoming_offset_minutes: normalizeAlertUpcomingOffsetMinutes(
+      data.alert_upcoming_offset_minutes,
+    ),
   }
 }
 
@@ -175,6 +210,38 @@ export async function updateMasterBookingSettings(
         booking_default_status: payload.booking_default_status,
         booking_buffer_minutes: payload.booking_buffer_minutes,
         booking_min_notice_minutes: payload.booking_min_notice_minutes,
+      },
+      { onConflict: 'user_id' },
+    )
+    .select(MASTER_SETTINGS_COLUMNS)
+    .single()
+
+  if (error) throw error
+  return toMasterSettings(data)
+}
+
+/**
+ * Persists the Notification settings. Upserts on the unique `user_id` (same
+ * rationale as `updateMasterBookingSettings`: some masters have no
+ * master_settings row until they touch a setting). RLS "Users can manage own
+ * settings" covers insert/update/select.
+ */
+export async function updateMasterNotificationSettings(
+  userId: string,
+  payload: MasterNotificationSettingsUpdate,
+): Promise<MasterSettings> {
+  const { data, error } = await supabase
+    .from('master_settings')
+    .upsert(
+      {
+        user_id: userId,
+        client_reminder_whatsapp_enabled: payload.client_reminder_whatsapp_enabled,
+        client_reminder_offsets_minutes: payload.client_reminder_offsets_minutes,
+        alert_new_booking_enabled: payload.alert_new_booking_enabled,
+        alert_awaiting_confirmation_enabled: payload.alert_awaiting_confirmation_enabled,
+        alert_cancellation_enabled: payload.alert_cancellation_enabled,
+        alert_upcoming_appointment_enabled: payload.alert_upcoming_appointment_enabled,
+        alert_upcoming_offset_minutes: payload.alert_upcoming_offset_minutes,
       },
       { onConflict: 'user_id' },
     )

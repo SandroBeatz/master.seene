@@ -10,6 +10,13 @@ export type MasterCalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGrid
  */
 export type BookingDefaultStatus = 'pending' | 'confirmed'
 
+/**
+ * Allowed "when to remind" offsets for client reminders, in minutes before the
+ * appointment. Mirrors the fixed checkbox set in the Notifications form
+ * (24h / 2h / 1h) and the CHECK on master_settings.client_reminder_offsets_minutes.
+ */
+export type ClientReminderOffset = 1440 | 120 | 60
+
 export type MasterScheduleDayKey =
   | 'monday'
   | 'tuesday'
@@ -101,6 +108,16 @@ export interface MasterSettings {
   booking_default_status: BookingDefaultStatus
   booking_buffer_minutes: number
   booking_min_notice_minutes: number
+  // Notifications (Settings → Notifications).
+  // Client reminders — outbound reminders to the client about their appointment.
+  client_reminder_whatsapp_enabled: boolean
+  client_reminder_offsets_minutes: number[]
+  // Master alerts — in-app/web heads-up for the master.
+  alert_new_booking_enabled: boolean
+  alert_awaiting_confirmation_enabled: boolean
+  alert_cancellation_enabled: boolean
+  alert_upcoming_appointment_enabled: boolean
+  alert_upcoming_offset_minutes: number
 }
 
 /** Fields editable from the Booking settings form. */
@@ -109,6 +126,17 @@ export interface MasterBookingSettingsUpdate {
   booking_default_status: BookingDefaultStatus
   booking_buffer_minutes: number
   booking_min_notice_minutes: number
+}
+
+/** Fields editable from the Notifications settings form. */
+export interface MasterNotificationSettingsUpdate {
+  client_reminder_whatsapp_enabled: boolean
+  client_reminder_offsets_minutes: number[]
+  alert_new_booking_enabled: boolean
+  alert_awaiting_confirmation_enabled: boolean
+  alert_cancellation_enabled: boolean
+  alert_upcoming_appointment_enabled: boolean
+  alert_upcoming_offset_minutes: number
 }
 
 export interface MasterPreferences {
@@ -123,4 +151,11 @@ export interface MasterPreferences {
   bookingDefaultStatus: BookingDefaultStatus
   bookingBufferMinutes: number
   bookingMinNoticeMinutes: number
+  clientReminderWhatsappEnabled: boolean
+  clientReminderOffsetsMinutes: number[]
+  alertNewBookingEnabled: boolean
+  alertAwaitingConfirmationEnabled: boolean
+  alertCancellationEnabled: boolean
+  alertUpcomingAppointmentEnabled: boolean
+  alertUpcomingOffsetMinutes: number
 }
