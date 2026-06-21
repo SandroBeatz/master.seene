@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
-import { createMasterPreferences } from './master-preferences'
 import {
   getMasterPreferences,
   getMasterProfile,
@@ -39,7 +38,9 @@ export const useMasterPreferencesQuery = (userId: Ref<string>) =>
     key: () => masterPreferencesQueryKey(userId.value),
     enabled: () => Boolean(userId.value),
     query: () => getMasterPreferences(userId.value),
-    initialData: () => createMasterPreferences(null, null),
+    // No `initialData`: the query starts `pending` so consumers can show a
+    // loading skeleton via `isPending`, and the real settings always load on
+    // mount (avoids the stale-placeholder bug where saved values never appeared).
     staleTime: 60_000,
     gcTime: false,
   })

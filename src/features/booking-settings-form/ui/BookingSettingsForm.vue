@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@entities/session'
 import {
@@ -18,10 +18,10 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: preferences } = useMasterPreferencesQuery(userId)
+const { data: preferences, isPending } = useMasterPreferencesQuery(userId)
 const updateMutation = useUpdateMasterBookingSettingsMutation(userId)
 
-const { state, seed, toUpdate } = useBookingSettings()
+const { state, onlineEnabled, seed, toUpdate, toOnlineUpdate } = useBookingSettings()
 const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
   message: t('common.unsavedChangesConfirm'),
 })
@@ -64,7 +64,27 @@ const noticeItems = computed(() =>
   })),
 )
 
-const enabled = computed(() => state.value.onlineBookingEnabled)
+const enabled = computed(() => onlineEnabled.value)
+
+// Online booking saves instantly on toggle (optimistic), independent of the
+// Save bar that governs the body fields below.
+const isTogglingOnline = ref(false)
+
+async function onToggleOnline(value: boolean) {
+  if (!preferences.value) return
+  const previous = onlineEnabled.value
+  onlineEnabled.value = value
+  isTogglingOnline.value = true
+  try {
+    await updateMutation.mutateAsync(toOnlineUpdate(preferences.value, value))
+    toast.add({ title: t('settings.booking.saveSuccess'), color: 'success' })
+  } catch {
+    onlineEnabled.value = previous
+    toast.add({ title: t('settings.booking.saveError'), color: 'error' })
+  } finally {
+    isTogglingOnline.value = false
+  }
+}
 
 async function onSave() {
   if (!isDirty.value) return
@@ -103,7 +123,9 @@ const hostUI = {
           </Typography>
         </div>
 
+        <USkeleton v-if="isPending" class="h-9 w-28 shrink-0 self-start rounded-full" />
         <div
+          v-else
           class="flex shrink-0 items-center gap-2.5 self-start rounded-full px-3 py-1.5 ring-1 transition-colors"
           :class="enabled ? 'bg-success/10 ring-success/25' : 'bg-elevated ring-default'"
         >
@@ -114,15 +136,32 @@ const hostUI = {
             {{ enabled ? t('settings.booking.onlineOn') : t('settings.booking.onlineOff') }}
           </span>
           <USwitch
-            v-model="state.onlineBookingEnabled"
+            :model-value="onlineEnabled"
+            :loading="isTogglingOnline"
             color="success"
             :aria-label="t('settings.booking.onlineToggleAria')"
+            @update:model-value="onToggleOnline"
           />
         </div>
       </div>
     </template>
 
-    <div class="divide-y divide-default">
+    <!-- Loading skeletons -->
+    <div v-if="isPending" class="divide-y divide-default">
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div class="flex flex-col gap-1.5">
+          <USkeleton class="h-4 w-40" />
+          <USkeleton class="h-3 w-56" />
+        </div>
+        <USkeleton class="h-9 w-40 shrink-0 rounded-md" />
+      </div>
+    </div>
+
+    <div v-else class="divide-y divide-default">
       <!-- Default status for new bookings -->
       <div
         class="flex flex-col gap-3 py-4 transition-opacity sm:flex-row sm:items-center sm:justify-between"
