@@ -158,7 +158,9 @@ const lastNameError = computed(() =>
   isDirty.value && !isLastNameFilled.value ? requiredMsg.value : undefined,
 )
 const specializationError = computed(() =>
-  isDirty.value && !hasSpecialization.value ? t('settings.profile.specializationRequired') : undefined,
+  isDirty.value && !hasSpecialization.value
+    ? t('settings.profile.specializationRequired')
+    : undefined,
 )
 const usernameError = computed(() => {
   if (usernameStatus.value === 'invalid') return t('settings.profile.usernameInvalid')
@@ -211,7 +213,11 @@ function onDiscard() {
 
 async function copyLink() {
   await navigator.clipboard.writeText(publicUrl.value)
-  toast.add({ title: t('settings.profile.linkCopied'), color: 'success' })
+  toast.add({
+    icon: 'i-lucide-check',
+    title: t('settings.profile.linkCopied'),
+    color: 'success',
+  })
 }
 
 function openPage() {

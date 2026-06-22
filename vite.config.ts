@@ -80,7 +80,7 @@ export default defineConfig({
             wrapper: 'w-auto min-w-0 flex-none',
             title: 'truncate text-base font-semibold leading-none text-white dark:text-zinc-950',
             description: 'mt-1 text-sm leading-5 text-zinc-300 dark:text-zinc-600',
-            icon: 'hidden',
+            icon: '',
             actions: 'hidden',
             close: 'hidden',
             progress: 'hidden',
