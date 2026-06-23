@@ -1,12 +1,12 @@
 ---
-version: 2.2
+version: 2.3
 date: 2026-06-23
 category: business
 ---
 
 # Data Model
 
-> Version 2.2 · 2026-06-23 · [Business](../)
+> Version 2.3 · 2026-06-23 · [Business](../)
 
 ## Overview
 
@@ -58,6 +58,7 @@ Identity, location, contact, and availability data for the master. First populat
 | `username` | `text` | NO | — | Unique; forms public URL `seene.app/<username>` |
 | `specializations` | `text[]` | NO | — | Array of category keys (see details below) |
 | `bio` | `text` | YES | `null` | Short description (Profile settings, ≤ 500 chars) |
+| `avatar_url` | `text` | YES | `null` | Public URL of the avatar in the `avatars` Storage bucket (Profile settings). `null` = no avatar |
 | `whatsapp` | `text` | YES | `null` | WhatsApp channel (Contacts settings) |
 | `telegram` | `text` | YES | `null` | Telegram channel (Contacts settings) |
 | `instagram` | `text` | YES | `null` | Instagram channel (Contacts settings) |
@@ -426,8 +427,11 @@ All seven tables follow the same pattern:
 | `20260621161508_add_notification_settings_to_master_settings.sql` | 2026-06-21 | Add notification settings to `master_settings` |
 | `20260623120000_add_system_region_settings.sql` | 2026-06-23 | Add `language`, `theme`, `currency`, `date_format` to `master_settings` |
 | `20260623162838_add_master_profile_deactivated_at.sql` | 2026-06-23 | Add `deactivated_at` to `master_profile` (soft-delete) |
+| `20260623172000_add_avatar_to_master_profile.sql` | 2026-06-23 | Add `avatar_url` to `master_profile`; create public `avatars` Storage bucket with owner-scoped RLS |
 
 Full SQL is in `supabase/migrations/`.
+
+> **Avatar storage.** Avatar images live in the Supabase Storage bucket `avatars`, not in a Postgres table — `master_profile.avatar_url` only holds the public URL. The bucket and its owner-scoped RLS are documented in [Supabase Integration → Storage](../integrations/supabase.md#storage).
 
 ---
 

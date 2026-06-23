@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-04-26
+version: 1.1
+date: 2026-06-23
 category: integrations
 ---
 
 # Supabase Integration
 
-> Version 1.0 · 2026-04-26 · [Integrations](../)
+> Version 1.1 · 2026-06-23 · [Integrations](../)
 
 ## Overview
 
@@ -140,6 +140,52 @@ This covers SELECT, INSERT, UPDATE, and DELETE — a user can only touch their o
 
 ---
 
+## Storage
+
+Supabase Storage is used for user-uploaded files. The first (and currently only) bucket is **`avatars`**, holding master profile pictures.
+
+### The `avatars` bucket
+
+- **Public bucket** (`storage.buckets.public = true`). Public buckets serve objects directly through the public storage/CDN endpoint (`supabase.storage.from('avatars').getPublicUrl(path)`), which **bypasses RLS** — so no SELECT policy is needed for clients to *display* an avatar.
+- **Path layout:** `<userId>/avatar-<timestamp>.webp`. The leading folder is the owner's `auth.uid()`, which the write policies key off. The timestamp makes each upload a unique object, so replacing an avatar writes a fresh file (the public URL changes, dodging stale CDN caches) rather than overwriting.
+- The resolved public URL is stored in `master_profile.avatar_url`; the image bytes live only in Storage. See [Data Model → `master_profile`](../business/data-model.md#master_profile).
+
+### Storage RLS
+
+Policies are on `storage.objects` and are **owner-scoped** — the first path segment must equal the caller's id:
+
+```sql
+-- One policy per write verb (INSERT / UPDATE / DELETE) + an owner-scoped SELECT,
+-- all for the `authenticated` role:
+CREATE POLICY "Users can upload own avatar"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+-- "Users can read/update/delete own avatar" follow the same predicate.
+```
+
+There is **no broad public SELECT policy** (e.g. `USING (bucket_id = 'avatars')`). A broad select on a public bucket lets clients *list/enumerate* every file and trips the `public_bucket_allows_listing` security advisor — and it's unnecessary because public display already works via the CDN endpoint. The SELECT policy that does exist is owner-scoped, so a master can read back their own objects without exposing the bucket listing.
+
+> **Upsert gotcha (important).** `supabase.storage.from(...).upload(path, file, { upsert: true })` makes Storage run an `INSERT ... ON CONFLICT DO UPDATE`, which under RLS **also requires a SELECT policy** on `storage.objects`. Uploading with `upsert: true` against a bucket that has only INSERT/UPDATE policies fails with `403 — new row violates row-level security policy`. The avatar code avoids this entirely by using unique timestamped filenames and **no upsert** (a plain INSERT), and additionally keeps an owner-scoped SELECT policy. If you add upsert-based uploads, ensure INSERT **+ SELECT + UPDATE** policies all exist.
+
+### Client usage
+
+`src/entities/master/api/master.api.ts` wraps the Storage calls:
+
+```ts
+// uploadMasterAvatar(userId, blob): uploads then persists the public URL
+const path = `${userId}/avatar-${Date.now()}.webp`
+await supabase.storage.from('avatars').upload(path, file, { contentType: 'image/webp' })
+const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+await supabase.from('master_profile').update({ avatar_url: publicUrl }).eq('user_id', userId)
+```
+
+`removeMasterAvatar(userId)` simply nulls `master_profile.avatar_url` (the orphaned object is left in the owner-scoped bucket). The whole flow is described in [Settings → Profile](../business/settings.md#1-profile-featuresprofile-form).
+
+---
+
 ## Files
 
 | Path | Description |
@@ -158,6 +204,7 @@ This covers SELECT, INSERT, UPDATE, and DELETE — a user can only touch their o
 | `src/pages/onboarding/ui/OnboardingStep2Page.vue` | `.from('master_profile').select()` — username uniqueness check |
 | `src/pages/onboarding/ui/OnboardingStep5Page.vue` | `.from('master_profile').insert()` — profile creation |
 | `src/widgets/dashboard-layout/ui/DashboardLayout.vue` | `supabase.auth.signOut()` — logout |
+| `src/entities/master/api/master.api.ts` | `supabase.storage.from('avatars')` — avatar upload/remove (`uploadMasterAvatar` / `removeMasterAvatar`) |
 
 ---
 
@@ -165,3 +212,4 @@ This covers SELECT, INSERT, UPDATE, and DELETE — a user can only touch their o
 
 - [Data Model](../business/data-model.md) — full schema of all tables, columns, constraints, and RLS policies
 - [Auth & Onboarding Flow](../business/auth-and-onboarding.md) — business logic for how auth and profile creation work
+- [Application Settings → Profile](../business/settings.md) — the avatar upload/remove flow that uses the `avatars` Storage bucket

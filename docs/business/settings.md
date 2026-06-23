@@ -1,12 +1,12 @@
 ---
-version: 1.0
+version: 1.1
 date: 2026-06-23
 category: business
 ---
 
 # Application Settings
 
-> Version 1.0 · 2026-06-23 · [Business](../business/)
+> Version 1.1 · 2026-06-23 · [Business](../business/)
 
 ## Overview
 
@@ -58,6 +58,7 @@ Two sections deviate from "explicit save":
 | Section | Table | Write API (`entities/master/api/master.api.ts`) | Save UX |
 |---|---|---|---|
 | Profile | `master_profile` | `updateMasterProfile` | Save bar |
+| Profile · Avatar | `master_profile.avatar_url` + `avatars` Storage bucket | `uploadMasterAvatar` / `removeMasterAvatar` | Instant (eager, no Save bar) |
 | Contacts & social | `master_profile` | `updateMasterContacts` | Save bar |
 | Working hours | `master_profile.schedule` | `updateMasterSchedule` | Save bar |
 | Booking | `master_settings` (upsert) | `updateMasterBookingSettings` | Instant toggle + Save bar |
@@ -82,6 +83,7 @@ A master may have **no** `master_settings` row until they first touch a Booking/
 | `username` | text | NO | — | Profile (unique, lowercased) |
 | `specializations` | text[] | NO | — | Profile |
 | `bio` | text | YES | — | Profile (≤ 500 chars) |
+| `avatar_url` | text | YES | `null` | Profile (avatar; public URL into the `avatars` Storage bucket) |
 | `phone` | text | NO | — | Contacts |
 | `whatsapp`, `telegram`, `instagram`, `tiktok` | text | YES | — | Contacts |
 | `contact_email` | text | YES | — | Contacts |
@@ -137,13 +139,13 @@ Defaults above mirror `src/entities/master/model/master-preferences.ts` (the `DE
 
 Identity and public booking page. Fields:
 
-- **Avatar** — upload/remove. ⚠️ **Local-only preview**, not persisted (uses `URL.createObjectURL`); there is no avatar column yet.
+- **Avatar** — upload/remove, **persisted to Supabase Storage**. Unlike the rest of the form, the avatar is **eager** (it does *not* flow through the Save bar and never marks the form dirty): on file select the image is validated (PNG/JPEG, ≤ 5 MB), cropped to a centered square and downscaled to ≤ 512 px WebP via `resizeImageToSquare` (`@shared/lib/image`), uploaded to the `avatars` bucket at `<userId>/avatar-<timestamp>.webp`, and its public URL written to `master_profile.avatar_url` (`uploadMasterAvatar`). An optimistic preview shows immediately and rolls back on error; **Remove** clears the column (`removeMasterAvatar`). Both actions then call `sessionStore.refreshProfile()` so the avatar updates everywhere it's shown.
 - **First name / Last name** — required (validated only once the form is dirty, so a fresh load isn't a wall of red).
 - **Specialization** — multi-select chips from `SPECIALIZATION_CODES` (`features/profile-form/config/specializations.ts`); at least one required. Mirrors the onboarding category set.
 - **Bio** — optional textarea, max 500 chars.
 - **Username** — required, lowercased, pattern `^[a-z0-9._-]+$`. Availability is checked live (debounced 400 ms) via `isUsernameAvailable`; the current user's own username counts as available. Drives the public page URL `https://<PUBLIC_BOOKING_HOST>/<username>` with Open / Copy-link actions.
 
-Saving also calls `sessionStore.refreshProfile()` so the dashboard header name stays in sync.
+Saving (and avatar upload/remove) calls `sessionStore.refreshProfile()` so the name and avatar stay in sync everywhere they're shown — the dashboard sidebar footer (`widgets/dashboard-layout`) and the home greeting (`widgets/home/HomeUserWidget`) both read `sessionStore.profile.avatar_url`, falling back to a user icon / `user_metadata.avatar_url` when it's `null`.
 
 #### 2. Contacts & social (`features/contacts-form`)
 
@@ -253,7 +255,8 @@ To add a field to an existing `master_settings`-backed section:
 | `src/app/router/index.ts` | Settings parent route + children; deactivation guard |
 | `src/pages/settings/ui/_EntryPage.vue` | Settings shell: left nav rail + `<RouterView>` |
 | `src/pages/settings/ui/Settings*Page.vue` | Thin page per section, each renders one feature slice |
-| `src/features/profile-form/` | Profile section (identity, username, specializations, bio) |
+| `src/features/profile-form/` | Profile section (identity, username, specializations, bio, avatar) |
+| `src/shared/lib/image/` | `resizeImageToSquare` — client-side square crop + downscale used before avatar upload |
 | `src/features/contacts-form/` | Contacts & social + studio address |
 | `src/features/working-hours-form/` | Weekly schedule editor (`useWorkingHours`) |
 | `src/features/booking-settings-form/` | Online booking config (`useBookingSettings`) |
