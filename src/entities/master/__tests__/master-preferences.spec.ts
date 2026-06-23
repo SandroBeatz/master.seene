@@ -8,6 +8,10 @@ import {
   DEFAULT_CALENDAR_SLOT_STEP_MINUTES,
   DEFAULT_CALENDAR_VIEW,
   DEFAULT_CLIENT_REMINDER_OFFSETS,
+  DEFAULT_CURRENCY,
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_LANGUAGE,
+  DEFAULT_THEME,
   DEFAULT_TIME_FORMAT,
   createMasterPreferences,
   getTimeZoneFromSchedule,
@@ -19,8 +23,12 @@ import {
   normalizeCalendarFirstDay,
   normalizeCalendarSlotStepMinutes,
   normalizeClientReminderOffsets,
+  normalizeCurrency,
+  normalizeDateFormat,
   normalizeDefaultCalendarView,
+  normalizeLanguage,
   normalizeOnlineBookingEnabled,
+  normalizeTheme,
   normalizeTimeFormat,
 } from '../model/master-preferences'
 
@@ -109,6 +117,10 @@ describe('master preferences helpers', () => {
       calendar_first_day: 1,
       calendar_slot_step_minutes: 15,
       default_calendar_view: 'timeGridWeek',
+      language: 'en',
+      theme: 'auto',
+      currency: 'USD',
+      date_format: 'DD.MM.YYYY',
       online_booking_enabled: false,
       booking_default_status: 'pending',
       booking_buffer_minutes: 0,
@@ -126,6 +138,10 @@ describe('master preferences helpers', () => {
     expect(preferences.calendarFirstDay).toBe(1)
     expect(preferences.calendarSlotStepMinutes).toBe(15)
     expect(preferences.defaultCalendarView).toBe('timeGridWeek')
+    expect(preferences.language).toBe('en')
+    expect(preferences.theme).toBe('auto')
+    expect(preferences.currency).toBe('USD')
+    expect(preferences.dateFormat).toBe('DD.MM.YYYY')
     expect(preferences.onlineBookingEnabled).toBe(false)
     expect(preferences.bookingDefaultStatus).toBe('pending')
     expect(preferences.bookingBufferMinutes).toBe(0)
@@ -147,6 +163,10 @@ describe('master preferences helpers', () => {
       calendar_first_day: 0,
       calendar_slot_step_minutes: 30,
       default_calendar_view: 'timeGridDay',
+      language: 'ru',
+      theme: 'dark',
+      currency: 'KGS',
+      date_format: 'YYYY-MM-DD',
       online_booking_enabled: true,
       booking_default_status: 'confirmed',
       booking_buffer_minutes: 15,
@@ -166,6 +186,10 @@ describe('master preferences helpers', () => {
       calendar_first_day: 0,
       calendar_slot_step_minutes: 30,
       default_calendar_view: 'timeGridDay',
+      language: 'ru',
+      theme: 'dark',
+      currency: 'KGS',
+      date_format: 'YYYY-MM-DD',
       online_booking_enabled: true,
       booking_default_status: 'confirmed',
       booking_buffer_minutes: 15,
@@ -182,6 +206,10 @@ describe('master preferences helpers', () => {
     expect(preferences.calendarFirstDay).toBe(0)
     expect(preferences.calendarSlotStepMinutes).toBe(30)
     expect(preferences.defaultCalendarView).toBe('timeGridDay')
+    expect(preferences.language).toBe('ru')
+    expect(preferences.theme).toBe('dark')
+    expect(preferences.currency).toBe('KGS')
+    expect(preferences.dateFormat).toBe('YYYY-MM-DD')
     expect(preferences.onlineBookingEnabled).toBe(true)
     expect(preferences.bookingDefaultStatus).toBe('confirmed')
     expect(preferences.bookingBufferMinutes).toBe(15)
@@ -193,6 +221,28 @@ describe('master preferences helpers', () => {
     expect(preferences.alertCancellationEnabled).toBe(true)
     expect(preferences.alertUpcomingAppointmentEnabled).toBe(true)
     expect(preferences.alertUpcomingOffsetMinutes).toBe(30)
+  })
+
+  it('normalizes system & region settings with safe defaults', () => {
+    expect(normalizeLanguage('ru')).toBe('ru')
+    expect(normalizeLanguage('fr')).toBe('fr')
+    expect(normalizeLanguage('de')).toBe(DEFAULT_LANGUAGE)
+    expect(normalizeLanguage(null)).toBe(DEFAULT_LANGUAGE)
+
+    expect(normalizeTheme('dark')).toBe('dark')
+    expect(normalizeTheme('light')).toBe('light')
+    expect(normalizeTheme('solarized')).toBe(DEFAULT_THEME)
+    expect(normalizeTheme(undefined)).toBe(DEFAULT_THEME)
+
+    expect(normalizeCurrency('KGS')).toBe('KGS')
+    expect(normalizeCurrency('EUR')).toBe('EUR')
+    expect(normalizeCurrency('XXX')).toBe(DEFAULT_CURRENCY)
+    expect(normalizeCurrency(123)).toBe(DEFAULT_CURRENCY)
+
+    expect(normalizeDateFormat('YYYY-MM-DD')).toBe('YYYY-MM-DD')
+    expect(normalizeDateFormat('DD.MM.YYYY')).toBe('DD.MM.YYYY')
+    expect(normalizeDateFormat('DD-MMM-YY')).toBe(DEFAULT_DATE_FORMAT)
+    expect(normalizeDateFormat(null)).toBe(DEFAULT_DATE_FORMAT)
   })
 
   it('normalizes notification booleans with safe fallbacks', () => {

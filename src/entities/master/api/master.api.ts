@@ -9,8 +9,12 @@ import {
   normalizeCalendarFirstDay,
   normalizeCalendarSlotStepMinutes,
   normalizeClientReminderOffsets,
+  normalizeCurrency,
+  normalizeDateFormat,
   normalizeDefaultCalendarView,
+  normalizeLanguage,
   normalizeOnlineBookingEnabled,
+  normalizeTheme,
   normalizeTimeFormat,
   DEFAULT_ALERT_AWAITING_CONFIRMATION_ENABLED,
   DEFAULT_ALERT_CANCELLATION_ENABLED,
@@ -27,10 +31,11 @@ import type {
   MasterProfileUpdate,
   MasterSchedule,
   MasterSettings,
+  MasterSystemSettingsUpdate,
 } from '../model/types'
 
 const MASTER_SETTINGS_COLUMNS =
-  'user_id,time_format,calendar_first_day,calendar_slot_step_minutes,default_calendar_view,online_booking_enabled,booking_default_status,booking_buffer_minutes,booking_min_notice_minutes,client_reminder_whatsapp_enabled,client_reminder_offsets_minutes,alert_new_booking_enabled,alert_awaiting_confirmation_enabled,alert_cancellation_enabled,alert_upcoming_appointment_enabled,alert_upcoming_offset_minutes'
+  'user_id,time_format,calendar_first_day,calendar_slot_step_minutes,default_calendar_view,language,theme,currency,date_format,online_booking_enabled,booking_default_status,booking_buffer_minutes,booking_min_notice_minutes,client_reminder_whatsapp_enabled,client_reminder_offsets_minutes,alert_new_booking_enabled,alert_awaiting_confirmation_enabled,alert_cancellation_enabled,alert_upcoming_appointment_enabled,alert_upcoming_offset_minutes'
 
 function toMasterSettings(data: Record<string, unknown>): MasterSettings {
   return {
@@ -39,6 +44,10 @@ function toMasterSettings(data: Record<string, unknown>): MasterSettings {
     calendar_first_day: normalizeCalendarFirstDay(data.calendar_first_day),
     calendar_slot_step_minutes: normalizeCalendarSlotStepMinutes(data.calendar_slot_step_minutes),
     default_calendar_view: normalizeDefaultCalendarView(data.default_calendar_view),
+    language: normalizeLanguage(data.language),
+    theme: normalizeTheme(data.theme),
+    currency: normalizeCurrency(data.currency),
+    date_format: normalizeDateFormat(data.date_format),
     online_booking_enabled: normalizeOnlineBookingEnabled(data.online_booking_enabled),
     booking_default_status: normalizeBookingDefaultStatus(data.booking_default_status),
     booking_buffer_minutes: normalizeBookingBufferMinutes(data.booking_buffer_minutes),
@@ -242,6 +251,41 @@ export async function updateMasterNotificationSettings(
         alert_cancellation_enabled: payload.alert_cancellation_enabled,
         alert_upcoming_appointment_enabled: payload.alert_upcoming_appointment_enabled,
         alert_upcoming_offset_minutes: payload.alert_upcoming_offset_minutes,
+      },
+      { onConflict: 'user_id' },
+    )
+    .select(MASTER_SETTINGS_COLUMNS)
+    .single()
+
+  if (error) throw error
+  return toMasterSettings(data)
+}
+
+/**
+ * Persists the System & region settings (language, theme, currency, date format,
+ * time format, calendar first day / slot step / default view). Upserts on the
+ * unique `user_id` (same rationale as `updateMasterBookingSettings`). Time zone
+ * is NOT saved here — it lives in profile.schedule.timezone and is persisted via
+ * the schedule mutation. RLS "Users can manage own settings" covers
+ * insert/update/select.
+ */
+export async function updateMasterSystemSettings(
+  userId: string,
+  payload: MasterSystemSettingsUpdate,
+): Promise<MasterSettings> {
+  const { data, error } = await supabase
+    .from('master_settings')
+    .upsert(
+      {
+        user_id: userId,
+        language: payload.language,
+        theme: payload.theme,
+        currency: payload.currency,
+        date_format: payload.date_format,
+        time_format: payload.time_format,
+        calendar_first_day: payload.calendar_first_day,
+        calendar_slot_step_minutes: payload.calendar_slot_step_minutes,
+        default_calendar_view: payload.default_calendar_view,
       },
       { onConflict: 'user_id' },
     )

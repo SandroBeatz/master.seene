@@ -2,6 +2,12 @@ export type TimeFormat = 12 | 24
 export type CalendarFirstDay = 0 | 1 | 2 | 3 | 4 | 5 | 6
 export type MasterCalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
 
+/** Persisted interface language (Settings → System & region). */
+export type AppLanguage = 'en' | 'fr' | 'ru'
+
+/** Persisted color-scheme preference (Settings → System & region). */
+export type ThemePreference = 'auto' | 'light' | 'dark'
+
 /**
  * Status applied to a new online booking.
  *   'confirmed' = auto-confirmed (lands straight in the calendar)
@@ -103,6 +109,11 @@ export interface MasterSettings {
   calendar_first_day: CalendarFirstDay
   calendar_slot_step_minutes: number
   default_calendar_view: MasterCalendarViewType
+  // System & region (Settings → System & region).
+  language: AppLanguage
+  theme: ThemePreference
+  currency: string
+  date_format: string
   // Online booking (Settings → Booking).
   online_booking_enabled: boolean
   booking_default_status: BookingDefaultStatus
@@ -128,6 +139,22 @@ export interface MasterBookingSettingsUpdate {
   booking_min_notice_minutes: number
 }
 
+/**
+ * Fields editable from the System & region settings form. Note: `timezone` is
+ * intentionally NOT here — it lives in profile.schedule.timezone (single source
+ * of truth, shared with Working Hours) and is saved via the schedule mutation.
+ */
+export interface MasterSystemSettingsUpdate {
+  language: AppLanguage
+  theme: ThemePreference
+  currency: string
+  date_format: string
+  time_format: TimeFormat
+  calendar_first_day: CalendarFirstDay
+  calendar_slot_step_minutes: number
+  default_calendar_view: MasterCalendarViewType
+}
+
 /** Fields editable from the Notifications settings form. */
 export interface MasterNotificationSettingsUpdate {
   client_reminder_whatsapp_enabled: boolean
@@ -147,6 +174,10 @@ export interface MasterPreferences {
   calendarFirstDay: CalendarFirstDay
   calendarSlotStepMinutes: number
   defaultCalendarView: MasterCalendarViewType
+  language: AppLanguage
+  theme: ThemePreference
+  currency: string
+  dateFormat: string
   onlineBookingEnabled: boolean
   bookingDefaultStatus: BookingDefaultStatus
   bookingBufferMinutes: number

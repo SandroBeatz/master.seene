@@ -8,6 +8,7 @@ import {
   updateMasterNotificationSettings,
   updateMasterProfile,
   updateMasterSchedule,
+  updateMasterSystemSettings,
 } from '../api/master.api'
 import type {
   MasterBookingSettingsUpdate,
@@ -15,6 +16,7 @@ import type {
   MasterNotificationSettingsUpdate,
   MasterProfileUpdate,
   MasterSchedule,
+  MasterSystemSettingsUpdate,
 } from './types'
 
 export const masterPreferencesQueryKey = (userId: string) =>
@@ -103,6 +105,18 @@ export const useUpdateMasterNotificationSettingsMutation = (userId: Ref<string>)
   return useMutation({
     mutation: (payload: MasterNotificationSettingsUpdate) =>
       updateMasterNotificationSettings(userId.value, payload),
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
+    },
+  })
+}
+
+export const useUpdateMasterSystemSettingsMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: (payload: MasterSystemSettingsUpdate) =>
+      updateMasterSystemSettings(userId.value, payload),
     onSettled: () => {
       cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
     },

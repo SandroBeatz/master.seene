@@ -17,6 +17,10 @@ export const useMasterPreferencesStore = defineStore('master-preferences', () =>
   const calendarFirstDay = computed(() => preferences.value.calendarFirstDay)
   const calendarSlotStepMinutes = computed(() => preferences.value.calendarSlotStepMinutes)
   const defaultCalendarView = computed(() => preferences.value.defaultCalendarView)
+  const language = computed(() => preferences.value.language)
+  const theme = computed(() => preferences.value.theme)
+  const currency = computed(() => preferences.value.currency)
+  const dateFormat = computed(() => preferences.value.dateFormat)
 
   function setPreferences(next: MasterPreferences | null | undefined) {
     preferences.value = next ?? createMasterPreferences(null, null)
@@ -72,6 +76,10 @@ export const useMasterPreferencesStore = defineStore('master-preferences', () =>
     calendarFirstDay,
     calendarSlotStepMinutes,
     defaultCalendarView,
+    language,
+    theme,
+    currency,
+    dateFormat,
     loadPreferences,
     setPreferences,
     reset,

@@ -1,4 +1,7 @@
+import { DEFAULT_CURRENCY_CODE, getCurrency } from '@shared/config/currencies'
+import { DEFAULT_DATE_FORMAT as CONFIG_DEFAULT_DATE_FORMAT, isSupportedDateFormat } from '@shared/config/date-formats'
 import type {
+  AppLanguage,
   BookingDefaultStatus,
   CalendarFirstDay,
   ClientReminderOffset,
@@ -7,6 +10,7 @@ import type {
   MasterProfile,
   MasterSchedule,
   MasterSettings,
+  ThemePreference,
   TimeFormat,
 } from './types'
 
@@ -15,6 +19,15 @@ export const DEFAULT_TIME_ZONE = 'local'
 export const DEFAULT_CALENDAR_FIRST_DAY: CalendarFirstDay = 1
 export const DEFAULT_CALENDAR_SLOT_STEP_MINUTES = 15
 export const DEFAULT_CALENDAR_VIEW: MasterCalendarViewType = 'timeGridWeek'
+// System & region defaults — mirror the column defaults in
+// 20260623120000_add_system_region_settings.sql.
+export const DEFAULT_LANGUAGE: AppLanguage = 'en'
+export const DEFAULT_THEME: ThemePreference = 'auto'
+export const DEFAULT_CURRENCY = DEFAULT_CURRENCY_CODE
+export const DEFAULT_DATE_FORMAT = CONFIG_DEFAULT_DATE_FORMAT
+const APP_LANGUAGES: AppLanguage[] = ['en', 'fr', 'ru']
+const THEME_PREFERENCES: ThemePreference[] = ['auto', 'light', 'dark']
+
 export const DEFAULT_ONLINE_BOOKING_ENABLED = false
 export const DEFAULT_BOOKING_STATUS: BookingDefaultStatus = 'pending'
 export const DEFAULT_BOOKING_BUFFER_MINUTES = 0
@@ -94,6 +107,26 @@ export function normalizeBookingMinNoticeMinutes(value: unknown): number {
     : DEFAULT_BOOKING_MIN_NOTICE_MINUTES
 }
 
+export function normalizeLanguage(value: unknown): AppLanguage {
+  return typeof value === 'string' && APP_LANGUAGES.includes(value as AppLanguage)
+    ? (value as AppLanguage)
+    : DEFAULT_LANGUAGE
+}
+
+export function normalizeTheme(value: unknown): ThemePreference {
+  return typeof value === 'string' && THEME_PREFERENCES.includes(value as ThemePreference)
+    ? (value as ThemePreference)
+    : DEFAULT_THEME
+}
+
+export function normalizeCurrency(value: unknown): string {
+  return typeof value === 'string' && getCurrency(value) ? value : DEFAULT_CURRENCY
+}
+
+export function normalizeDateFormat(value: unknown): string {
+  return typeof value === 'string' && isSupportedDateFormat(value) ? value : DEFAULT_DATE_FORMAT
+}
+
 export function normalizeBool(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback
 }
@@ -158,6 +191,10 @@ export function createMasterPreferences(
     settings?.calendar_slot_step_minutes,
   )
   const defaultCalendarView = normalizeDefaultCalendarView(settings?.default_calendar_view)
+  const language = normalizeLanguage(settings?.language)
+  const theme = normalizeTheme(settings?.theme)
+  const currency = normalizeCurrency(settings?.currency)
+  const dateFormat = normalizeDateFormat(settings?.date_format)
   const onlineBookingEnabled = normalizeOnlineBookingEnabled(settings?.online_booking_enabled)
   const bookingDefaultStatus = normalizeBookingDefaultStatus(settings?.booking_default_status)
   const bookingBufferMinutes = normalizeBookingBufferMinutes(settings?.booking_buffer_minutes)
@@ -199,6 +236,10 @@ export function createMasterPreferences(
       calendar_first_day: calendarFirstDay,
       calendar_slot_step_minutes: calendarSlotStepMinutes,
       default_calendar_view: defaultCalendarView,
+      language,
+      theme,
+      currency,
+      date_format: dateFormat,
       online_booking_enabled: onlineBookingEnabled,
       booking_default_status: bookingDefaultStatus,
       booking_buffer_minutes: bookingBufferMinutes,
@@ -216,6 +257,10 @@ export function createMasterPreferences(
     calendarFirstDay,
     calendarSlotStepMinutes,
     defaultCalendarView,
+    language,
+    theme,
+    currency,
+    dateFormat,
     onlineBookingEnabled,
     bookingDefaultStatus,
     bookingBufferMinutes,

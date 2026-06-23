@@ -27,6 +27,9 @@ app.use(i18n)
 app.use(VueTelInput)
 app.use(formatsPlugin, {
   getTimeFormat: () => useMasterPreferencesStore().timeFormat,
+  getCurrency: () => useMasterPreferencesStore().currency,
+  getDateFormat: () => useMasterPreferencesStore().dateFormat,
+  getLocale: () => i18n.global.locale.value,
 })
 
 app.mount('#app')
