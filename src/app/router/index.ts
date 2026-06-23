@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSessionStore } from '@entities/session'
+import { supabase } from '@shared/lib/supabase'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -150,6 +151,13 @@ router.beforeEach(async (to) => {
   const { session, profile } = sessionStore
   const isAuthRoute = authRoutes.includes(to.path)
   const isOnboarding = to.path.startsWith('/onboarding')
+
+  // Soft-deleted account: sign the user out and block access. Real ban + data
+  // cleanup happens 30 days later via a scheduled Edge Function (master.seene-c5og).
+  if (session && profile?.deactivated_at) {
+    await supabase.auth.signOut()
+    return { path: '/login', query: { deactivated: '1' } }
+  }
 
   // Unauthenticated → login (only auth routes are accessible without session)
   if (!session && !isAuthRoute) return '/login'

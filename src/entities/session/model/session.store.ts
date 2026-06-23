@@ -8,6 +8,9 @@ export interface SessionProfile {
   id: string
   first_name: string
   last_name: string
+  username: string
+  /** Set when the master requested account deletion (soft-delete). null = active. */
+  deactivated_at: string | null
 }
 
 export const useSessionStore = defineStore('session', () => {

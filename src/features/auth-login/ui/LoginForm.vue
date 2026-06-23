@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
@@ -8,7 +8,10 @@ import { supabase } from '@shared/lib/supabase'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
+
+const isDeactivated = computed(() => route.query.deactivated === '1')
 
 const schema = Joi.object({
   email: Joi.string()
@@ -83,6 +86,14 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
 
 <template>
   <div class="w-full max-w-sm py-8">
+    <UAlert
+      v-if="isDeactivated"
+      class="mb-4"
+      color="warning"
+      variant="subtle"
+      icon="i-lucide-triangle-alert"
+      :description="$t('settings.account.deactivatedNotice')"
+    />
     <UAuthForm :schema="schema" :fields="fields" :providers="providers" @submit="onSubmit">
       <template #footer>
         <div class="text-center">

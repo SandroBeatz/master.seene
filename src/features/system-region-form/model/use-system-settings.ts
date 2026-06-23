@@ -96,7 +96,7 @@ export function useSystemSettings() {
    */
   function toScheduleUpdate(profile: MasterProfile | null): MasterSchedule {
     return {
-      ...(profile?.schedule ?? {}),
+      ...profile?.schedule,
       timezone: state.value.timezone,
     }
   }
