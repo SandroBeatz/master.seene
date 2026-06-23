@@ -1,12 +1,12 @@
 ---
-version: 2.1
-date: 2026-06-15
+version: 2.2
+date: 2026-06-23
 category: business
 ---
 
 # Data Model
 
-> Version 2.1 · 2026-06-15 · [Business](../)
+> Version 2.2 · 2026-06-23 · [Business](../)
 
 ## Overview
 
@@ -44,7 +44,7 @@ auth.users
 
 ## `master_profile`
 
-Identity, location, and availability data for the master. Populated once at the end of the onboarding wizard (Step 5).
+Identity, location, contact, and availability data for the master. First populated at the end of the onboarding wizard (Step 5), then edited across the Settings area (Profile, Contacts & social, Working hours). The `deactivated_at` column is set by the Account settings soft-delete flow.
 
 ### Schema
 
@@ -57,6 +57,12 @@ Identity, location, and availability data for the master. Populated once at the 
 | `phone` | `text` | NO | — | International format, from Step 2 |
 | `username` | `text` | NO | — | Unique; forms public URL `seene.app/<username>` |
 | `specializations` | `text[]` | NO | — | Array of category keys (see details below) |
+| `bio` | `text` | YES | `null` | Short description (Profile settings, ≤ 500 chars) |
+| `whatsapp` | `text` | YES | `null` | WhatsApp channel (Contacts settings) |
+| `telegram` | `text` | YES | `null` | Telegram channel (Contacts settings) |
+| `instagram` | `text` | YES | `null` | Instagram channel (Contacts settings) |
+| `tiktok` | `text` | YES | `null` | TikTok channel (Contacts settings) |
+| `contact_email` | `text` | YES | `null` | Public contact email (Contacts settings) |
 | `country` | `text` | NO | `''` | ISO 3166-1 alpha-2 code or full country name |
 | `address` | `text` | YES | `null` | Street address |
 | `house_number` | `text` | YES | `null` | House/building number |
@@ -66,6 +72,7 @@ Identity, location, and availability data for the master. Populated once at the 
 | `works_at_place` | `boolean` | NO | `true` | Master accepts clients at their own address |
 | `can_travel` | `boolean` | NO | `false` | Master can travel to client's location |
 | `schedule` | `jsonb` | NO | — | Weekly schedule with timezone (see structure below) |
+| `deactivated_at` | `timestamptz` | YES | `null` | Soft-delete marker; set when the master requests account deletion. `null` = active. Physical deletion happens 30 days later (Account settings) |
 | `created_at` | `timestamptz` | NO | `now()` | Row creation timestamp |
 
 ### Constraints & indexes
@@ -404,6 +411,21 @@ All seven tables follow the same pattern:
 | `20260430100000_add_color_to_services.sql` | 2026-04-30 | Add `color` column to `service` |
 | `20260502010000_create_time_blocks.sql` | 2026-05-02 | Create `time_block` |
 | `20260503140000_calendar_behavior_settings.sql` | 2026-05-03 | Add `calendar_first_day`, `calendar_slot_step_minutes`, `default_calendar_view` to `master_settings` |
+| `20260513120000_create_payment_types.sql` | 2026-05-13 | Create `payment_type` |
+| `20260515120000_create_sale_tables.sql` | 2026-05-15 | Create sale/checkout tables |
+| `20260515130000_add_get_analytics_rpc.sql` | 2026-05-15 | Add analytics RPC |
+| `20260515140000_secure_get_analytics_rpc.sql` | 2026-05-15 | Secure the analytics RPC |
+| `20260611120000_add_appointment_day_counts_rpc.sql` | 2026-06-11 | Add appointment day-counts RPC |
+| `20260613120000_add_appointment_source.sql` | 2026-06-13 | Add `source` to appointments |
+| `20260613130000_expire_stale_pending_appointments.sql` | 2026-06-13 | Auto-expire stale pending appointments |
+| `20260613140000_sale_paid_at_service_date.sql` | 2026-06-13 | Sale `paid_at` / service date handling |
+| `20260616152425_add_bio_to_master_profile.sql` | 2026-06-16 | Add `bio` to `master_profile` |
+| `20260618172251_add_contacts_social_to_master_profile.sql` | 2026-06-18 | Add `whatsapp`, `telegram`, `instagram`, `tiktok`, `contact_email` to `master_profile` |
+| `20260620120000_add_booking_settings_to_master_settings.sql` | 2026-06-20 | Add online-booking settings to `master_settings` |
+| `20260620170555_payment_type_kind_active.sql` | 2026-06-20 | Add `kind` / `is_active` to `payment_type` |
+| `20260621161508_add_notification_settings_to_master_settings.sql` | 2026-06-21 | Add notification settings to `master_settings` |
+| `20260623120000_add_system_region_settings.sql` | 2026-06-23 | Add `language`, `theme`, `currency`, `date_format` to `master_settings` |
+| `20260623162838_add_master_profile_deactivated_at.sql` | 2026-06-23 | Add `deactivated_at` to `master_profile` (soft-delete) |
 
 Full SQL is in `supabase/migrations/`.
 
@@ -415,3 +437,4 @@ Full SQL is in `supabase/migrations/`.
 - [Auth & Onboarding Flow](../business/auth-and-onboarding.md) — wizard that populates `master_profile` and `master_settings`
 - [Services](../business/services.md) — service and category management business logic
 - [Calendar Architecture](../architecture/calendar.md) — how `appointments`, `time_block`, and `master_settings` calendar fields are used in the calendar feature
+- [Application Settings](../business/settings.md) — every settings section, the fields it edits, and which of these tables/columns it writes

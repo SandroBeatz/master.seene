@@ -1,20 +1,21 @@
 ---
-version: 1.0
-date: 2026-04-27
+version: 1.1
+date: 2026-06-23
 category: architecture
 ---
 
 # Auth Guard & Session Store
 
-> Version 1.0 · 2026-04-27 · [Architecture](../)
+> Version 1.1 · 2026-06-23 · [Architecture](../)
 
 ## Overview
 
-Every navigation in Seene passes through a Vue Router `beforeEach` guard that enforces three rules:
+Every navigation in Seene passes through a Vue Router `beforeEach` guard that enforces four rules:
 
 1. Unauthenticated users can only reach `/login` and `/register`.
 2. Authenticated users without a completed `master_profile` are redirected to `/onboarding`.
 3. Authenticated users who have completed onboarding are redirected away from auth routes to `/home`.
+4. Authenticated users whose profile is soft-deleted (`deactivated_at` set) are signed out and sent to `/login?deactivated=1`.
 
 The guard reads its state from a Pinia session store (`useSessionStore`) backed by Supabase's `onAuthStateChange` listener. This means the Supabase session and profile are fetched **once** per app load — not on every navigation.
 
@@ -77,7 +78,8 @@ The store exposes:
 | Member | Type | Description |
 |---|---|---|
 | `session` | `Ref<Session \| null>` | Current Supabase auth session |
-| `profile` | `Ref<SessionProfile \| null>` | Fetched `master_profile` row (`{ id }`) or null if not created yet |
+| `profile` | `Ref<SessionProfile \| null>` | Fetched `master_profile` row, or null if not created yet. `SessionProfile` = `{ id, first_name, last_name, username, deactivated_at }` — `username` powers the delete-account confirmation, `deactivated_at` drives the soft-delete guard |
+| `refreshProfile()` | `() => Promise<void>` | Re-fetches the current user's profile (e.g. after editing it in Profile settings) |
 | `isInitialized` | `Ref<boolean>` | True after first `init()` completes |
 | `init()` | `() => Promise<void>` | Idempotent — safe to call multiple times; only runs setup once |
 | `waitForReady()` | `() => Promise<void>` | Resolves when any in-flight profile fetch is complete |
@@ -154,6 +156,12 @@ router.beforeEach(async (to) => {
   const isAuthRoute = authRoutes.includes(to.path)       // /login, /register
   const isOnboarding = to.path.startsWith('/onboarding')
 
+  // Soft-deleted account → sign out and block access
+  if (session && profile?.deactivated_at) {
+    await supabase.auth.signOut()
+    return { path: '/login', query: { deactivated: '1' } }
+  }
+
   // Unauthenticated → only auth routes are accessible
   if (!session && !isAuthRoute) return '/login'
 
@@ -171,6 +179,7 @@ router.beforeEach(async (to) => {
 
 | Session | Profile | Target | Outcome |
 |---|---|---|---|
+| ✅ | `deactivated_at` set | any | Sign out → `/login?deactivated=1` |
 | ❌ | any | `/login`, `/register` | Allow |
 | ❌ | any | anything else | → `/login` |
 | ✅ | ❌ | `/login`, `/register` | → `/onboarding/step1` |
@@ -193,13 +202,16 @@ router.push('/login')
 
 `signOut()` fires a `SIGNED_OUT` event through `onAuthStateChange`. The store's listener sets both `session` and `profile` to `null` synchronously. The subsequent guard execution on `/login` sees no session and allows access.
 
+The same `signOut()` flow is also reachable from **Account settings** (`features/account-settings`): the Sign-out row (with a confirmation dialog) and the Delete-account flow both call it. Delete-account first soft-deletes by stamping `master_profile.deactivated_at`, then signs out — after which the guard's rule 4 keeps the account locked out on any future login until the timestamp is cleared.
+
 ---
 
 ## Cross-references
 
 - [Auth & Onboarding Flow](../business/auth-and-onboarding.md) — business rules, registration, onboarding steps, and email confirmation plan
 - [Supabase Integration](../integrations/supabase.md) — Supabase client setup, RLS, schema workflow
-- [Data Model](../business/data-model.md) — `master_profile` table schema that the profile fetch queries
+- [Data Model](../business/data-model.md) — `master_profile` table schema (incl. `deactivated_at`) that the profile fetch queries
+- [Application Settings](../business/settings.md) — the Account section that drives sign-out, change email/password, and the soft-delete this guard enforces
 
 ## File Structure
 
