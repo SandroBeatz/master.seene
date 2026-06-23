@@ -3,12 +3,14 @@ import type { Ref } from 'vue'
 import {
   getMasterPreferences,
   getMasterProfile,
+  removeMasterAvatar,
   updateMasterBookingSettings,
   updateMasterContacts,
   updateMasterNotificationSettings,
   updateMasterProfile,
   updateMasterSchedule,
   updateMasterSystemSettings,
+  uploadMasterAvatar,
 } from '../api/master.api'
 import type {
   MasterBookingSettingsUpdate,
@@ -67,6 +69,32 @@ export const useUpdateMasterProfileMutation = (userId: Ref<string>) => {
     onSettled: () => {
       cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
       cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+    },
+  })
+}
+
+export const useUploadMasterAvatarMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: (file: Blob) => uploadMasterAvatar(userId.value, file),
+    // uploadMasterAvatar returns only the URL, so refetch the profile to pick up
+    // the new avatar_url rather than patching the cached object by hand.
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
+    },
+  })
+}
+
+export const useRemoveMasterAvatarMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+
+  return useMutation({
+    mutation: () => removeMasterAvatar(userId.value),
+    onSettled: () => {
+      cache.invalidateQueries({ key: masterProfileQueryKey(userId.value) })
+      cache.invalidateQueries({ key: masterPreferencesQueryKey(userId.value) })
     },
   })
 }

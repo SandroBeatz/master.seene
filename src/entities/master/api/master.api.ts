@@ -82,7 +82,9 @@ function toMasterSettings(data: Record<string, unknown>): MasterSettings {
 }
 
 const MASTER_PROFILE_COLUMNS =
-  'id,user_id,first_name,last_name,username,specializations,bio,schedule,phone,whatsapp,telegram,instagram,tiktok,contact_email,country,address,house_number,zip_code,city,place_id,works_at_place,can_travel'
+  'id,user_id,first_name,last_name,username,specializations,bio,avatar_url,schedule,phone,whatsapp,telegram,instagram,tiktok,contact_email,country,address,house_number,zip_code,city,place_id,works_at_place,can_travel'
+
+const AVATAR_BUCKET = 'avatars'
 
 export async function getMasterProfile(userId: string): Promise<MasterProfile | null> {
   if (!userId) return null
@@ -116,6 +118,55 @@ export async function updateMasterProfile(
 
   if (error) throw error
   return data as MasterProfile
+}
+
+/**
+ * Uploads a new avatar for the master and persists its public URL.
+ *
+ * The file is stored at `<userId>/avatar-<timestamp>.webp`. The timestamped name
+ * is deliberate: replacing an avatar writes a fresh object instead of overwriting
+ * the old one, so the public CDN URL changes and clients don't see a stale cached
+ * image. RLS ("Users can ... own avatar") allows writes only under the user's own
+ * `<uid>/` folder. Returns the public URL now stored on the profile.
+ */
+export async function uploadMasterAvatar(userId: string, file: Blob): Promise<string> {
+  const path = `${userId}/avatar-${Date.now()}.webp`
+
+  // No upsert: the timestamped path is unique, so this is always a fresh INSERT.
+  // (An upsert would run INSERT ... ON CONFLICT DO UPDATE, which under RLS also
+  // needs a SELECT policy on storage.objects — avoided by never conflicting.)
+  const { error: uploadError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, file, { contentType: 'image/webp' })
+
+  if (uploadError) throw uploadError
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path)
+
+  const { error: updateError } = await supabase
+    .from('master_profile')
+    .update({ avatar_url: publicUrl })
+    .eq('user_id', userId)
+
+  if (updateError) throw updateError
+
+  return publicUrl
+}
+
+/**
+ * Clears the master's avatar by nulling `avatar_url`. The orphaned storage object
+ * is left in place (cheap, and the bucket is owner-scoped) — physical cleanup is
+ * out of scope here.
+ */
+export async function removeMasterAvatar(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('master_profile')
+    .update({ avatar_url: null })
+    .eq('user_id', userId)
+
+  if (error) throw error
 }
 
 export async function updateMasterContacts(

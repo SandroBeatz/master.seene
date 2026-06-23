@@ -9,6 +9,8 @@ export interface SessionProfile {
   first_name: string
   last_name: string
   username: string
+  /** Public URL of the master's avatar, or null when none is set. */
+  avatar_url: string | null
   /** Set when the master requested account deletion (soft-delete). null = active. */
   deactivated_at: string | null
 }

@@ -57,6 +57,8 @@ export interface MasterProfile {
   username: string
   specializations: string[]
   bio: string | null
+  // Public URL of the avatar in the `avatars` storage bucket. null = no avatar.
+  avatar_url: string | null
   schedule: MasterSchedule | null
   // Contact & social channels (Settings → Contacts & social).
   phone: string

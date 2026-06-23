@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { watchDebounced } from '@vueuse/core'
 import { useSessionStore } from '@entities/session'
 import {
   isUsernameAvailable,
   useMasterProfileQuery,
+  useRemoveMasterAvatarMutation,
   useUpdateMasterProfileMutation,
+  useUploadMasterAvatarMutation,
 } from '@entities/master'
 import type { MasterProfile } from '@entities/master'
+import { resizeImageToSquare } from '@shared/lib/image'
 import { useDirtyForm } from '@shared/lib/forms'
 import { PUBLIC_BOOKING_HOST, bookingPageUrl } from '@shared/config'
 import { FormSaveBar, Typography } from '@shared/ui'
@@ -24,6 +27,8 @@ const userId = computed(() => sessionStore.session?.user.id ?? '')
 
 const { data: profileData } = useMasterProfileQuery(userId)
 const updateMutation = useUpdateMasterProfileMutation(userId)
+const uploadAvatarMutation = useUploadMasterAvatarMutation(userId)
+const removeAvatarMutation = useRemoveMasterAvatarMutation(userId)
 
 interface ProfileFormState {
   first_name: string
@@ -74,26 +79,81 @@ watch(
   { immediate: true },
 )
 
-// --- Avatar (local-only preview, not persisted) -------------------------------
+// --- Avatar (eager: uploaded/removed independently of the Save bar) ------------
+// Avatar changes persist immediately on file select / remove — they do NOT flow
+// through the dirty-form Save bar, so they never mark the form dirty.
+const ACCEPTED_AVATAR_TYPES = ['image/png', 'image/jpeg']
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024 // 5 MB
+
 const fileInput = ref<HTMLInputElement | null>(null)
-const avatarUrl = ref<string | null>(null)
+// Local optimistic preview (objectURL) shown after a successful pick; otherwise
+// we fall back to the persisted avatar from the profile query.
+const previewUrl = ref<string | null>(null)
+
+const avatarSrc = computed(() => previewUrl.value ?? profileData.value?.avatar_url ?? undefined)
+const hasAvatar = computed(() => Boolean(previewUrl.value ?? profileData.value?.avatar_url))
+const isAvatarBusy = computed(
+  () => uploadAvatarMutation.isLoading.value || removeAvatarMutation.isLoading.value,
+)
 
 function pickAvatar() {
   fileInput.value?.click()
 }
 
-function onAvatarSelected(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  if (avatarUrl.value) URL.revokeObjectURL(avatarUrl.value)
-  avatarUrl.value = URL.createObjectURL(file)
-}
-
-function removeAvatar() {
-  if (avatarUrl.value) URL.revokeObjectURL(avatarUrl.value)
-  avatarUrl.value = null
+function clearFileInput() {
   if (fileInput.value) fileInput.value.value = ''
 }
+
+function setPreview(url: string | null) {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  previewUrl.value = url
+}
+
+async function onAvatarSelected(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
+    toast.add({ title: t('settings.profile.avatar.invalidType'), color: 'error' })
+    clearFileInput()
+    return
+  }
+  if (file.size > MAX_AVATAR_BYTES) {
+    toast.add({ title: t('settings.profile.avatar.tooLarge'), color: 'error' })
+    clearFileInput()
+    return
+  }
+
+  try {
+    const blob = await resizeImageToSquare(file, 512)
+    setPreview(URL.createObjectURL(blob))
+    await uploadAvatarMutation.mutateAsync(blob)
+    // Keep the dashboard header / widgets in sync (they read the session profile).
+    await sessionStore.refreshProfile()
+    toast.add({ title: t('settings.profile.avatar.uploadSuccess'), color: 'success' })
+  } catch {
+    // Roll back the optimistic preview; fall back to the persisted avatar.
+    setPreview(null)
+    toast.add({ title: t('settings.profile.avatar.uploadError'), color: 'error' })
+  } finally {
+    clearFileInput()
+  }
+}
+
+async function removeAvatar() {
+  try {
+    await removeAvatarMutation.mutateAsync()
+    setPreview(null)
+    await sessionStore.refreshProfile()
+    toast.add({ title: t('settings.profile.avatar.removeSuccess'), color: 'success' })
+  } catch {
+    toast.add({ title: t('settings.profile.avatar.removeError'), color: 'error' })
+  } finally {
+    clearFileInput()
+  }
+}
+
+onBeforeUnmount(() => setPreview(null))
 
 // --- Specializations ----------------------------------------------------------
 function toggleSpecialization(code: string) {
@@ -246,7 +306,7 @@ const hostUI = {
     <div class="flex flex-col gap-6">
       <!-- Avatar -->
       <div class="flex items-center gap-4">
-        <UAvatar :src="avatarUrl ?? undefined" icon="i-lucide-user" size="4xl" />
+        <UAvatar :src="avatarSrc" icon="i-lucide-user" size="4xl" />
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <UButton
@@ -254,16 +314,20 @@ const hostUI = {
               color="neutral"
               variant="outline"
               leading-icon="i-lucide-upload"
+              :loading="uploadAvatarMutation.isLoading.value"
+              :disabled="isAvatarBusy"
               @click="pickAvatar"
             >
               {{ t('settings.profile.avatar.upload') }}
             </UButton>
             <UButton
-              v-if="avatarUrl"
+              v-if="hasAvatar"
               size="sm"
               color="neutral"
               variant="ghost"
               leading-icon="i-lucide-trash-2"
+              :loading="removeAvatarMutation.isLoading.value"
+              :disabled="isAvatarBusy"
               @click="removeAvatar"
             >
               {{ t('settings.profile.avatar.remove') }}

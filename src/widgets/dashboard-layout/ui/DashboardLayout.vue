@@ -2,12 +2,14 @@
 import { RouterView } from 'vue-router'
 import { AppLogo } from '@shared/ui'
 import { supabase } from '@shared/lib/supabase'
+import { useSessionStore } from '@entities/session'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 const router = useRouter()
+const sessionStore = useSessionStore()
 const showNotifications = ref(false)
 
 const navItems = computed(() => [
@@ -55,7 +57,9 @@ const footerItems = computed(() => [
   {
     label: t('nav.profile'),
     avatar: {
-      src: 'https://i.pravatar.cc/200?img=47',
+      // Falls back to a user icon when the master hasn't set an avatar.
+      src: sessionStore.profile?.avatar_url ?? undefined,
+      icon: 'i-lucide-user',
       alt: t('common.userAvatarAlt'),
     },
     to: '/settings/profile',

@@ -64,21 +64,25 @@ export {
   useInvalidateMasterPreferences,
   useMasterPreferencesQuery,
   useMasterProfileQuery,
+  useRemoveMasterAvatarMutation,
   useUpdateMasterBookingSettingsMutation,
   useUpdateMasterContactsMutation,
   useUpdateMasterNotificationSettingsMutation,
   useUpdateMasterProfileMutation,
   useUpdateMasterScheduleMutation,
   useUpdateMasterSystemSettingsMutation,
+  useUploadMasterAvatarMutation,
 } from './model/master.queries'
 export {
   getMasterProfile,
+  removeMasterAvatar,
   updateMasterBookingSettings,
   updateMasterContacts,
   updateMasterNotificationSettings,
   updateMasterProfile,
   updateMasterSchedule,
   updateMasterSystemSettings,
+  uploadMasterAvatar,
   isUsernameAvailable,
 } from './api/master.api'
 export { useMasterPreferencesStore } from './model/master-preferences.store'

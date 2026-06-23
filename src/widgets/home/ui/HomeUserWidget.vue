@@ -13,7 +13,12 @@ const userName = computed(() => {
   return sessionStore.session?.user?.email ?? 'User'
 })
 
-const avatarSrc = computed(() => sessionStore.session?.user?.user_metadata?.avatar_url ?? undefined)
+const avatarSrc = computed(
+  () =>
+    sessionStore.profile?.avatar_url ??
+    sessionStore.session?.user?.user_metadata?.avatar_url ??
+    undefined,
+)
 
 const greeting = computed(() => {
   const h = new Date().getHours()
