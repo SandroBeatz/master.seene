@@ -92,6 +92,7 @@ describe('master preferences helpers', () => {
         username: 'karinami',
         specializations: [],
         bio: null,
+        avatar_url: null,
         schedule: { timezone: 'Asia/Bishkek' },
         phone: '+996700000000',
         whatsapp: null,
