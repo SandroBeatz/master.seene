@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { supabase } from '@shared/lib/supabase'
+import { signInWithGoogle } from '@entities/session'
 
 const { t } = useI18n()
 const router = useRouter()
 const toast = useToast()
+
+const passwordLoading = ref(false)
+const googleLoading = ref(false)
 
 const schema = Joi.object({
   name: Joi.string()
@@ -77,19 +81,33 @@ const providers = computed(() => [
     label: t('auth.register.signUpGoogle'),
     icon: 'i-logos-google-icon',
     variant: 'soft',
-    onClick: () => {
-      toast.add({ title: 'Google', description: t('auth.register.signUpGoogle') })
-    },
+    loading: googleLoading.value,
+    disabled: passwordLoading.value,
+    onClick: onGoogleSignUp,
   },
   {
-    label: t('auth.register.signUpApple'),
+    label: t('common.comingSoon'),
     icon: 'i-logos-apple',
     variant: 'soft',
-    onClick: () => {
-      toast.add({ title: 'Apple', description: t('auth.register.signUpApple') })
-    },
+    disabled: true,
   },
 ])
+
+const submit = computed(() => ({
+  label: t('auth.register.signUp'),
+  loading: passwordLoading.value,
+  disabled: googleLoading.value,
+}))
+
+async function onGoogleSignUp() {
+  googleLoading.value = true
+  const { error } = await signInWithGoogle()
+  // On success the browser redirects to Google, so keep the spinner until then.
+  if (error) {
+    googleLoading.value = false
+    toast.add({ title: t('auth.register.errorTitle'), description: error.message, color: 'error' })
+  }
+}
 
 interface RegisterFormData {
   name: string
@@ -99,11 +117,13 @@ interface RegisterFormData {
 }
 
 async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
+  passwordLoading.value = true
   const { error } = await supabase.auth.signUp({
     email: event.data.email,
     password: event.data.password,
   })
   if (error) {
+    passwordLoading.value = false
     toast.add({ title: t('auth.register.errorTitle'), description: error.message, color: 'error' })
     return
   }
@@ -117,7 +137,8 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormData>) {
       :schema="schema"
       :fields="fields"
       :providers="providers"
-      :submit="{ label: t('auth.register.signUp') }"
+      :submit="submit"
+      :separator="$t('common.or')"
       @submit="onSubmit"
     >
       <template #header>

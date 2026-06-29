@@ -13,6 +13,8 @@ export default {
     dashboardWelcome:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
     userAvatarAlt: 'User Avatar',
+    comingSoon: 'Coming soon',
+    or: 'or',
     previous: 'Previous',
     next: 'Next',
     edit: 'Edit',

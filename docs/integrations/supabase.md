@@ -1,12 +1,12 @@
 ---
-version: 1.1
-date: 2026-06-23
+version: 1.2
+date: 2026-06-29
 category: integrations
 ---
 
 # Supabase Integration
 
-> Version 1.1 · 2026-06-23 · [Integrations](../)
+> Version 1.2 · 2026-06-29 · [Integrations](../)
 
 ## Overview
 
@@ -46,7 +46,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 
 Auth is handled entirely by Supabase Auth. The client calls `supabase.auth.*` methods; sessions are managed automatically (stored in `localStorage`).
 
-The router guard in `src/app/router/index.ts` calls `supabase.auth.getSession()` on every navigation to protect routes.
+Active methods: email + password (`signInWithPassword` / `signUp`) and **Google OAuth** (`signInWithOAuth({ provider: 'google' })`, wrapped by `signInWithGoogle()` in the `session` entity). OAuth uses the redirect flow back to the app origin; the session is picked up automatically because `detectSessionInUrl` is on by the client's defaults — no callback route is needed. OAuth providers (Client ID/Secret) are configured in the Supabase Dashboard, **not** in frontend env vars.
+
+The router guard in `src/app/router/index.ts` reads session/profile state from the cached `useSessionStore` (backed by `onAuthStateChange`); it does not call Supabase on every navigation. See [Auth & Onboarding Flow → Google OAuth](../business/auth-and-onboarding.md#google-oauth).
 
 ### Data access
 
@@ -198,9 +200,11 @@ await supabase.from('master_profile').update({ avatar_url: publicUrl }).eq('user
 
 | Path | What it does |
 |---|---|
-| `src/app/router/index.ts` | `supabase.auth.getSession()` — route guard |
-| `src/features/auth-login/ui/LoginForm.vue` | `supabase.auth.signInWithPassword()` |
-| `src/features/auth-register/ui/RegisterForm.vue` | `supabase.auth.signUp()` |
+| `src/entities/session/api/session.api.ts` | `supabase.auth.signInWithOAuth()` (Google, via `signInWithGoogle`) + `fetchSessionProfile` |
+| `src/entities/session/model/session.store.ts` | `supabase.auth.onAuthStateChange()` / `getSession()` — cached session+profile store |
+| `src/app/router/index.ts` | reads cached session from the store (no per-navigation Supabase call) |
+| `src/features/auth-login/ui/LoginForm.vue` | `supabase.auth.signInWithPassword()` + `signInWithGoogle()` |
+| `src/features/auth-register/ui/RegisterForm.vue` | `supabase.auth.signUp()` + `signInWithGoogle()` |
 | `src/pages/onboarding/ui/OnboardingStep2Page.vue` | `.from('master_profile').select()` — username uniqueness check |
 | `src/pages/onboarding/ui/OnboardingStep5Page.vue` | `.from('master_profile').insert()` — profile creation |
 | `src/widgets/dashboard-layout/ui/DashboardLayout.vue` | `supabase.auth.signOut()` — logout |

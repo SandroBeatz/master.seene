@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Joi from 'joi'
 import type { AuthFormField, FormSubmitEvent } from '@nuxt/ui'
 import { supabase } from '@shared/lib/supabase'
+import { signInWithGoogle } from '@entities/session'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -12,6 +13,9 @@ const route = useRoute()
 const toast = useToast()
 
 const isDeactivated = computed(() => route.query.deactivated === '1')
+
+const passwordLoading = ref(false)
+const googleLoading = ref(false)
 
 const schema = Joi.object({
   email: Joi.string()
@@ -52,19 +56,33 @@ const providers = computed(() => [
     label: t('auth.login.signInGoogle'),
     icon: 'i-logos-google-icon',
     variant: 'soft',
-    onClick: () => {
-      toast.add({ title: 'Google', description: t('auth.login.signInGoogle') })
-    },
+    loading: googleLoading.value,
+    disabled: passwordLoading.value,
+    onClick: onGoogleSignIn,
   },
   {
-    label: t('auth.login.signInApple'),
+    label: t('common.comingSoon'),
     icon: 'i-logos-apple',
     variant: 'soft',
-    onClick: () => {
-      toast.add({ title: 'Apple', description: t('auth.login.signInApple') })
-    },
+    disabled: true,
   },
 ])
+
+const submit = computed(() => ({
+  label: t('auth.login.signIn'),
+  loading: passwordLoading.value,
+  disabled: googleLoading.value,
+}))
+
+async function onGoogleSignIn() {
+  googleLoading.value = true
+  const { error } = await signInWithGoogle()
+  // On success the browser redirects to Google, so keep the spinner until then.
+  if (error) {
+    googleLoading.value = false
+    toast.add({ title: t('auth.login.errorTitle'), description: error.message, color: 'error' })
+  }
+}
 
 interface LoginFormData {
   email: string
@@ -72,11 +90,13 @@ interface LoginFormData {
 }
 
 async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
+  passwordLoading.value = true
   const { error } = await supabase.auth.signInWithPassword({
     email: event.data.email,
     password: event.data.password,
   })
   if (error) {
+    passwordLoading.value = false
     toast.add({ title: t('auth.login.errorTitle'), description: error.message, color: 'error' })
     return
   }
@@ -94,7 +114,14 @@ async function onSubmit(event: FormSubmitEvent<LoginFormData>) {
       icon="i-lucide-triangle-alert"
       :description="$t('settings.account.deactivatedNotice')"
     />
-    <UAuthForm :schema="schema" :fields="fields" :providers="providers" @submit="onSubmit">
+    <UAuthForm
+      :schema="schema"
+      :fields="fields"
+      :providers="providers"
+      :submit="submit"
+      :separator="$t('common.or')"
+      @submit="onSubmit"
+    >
       <template #footer>
         <div class="text-center">
           <UButton

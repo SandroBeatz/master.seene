@@ -12,6 +12,8 @@ export default {
   common: {
     dashboardWelcome: 'Вот что происходит с вашими проектами сегодня.',
     userAvatarAlt: 'Аватар пользователя',
+    comingSoon: 'Скоро',
+    or: 'или',
     previous: 'Назад',
     next: 'Вперёд',
     edit: 'Редактировать',

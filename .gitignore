@@ -40,3 +40,8 @@ __screenshots__/
 
 # Git worktrees
 .worktrees/
+
+# Env (.env.local already covered by *.local; keep .env.example tracked)
+.env
+.env.*
+!.env.example

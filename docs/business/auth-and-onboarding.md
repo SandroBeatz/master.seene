@@ -1,12 +1,12 @@
 ---
-version: 1.3
-date: 2026-04-27
+version: 1.4
+date: 2026-06-29
 category: business
 ---
 
 # Auth & Onboarding Flow
 
-> Version 1.3 · 2026-04-27 · [Business](../)
+> Version 1.4 · 2026-06-29 · [Business](../)
 
 ## Overview
 
@@ -66,7 +66,7 @@ Authenticated user (session exists)
 
 ### Current implementation
 
-Only **email + password** is active. Google and Apple OAuth buttons are rendered in the UI but are no-ops (show a toast). They will be wired up in a future milestone.
+Two methods are active: **email + password** and **Google OAuth**. Apple sign-in is intentionally shown as a **disabled "Coming soon" button** until an Apple Developer account is provisioned (it is not a no-op toast anymore).
 
 **Registration** (`/register`, `src/features/auth-register/ui/RegisterForm.vue`):
 - Fields: full name, email, password, confirm password.
@@ -82,13 +82,60 @@ Only **email + password** is active. Google and Apple OAuth buttons are rendered
 - On success → redirect to `/home`.
 - On error → toast with Supabase error message.
 
+**UI polish (both forms):**
+- The submit button and the Google button each show a loading spinner during their request and **mutually disable** each other to prevent double-submits (`passwordLoading` / `googleLoading` refs).
+- A translatable separator (`common.or` → en `or` / fr `ou` / ru `или`) divides the OAuth buttons from the email/password fields, via the `UAuthForm` `separator` prop.
+- The shared shell (`src/widgets/authorization-layout/ui/AuthorizationLayout.vue`) renders the brand mark (`AppFullLogo`) and the `auth-background.jpg` side image.
+
+### Google OAuth
+
+Implemented through a single shared helper so both forms stay in sync. Because `auth-login` and `auth-register` are sibling **feature** slices (which may not import from each other under FSD), the helper lives one layer down in the **`session` entity**:
+
+```ts
+// src/entities/session/api/session.api.ts
+export async function signInWithGoogle(): Promise<{ error: AuthError | null }> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
+  return { error }
+}
+```
+
+Exported from `@entities/session`; each form calls it from its Google button handler and surfaces any error with its own toast title (`auth.login.errorTitle` / `auth.register.errorTitle`).
+
+**No callback route or guard changes were needed.** The flow relies on existing infrastructure:
+
+```
+User clicks "Sign in with Google"
+        │  signInWithGoogle() → supabase.auth.signInWithOAuth
+        ▼
+Browser redirects to Google's consent screen
+        │  user authenticates / consents
+        ▼
+Google redirects back to window.location.origin (#access_token=… in hash)
+        │
+        ▼
+Supabase JS picks up the token automatically (detectSessionInUrl, on by default)
+        │  fires SIGNED_IN → useSessionStore updates session + fetches profile
+        ▼
+router.beforeEach runs:
+        ├─ new Google user (no master_profile row) ──► /onboarding/step1
+        └─ returning user (profile exists)          ──► /home
+```
+
+A brand-new Google user therefore lands in the same onboarding wizard as an email sign-up — the guard's existing "session but no profile" rule handles it, no provider-specific branching.
+
+**Configuration / security:**
+- The Google provider (Client ID + Client Secret) is configured **server-side in the Supabase Dashboard** → Auth → Providers → Google. The frontend needs **no** Google credentials — do not put a client secret in a `VITE_*` env var (those are bundled and publicly visible).
+- `redirectTo` (= the app origin) must be listed under Supabase → Auth → URL Configuration → Redirect URLs for every environment (e.g. `http://localhost:5173` for dev, the production URL for prod), or Supabase rejects the return redirect.
+
 ### Planned (not yet implemented)
 
 | Feature | Notes |
 |---|---|
 | Email confirmation | Disabled now. Will be enabled in Supabase project settings; requires adding a confirmation-pending state and a `/verify-email` page. See [Email Confirmation Implementation Plan](#email-confirmation-implementation-plan) below. |
-| Google OAuth | `supabase.auth.signInWithOAuth({ provider: 'google' })` — requires Google Cloud credentials configured in Supabase. |
-| Apple OAuth | `supabase.auth.signInWithOAuth({ provider: 'apple' })` — requires Apple Developer setup. |
+| Apple OAuth | Button present but disabled ("Coming soon"). Requires an Apple Developer account + Sign in with Apple service config. On native iOS (Capacitor) this needs the **native** flow (`supabase.auth.signInWithIdToken` with a nonce), not the web redirect — so it is a separate, larger effort than the Google web flow. |
 
 ---
 
@@ -361,6 +408,7 @@ See [Data Model](./data-model.md) for the full schema, constraints, RLS policies
 |---|---|---|
 | Email registration | ✅ Done | `src/features/auth-register/ui/RegisterForm.vue` |
 | Email login | ✅ Done | `src/features/auth-login/ui/LoginForm.vue` |
+| Google OAuth | ✅ Done | `signInWithGoogle()` in `src/entities/session/api/session.api.ts`, wired into both forms |
 | Supabase client | ✅ Done | `src/shared/lib/supabase/client.ts` |
 | Router guard (auth + onboarding gate) | ✅ Done | `src/app/router/index.ts` |
 | Session store (cached auth + profile state) | ✅ Done | `src/entities/session/model/session.store.ts` |
@@ -374,7 +422,7 @@ See [Data Model](./data-model.md) for the full schema, constraints, RLS policies
 | `$f.time()` / `$f.price()` format helper | ✅ Done | `src/shared/lib/formats/index.ts` |
 | `master_profile` DB table | ✅ Done | Migrations applied via Supabase MCP |
 | `master_settings` DB table | ✅ Done | Migration `20260426140000_master_settings.sql` |
-| Google / Apple OAuth | ❌ Not built | UI present, logic not wired |
+| Apple OAuth | ⏳ Stub | Button disabled with "Coming soon"; needs Apple Developer + native flow |
 | Email verification | ❌ Not built | Disabled in Supabase settings — see [implementation plan](#email-confirmation-implementation-plan) |
 
 ---
