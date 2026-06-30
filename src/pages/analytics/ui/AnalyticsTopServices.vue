@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { TopService } from '@entities/analytics'
+import type { TopServiceV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { useI18n } from 'vue-i18n'
 
-const props = defineProps<{
-  services: TopService[]
+defineProps<{
+  services: TopServiceV2[]
   loading: boolean
 }>()
 
@@ -15,31 +15,44 @@ const formats = useFormats()
 <template>
   <UPageCard variant="subtle" :ui="{ root: 'shadow-none' }">
     <div class="space-y-4">
-      <p class="text-sm font-semibold uppercase text-muted">{{ t('analytics.topServices') }}</p>
+      <div>
+        <p class="text-sm font-semibold">{{ t('analytics.topServicesTitle') }}</p>
+        <p class="text-xs text-muted">{{ t('analytics.topServicesSubtitle') }}</p>
+      </div>
 
-      <div v-if="loading" class="space-y-3">
-        <div v-for="i in 3" :key="i" class="h-8 w-full animate-pulse rounded bg-elevated" />
+      <div v-if="loading" class="space-y-4">
+        <div v-for="i in 5" :key="i" class="h-10 w-full animate-pulse rounded bg-elevated" />
       </div>
 
       <p v-else-if="!services.length" class="text-sm text-muted">
         {{ t('analytics.noTopServices') }}
       </p>
 
-      <div v-else class="space-y-3">
-        <div v-for="service in services" :key="service.name" class="space-y-1">
-          <div class="flex items-center justify-between text-sm">
-            <span class="font-medium">{{ service.name }}</span>
-            <span class="text-muted">{{ formats.price(service.revenue) }}</span>
+      <ol v-else class="space-y-4">
+        <li
+          v-for="(service, index) in services"
+          :key="service.name"
+          class="flex items-start gap-3"
+        >
+          <span class="w-4 shrink-0 pt-0.5 text-sm font-medium text-muted">{{ index + 1 }}</span>
+          <div class="flex-1 space-y-1.5">
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <span class="truncate font-medium">{{ service.name }}</span>
+              <span class="shrink-0 font-medium">{{ formats.price(service.revenue) }}</span>
+            </div>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-elevated">
+              <div
+                class="h-full rounded-full"
+                :style="{ width: `${service.percentage}%`, backgroundColor: service.color }"
+              />
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted">
+              <span>{{ service.percentage }}%</span>
+              <span>{{ t('analytics.serviceAppointments', { count: service.count }) }}</span>
+            </div>
           </div>
-          <div class="h-2 w-full overflow-hidden rounded-full bg-elevated">
-            <div
-              class="h-full rounded-full bg-primary"
-              :style="{ width: `${service.percentage}%` }"
-            />
-          </div>
-          <p class="text-right text-xs text-muted">{{ service.percentage }}%</p>
-        </div>
-      </div>
+        </li>
+      </ol>
     </div>
   </UPageCard>
 </template>

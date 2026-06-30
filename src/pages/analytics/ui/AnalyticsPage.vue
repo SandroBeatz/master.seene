@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { AnalyticsPeriod } from '@entities/analytics'
-import { useAnalyticsQuery } from '@entities/analytics'
-import AnalyticsPeriodTabs from './AnalyticsPeriodTabs.vue'
+import type { AnalyticsPeriodV2 } from '@entities/analytics'
+import { useAnalyticsQueryV2 } from '@entities/analytics'
 import AnalyticsStatCards from './AnalyticsStatCards.vue'
 import AnalyticsTopServices from './AnalyticsTopServices.vue'
 
 const { t } = useI18n()
-const period = ref<AnalyticsPeriod>('today')
-const { data, isLoading } = useAnalyticsQuery(period)
+// Interim defaults — the date toolbar (T5) and full mockup layout (T11) replace this.
+const period = ref<AnalyticsPeriodV2>('this_month')
+const compare = ref(false)
+const { data, isLoading } = useAnalyticsQueryV2(period)
 </script>
 
 <template>
@@ -18,14 +19,10 @@ const { data, isLoading } = useAnalyticsQuery(period)
       :title="t('analytics.title')"
       :description="t('analytics.description')"
       :ui="{ root: 'border-none' }"
-    >
-      <template #links>
-        <AnalyticsPeriodTabs v-model="period" />
-      </template>
-    </UPageHeader>
+    />
     <UPageBody>
       <div class="space-y-6">
-        <AnalyticsStatCards :data="data" :loading="isLoading" />
+        <AnalyticsStatCards :data="data" :loading="isLoading" :compare="compare" />
         <AnalyticsTopServices :services="data?.top_services ?? []" :loading="isLoading" />
       </div>
     </UPageBody>
