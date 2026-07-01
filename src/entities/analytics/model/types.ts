@@ -1,8 +1,4 @@
-export type AnalyticsPeriod = 'today' | 'week' | 'month'
-
 // --- V2 period model -------------------------------------------------------
-// Parallel to the V1 AnalyticsPeriod above. V1 stays until the Home page is
-// migrated off it (task T11); new analytics code uses these types.
 
 export type AnalyticsPeriodPreset =
   | 'today'
@@ -23,20 +19,6 @@ export type AnalyticsPeriodV2 =
 
 /** Granularity used to bucket the revenue time-series for a period. */
 export type AnalyticsGranularity = 'hour' | 'day' | 'week' | 'month'
-
-export interface TopService {
-  name: string
-  revenue: number
-  percentage: number
-}
-
-export interface AnalyticsResult {
-  earned: number
-  completed_count: number
-  working_minutes: number
-  avg_check: number | null
-  top_services: TopService[]
-}
 
 // --- V2 result shape (get_analytics_v2 RPC) --------------------------------
 

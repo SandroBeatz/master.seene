@@ -1,14 +1,6 @@
 import { supabase } from '@shared/lib/supabase'
-import type { AnalyticsResult, AnalyticsResultV2, AnalyticsPeriod, AnalyticsPeriodV2 } from '../model/types'
-import { periodToDateRange } from '../model/period'
+import type { AnalyticsResultV2, AnalyticsPeriodV2 } from '../model/types'
 import { periodGranularity, periodToDateRangeV2, previousPeriodRange } from '../model/period-v2'
-
-export async function getAnalytics(period: AnalyticsPeriod): Promise<AnalyticsResult> {
-  const { from, to } = periodToDateRange(period)
-  const { data, error } = await supabase.rpc('get_analytics', { p_from: from, p_to: to })
-  if (error) throw error
-  return data as AnalyticsResult
-}
 
 /** The master's local IANA timezone — drives weekday/hour/bucket alignment server-side. */
 function localTimeZone(): string {

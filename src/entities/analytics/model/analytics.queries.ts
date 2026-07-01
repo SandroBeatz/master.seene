@@ -1,13 +1,7 @@
 import { useQuery } from '@pinia/colada'
 import type { Ref } from 'vue'
-import type { AnalyticsPeriod, AnalyticsPeriodV2 } from './types'
-import { getAnalytics, getAnalyticsV2 } from '../api/analytics.api'
-
-export const useAnalyticsQuery = (period: Ref<AnalyticsPeriod>) =>
-  useQuery({
-    key: () => ['analytics', period.value],
-    query: () => getAnalytics(period.value),
-  })
+import type { AnalyticsPeriodV2 } from './types'
+import { getAnalyticsV2 } from '../api/analytics.api'
 
 /** Stable cache-key fragment for a V2 period (custom ranges vary by from/to). */
 function periodKey(period: AnalyticsPeriodV2): string {
