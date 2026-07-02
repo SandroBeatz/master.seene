@@ -82,12 +82,7 @@ const cards = computed<Card[]>(() => {
 
 <template>
   <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <UPageCard
-      v-for="card in cards"
-      :key="card.key"
-      variant="subtle"
-      :ui="{ root: 'shadow-none' }"
-    >
+    <UCard v-for="card in cards" :key="card.key" :ui="{ root: 'shadow-panel ring-0' }">
       <div class="space-y-2">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 text-muted">
@@ -122,6 +117,6 @@ const cards = computed<Card[]>(() => {
           <p v-if="card.secondary" class="text-xs text-muted">{{ card.secondary }}</p>
         </template>
       </div>
-    </UPageCard>
+    </UCard>
   </div>
 </template>

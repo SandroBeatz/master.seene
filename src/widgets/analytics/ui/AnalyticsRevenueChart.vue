@@ -52,7 +52,7 @@ const options = computed<ChartOptions<'bar'>>(() => ({
 </script>
 
 <template>
-  <UPageCard variant="subtle" :ui="{ root: 'shadow-none' }">
+  <UCard :ui="{ root: 'shadow-panel ring-0' }">
     <div class="space-y-4">
       <div class="flex items-start justify-between gap-4">
         <div>
@@ -81,5 +81,5 @@ const options = computed<ChartOptions<'bar'>>(() => ({
         <BaseBarChart :data="chartData" :options="options" />
       </div>
     </div>
-  </UPageCard>
+  </UCard>
 </template>

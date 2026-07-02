@@ -53,7 +53,7 @@ const peakRange = computed(() => {
 </script>
 
 <template>
-  <UPageCard variant="subtle" :ui="{ root: 'shadow-none' }">
+  <UCard :ui="{ root: 'shadow-panel ring-0' }">
     <div class="space-y-4">
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.busiest.title') }}</p>
@@ -65,5 +65,5 @@ const peakRange = computed(() => {
         <BaseBarChart :data="chartData" :options="options" />
       </div>
     </div>
-  </UPageCard>
+  </UCard>
 </template>

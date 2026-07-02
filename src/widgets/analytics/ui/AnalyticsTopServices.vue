@@ -13,7 +13,7 @@ const formats = useFormats()
 </script>
 
 <template>
-  <UPageCard variant="subtle" :ui="{ root: 'shadow-none' }">
+  <UCard :ui="{ root: 'shadow-panel ring-0' }">
     <div class="space-y-4">
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.topServicesTitle') }}</p>
@@ -54,5 +54,5 @@ const formats = useFormats()
         </li>
       </ol>
     </div>
-  </UPageCard>
+  </UCard>
 </template>

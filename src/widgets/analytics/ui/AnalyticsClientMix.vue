@@ -48,7 +48,7 @@ const legend = computed(() => [
 </script>
 
 <template>
-  <UPageCard variant="subtle" :ui="{ root: 'shadow-none' }">
+  <UCard :ui="{ root: 'shadow-panel ring-0' }">
     <div class="space-y-4">
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.clientMix.title') }}</p>
@@ -89,5 +89,5 @@ const legend = computed(() => [
         </ul>
       </div>
     </div>
-  </UPageCard>
+  </UCard>
 </template>
