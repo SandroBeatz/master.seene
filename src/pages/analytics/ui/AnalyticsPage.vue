@@ -3,15 +3,16 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
 import { useAnalyticsQueryV2 } from '@entities/analytics'
-import AnalyticsToolbar from './AnalyticsToolbar.vue'
-import AnalyticsStatCards from './AnalyticsStatCards.vue'
-import AnalyticsRevenueChart from './AnalyticsRevenueChart.vue'
-import AnalyticsClientMix from './AnalyticsClientMix.vue'
-import AnalyticsBusiestDays from './AnalyticsBusiestDays.vue'
-import AnalyticsTopServices from './AnalyticsTopServices.vue'
+import {
+  AnalyticsToolbar,
+  AnalyticsStatCards,
+  AnalyticsRevenueChart,
+  AnalyticsClientMix,
+  AnalyticsBusiestDays,
+  AnalyticsTopServices,
+} from '@widgets/analytics'
 
 const { t } = useI18n()
-// Full mockup layout (widgets, grid) is refined in T11.
 const period = ref<AnalyticsPeriodV2>('this_month')
 const compare = ref(false)
 const { data, isLoading } = useAnalyticsQueryV2(period)
