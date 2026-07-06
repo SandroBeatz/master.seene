@@ -3,6 +3,7 @@ import type { AnalyticsResultV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
+import { deltaPct, workingHoursLabel } from '../lib/stat-format'
 
 const props = defineProps<{
   data: AnalyticsResultV2 | null | undefined
@@ -14,20 +15,6 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const formats = useFormats()
-
-function workingHoursLabel(minutes: number): string {
-  if (minutes === 0) return `0 ${t('analytics.hoursUnit')}`
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (m === 0) return `${h} ${t('analytics.hoursUnit')}`
-  return `${h} ${t('analytics.hoursUnit')} ${m} ${t('analytics.minutesUnit')}`
-}
-
-/** Percentage change vs the previous period. `null` when there's no baseline. */
-function deltaPct(current: number, previous: number): number | null {
-  if (previous === 0) return null
-  return Math.round(((current - previous) / previous) * 100)
-}
 
 interface Card {
   key: string
@@ -74,7 +61,7 @@ const cards = computed<Card[]>(() => {
       icon: 'i-lucide-clock',
       iconClass: 'text-amber-600 dark:text-amber-400',
       iconBgClass: 'bg-amber-100 dark:bg-amber-900/30',
-      value: workingHoursLabel(cur?.working_minutes ?? 0),
+      value: workingHoursLabel(cur?.working_minutes ?? 0, t),
       current: cur?.working_minutes ?? 0,
       previous: prev?.working_minutes ?? 0,
     },
@@ -115,9 +102,8 @@ const cards = computed<Card[]>(() => {
                   : 'i-lucide-trending-down'
               "
             >
-              {{ (deltaPct(card.current, card.previous)! > 0 ? '+' : '') }}{{
-                deltaPct(card.current, card.previous)
-              }}%
+              {{ deltaPct(card.current, card.previous)! > 0 ? '+' : ''
+              }}{{ deltaPct(card.current, card.previous) }}%
             </UBadge>
             <UBadge v-else color="neutral" variant="subtle" size="sm">
               {{ t('analytics.deltaNew') }}

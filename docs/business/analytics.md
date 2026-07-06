@@ -1,18 +1,21 @@
 ---
-version: 1.0
-date: 2026-05-15
+version: 2.0
+date: 2026-07-06
 category: business
 ---
 
 # Analytics
 
-> Version 1.0 · 2026-05-15 · [Business](../)
+> Version 2.0 · 2026-07-06 · [Business](../)
 
 ## Overview
 
-Analytics gives the master a real-time view of their business performance over three selectable periods: today, the current week, and the current month. Five metrics are surfaced: revenue earned, number of completed appointments, working hours, average check, and a top-5 services breakdown by revenue.
+Analytics gives the master a view of their business performance across a flexible date filter, with optional comparison against the equal-length preceding period. The dashboard is split into two conceptual halves:
 
-Analytics is read-only and fully server-side — no client-side aggregation. All metrics are computed by a single Postgres RPC call (`get_analytics`) and returned as a JSON snapshot. The master cannot edit or annotate analytics data.
+- **Filter-driven blocks** — four headline metrics (earned, clients served, hours worked, appointments) and a revenue time-series chart. These follow the toolbar's period filter (Today / This week / Last week / This month / Last month / Custom range) and, when *Compare* is on, each shows a % delta versus the previous period.
+- **Fixed-window widgets** — Top services, Client mix (new vs returning), and Busiest days + peak hours. These deliberately **ignore** the period filter and each run over their own rolling window, because short periods make them meaningless (top services over a single day is noise; repeat-rate and weekday distribution need weeks of data).
+
+Analytics is read-only and fully server-side — no client-side aggregation. Metrics are computed by two Postgres RPCs (`get_analytics_v2` and `get_analytics_widgets_v2`) and returned as JSON snapshots. The master cannot edit or annotate analytics data.
 
 ---
 
@@ -20,98 +23,153 @@ Analytics is read-only and fully server-side — no client-side aggregation. All
 
 ### Periods
 
-| Period | Window |
+The period filter offers five presets plus a custom range. All boundaries are computed in the **master's local timezone** (the browser's system zone via JavaScript's `Date`), then passed to the RPC as `TIMESTAMPTZ` instants.
+
+| Preset | Window |
 |---|---|
 | **Today** | 00:00:00 → 23:59:59 of the current calendar day |
-| **Week** | Monday 00:00:00 → Sunday 23:59:59 of the current ISO week |
-| **Month** | 1st 00:00:00 → last day 23:59:59 of the current calendar month |
-
-All period boundaries are computed in the **master's local timezone** (the browser's system timezone via JavaScript's `Date` constructor). The resulting timestamps are passed to the RPC as `TIMESTAMPTZ` values. This ensures that "today" means today as the master experiences it, regardless of the server's UTC offset.
+| **This week** | Monday 00:00:00 → Sunday 23:59:59 of the current week |
+| **Last week** | The Monday→Sunday week immediately before this week |
+| **This month** | 1st 00:00:00 → last day 23:59:59 of the current month |
+| **Last month** | 1st → last day of the previous calendar month |
+| **Custom** | Start-of-from-day 00:00:00 → end-of-to-day 23:59:59, picked in a calendar capped at today |
 
 Week starts on **Monday**. Sunday belongs to the *preceding* week, not the current one.
 
+The toolbar also supports **← / → stepping**: the arrows shift the selection to the adjacent period. Full calendar months step by one month; every other selection shifts by its own length in days. Forward stepping is disabled once the next period would start in the future. Stepping collapses back to a preset chip when the resulting range exactly matches one (e.g. stepping back from *This week* highlights *Last week*).
+
+The last selected period is persisted to `localStorage` under `analytics:period` and restored on reload; the default on first visit is **This month**.
+
+### Comparison and deltas
+
+When *Compare* is toggled on, every headline metric shows a percentage delta against the **equal-length previous period**:
+
+| Current period | Compared against |
+|---|---|
+| Today | Yesterday |
+| This week | Last week |
+| Last week | The week before last |
+| This month | Last month |
+| Last month | The month before last |
+| Custom (length *N*) | The *N*-length block ending immediately before the start |
+
+The delta is `ROUND((current − previous) / previous × 100)`. When the previous value is `0` there is no baseline, so instead of an infinite percentage the card shows a neutral **"new"** badge. A positive delta is rendered green with an up-arrow, negative red with a down-arrow. The revenue chart additionally overlays a second (previous-period) series when comparing.
+
 ### Metric definitions
+
+All metrics come from the current-period block unless noted. The previous-period block has the identical shape and is used only for deltas.
 
 #### Earned
 
-The sum of `sale.amount` for all sales whose `paid_at` timestamp falls within the selected period.
+The sum of `sale.amount` for all sales whose `paid_at` falls within the period. `paid_at` defaults to the moment the sale is created (checkout confirm), **not** the appointment date. Revenue is attributed to the day the sale was recorded.
 
-`paid_at` defaults to the moment the sale is created (i.e., the moment the master taps "Confirm" in the checkout modal). It is not the appointment date.
+#### Appointments
 
-**Important:** If a master completes an appointment on Monday but the appointment itself was scheduled for Sunday, the revenue is attributed to Monday (when the sale was recorded), not Sunday.
+The count of `appointments` rows where `status = 'completed'` and `start_at` is within the period. This uses the **appointment date** (`start_at`), not the payment date — the master wants to know how many sessions they worked on a given day. (In V1 this metric was called "completed count".)
 
-#### Completed count
+#### Clients served
 
-The count of `appointments` rows where:
-- `status = 'completed'`
-- `start_at` is within the selected period
+`COUNT(DISTINCT client_id)` over the same completed appointments used for the Appointments metric. Counts unique clients, so a client with two sessions in the period counts once.
 
-Unlike earned, completed count uses the **appointment date** (`start_at`), not the payment date. This is intentional: the master wants to know how many sessions they worked on a given day, not how many they invoiced.
+#### Hours worked
 
-This creates a deliberate asymmetry: **earned uses `paid_at`; completed count uses `start_at`**. In typical usage these coincide (the master checks out immediately after the appointment), but they can diverge if a master delays recording payment.
-
-#### Working hours
-
-The sum of `appointments.duration` (in minutes) for all completed appointments in the period. Uses the same `start_at` filter as completed count.
-
-Displayed as hours and minutes: e.g., `2 h 30 min`. If the minute component is zero, only hours are shown: `3 h`. If zero appointments were completed, the value is `0 h`.
+The sum of `appointments.duration` (minutes) for the completed appointments in the period. Rendered as `Xh Ym` (e.g. `2 h 30 min`); the minutes part is dropped when zero (`3 h`); zero appointments render `0 h`.
 
 #### Average check
 
-`earned / completed_count`, rounded to two decimal places. Returns `null` when `completed_count = 0` (division by zero is avoided server-side). The UI renders `null` as an em dash `—`.
+`earned / appointments`, rounded to two decimals; `null` when appointments = 0 (division by zero avoided server-side), rendered as an em dash `—`. In the V2 card layout the average check is **secondary text under the Total earned card**, not a standalone card.
 
-Note that because earned and completed count use different date fields (`paid_at` vs `start_at`), the average check is not a simple average over a homogeneous dataset — it can produce unexpected values if payments are recorded out of order.
+Because earned uses `paid_at` and appointments uses `start_at`, the average check is not an average over a homogeneous dataset — it can drift if payments are recorded out of order.
+
+### Fixed-window widget rules
+
+These three widgets run over rolling windows computed client-side (in local calendar days including today), independent of the period filter:
+
+| Widget | Window | Source |
+|---|---|---|
+| Top services | last **30 days** | `sale_item` → `sale` |
+| Client mix | last **90 days** | completed `appointments` |
+| Busiest days + peak hours | last **56 days** (8 full weeks) | completed `appointments` |
+
+56 days is chosen so every weekday is sampled exactly 8 times.
 
 #### Top services
 
-Up to 5 services ranked by revenue within the period. Revenue is summed from `sale_item.price_snapshot` — the price at the moment of checkout, not the service's current price.
+Up to **6** services ranked by revenue in the 30-day window. Revenue is summed from `sale_item.price_snapshot` (checkout-time price). Each entry carries its **count** (number of sale items) and **color** (the service's current `service.color`, falling back to neutral grey `#a1a1aa` when the service was deleted). Grouping is by `name_snapshot` — renaming a service splits historical rows under the old name. Percentage is `ROUND(service_revenue / window_earned × 100)`; integers, may not sum to 100. Empty array when the window has no revenue.
 
-Services are grouped by `name_snapshot` (the service name at checkout time). If the master renames a service, past sales appear under the old name in historical analytics.
+#### Client mix (new vs returning)
 
-Percentage is computed as `ROUND(service_revenue / total_earned * 100)`. Values are integers and may not sum to 100 due to rounding. When total earned is zero, top_services returns an empty array.
+Of the clients served in the 90-day window, each is classified by their **earliest completed appointment ever**:
+
+- **New** — the client's first-ever completed appointment falls inside the window.
+- **Returning** — the client's first-ever completed appointment predates the window.
+
+Returns `{ new, returning, total }`. The doughnut shows the **returning share** in its center. Note the classification looks at the client's entire history, not just the window, so "new" genuinely means first-time.
+
+#### Busiest days + peak hours
+
+A 7-element array of completed-appointment counts per ISO weekday, ordered **Monday→Sunday** (index 0 = Monday), over the 56-day window. The busiest weekday's bar is highlighted. Peak hours are the single hour-of-day with the most completed appointments, returned as `[peak_hour_from, peak_hour_to]` where `to = from + 1` (e.g. `10 → 11` renders "10:00 – 11:00"); both `null` when there are no appointments. Weekday and hour extraction happen in the master's local timezone (`p_tz`).
+
+### Revenue over time
+
+The `revenue_series` is the period bucketed by a granularity chosen from the period length:
+
+| Period | Granularity |
+|---|---|
+| Today | hour |
+| This / Last week | day |
+| This / Last month | week |
+| Custom ≤ 2 days | hour |
+| Custom ≤ 31 days | day |
+| Custom ≤ 92 days | week |
+| Custom > 92 days | month |
+
+Each bucket carries a server-formatted `label` (e.g. `08:00`, `05 Mar`, `W24`, `Mar 2026`), the `current` revenue, and the `previous`-period revenue aligned to the same bucket (shifted back by the offset between the two periods). The chart draws the previous series only when *Compare* is on.
 
 ### Security
 
-The `get_analytics` RPC is restricted to the `authenticated` Supabase role. Unauthenticated requests receive a permission error. The function filters all data by `auth.uid()` — a master can only see their own metrics.
+Both RPCs are `SECURITY DEFINER` with `search_path = public`, filter every query by `auth.uid()`, and grant `EXECUTE` to the `authenticated` role only (revoked from `anon` and `PUBLIC`). A master can only ever see their own metrics. The internal scalar-metrics helper (`analytics_period_metrics`) is not granted to any role and is callable only from within the RPCs.
 
 ---
 
 ## Metric Attribution Summary
 
-| Metric | Source table | Filtering field | Filter value |
-|---|---|---|---|
-| Earned | `sale` | `paid_at` | within period |
-| Completed count | `appointments` | `start_at` | within period |
-| Working minutes | `appointments` | `start_at` | within period |
-| Avg check | derived | — | earned / completed_count |
-| Top services | `sale_item` → `sale` | `sale.paid_at` | within period |
+| Metric | Source table | Filtering field | Filter value | Window |
+|---|---|---|---|---|
+| Earned | `sale` | `paid_at` | within period | filter |
+| Appointments | `appointments` | `start_at` (status=completed) | within period | filter |
+| Clients served | `appointments` | `start_at` (status=completed) | distinct client_id | filter |
+| Working minutes | `appointments` | `start_at` (status=completed) | sum duration | filter |
+| Avg check | derived | — | earned / appointments | filter |
+| Revenue series | `sale` | `paid_at` | bucketed | filter |
+| Top services | `sale_item` → `sale` | `sale.paid_at` | within window | 30 days |
+| Client mix | `appointments` | first-ever `start_at` vs window | new/returning | 90 days |
+| Busiest days / peak | `appointments` | `start_at` (status=completed) | ISODOW / hour | 56 days |
 
 ---
 
 ## Business Surfaces
 
-Analytics data is exposed in two places in the UI:
-
 ### Analytics page (`/analytics`)
 
-The dedicated analytics page. The master can switch between Today, Week, and Month using a tab bar. All five metrics are shown: four stat cards (earned, completed, working hours, avg check) and a top-services progress bar list.
+The dedicated dashboard: toolbar (period presets + custom range + ← / → stepper + Compare switch + Export button), four stat cards, the revenue chart, and the three fixed-window widgets. **Export is a stub** — the button shows a "coming soon" toast; CSV/PDF export is tracked as a separate backlog task.
 
 ### Home page (`/home`)
 
-Three summary cards showing **today's** metrics only (no period switcher): earned today, completed count, and working hours. The earned card is a link to the full analytics page.
+The `HomeOverviewWidget` shows three headline metrics (earned, appointments, hours worked) with its own compact Day / Week / Month tab switcher, mapping to `today` / `this_week` / `this_month`. It reads the same `current` block from `get_analytics_v2` as the full page. Home does **not** show clients-served, comparison deltas, the revenue chart, or the fixed-window widgets.
 
-Both surfaces use the same underlying query (`useAnalyticsQuery`). When both are mounted simultaneously, @pinia/colada serves a single cached result for the `'today'` period — no duplicate requests.
+Both surfaces share `useAnalyticsQueryV2`; @pinia/colada caches per period key, so overlapping periods are fetched once.
 
 ---
 
 ## What Analytics Does Not Cover
 
-- **Cancelled and no-show appointments** — these are not counted in any metric. A `no_show` appointment has no sale and its status is not `'completed'`, so it contributes zero to all metrics.
-- **Pending and confirmed appointments** — only `completed` appointments affect working hours and completed count. Revenue requires a sale, which only exists after checkout.
-- **Refunds** — the system has no concept of refund or credit note. Once a sale is recorded, it permanently contributes to earned revenue.
-- **Historical period comparison** — the UI provides no previous-period comparison (e.g., "this week vs last week"). Only the current period is shown.
-- **Per-client analytics** — no breakdown by client. Top services is the only dimension available beyond the aggregate.
-- **Service category aggregation** — top services groups by individual service name, not by category.
+- **Cancelled and no-show appointments** — excluded from every metric (no sale, status not `completed`).
+- **Pending and confirmed appointments** — only `completed` appointments affect appointment-based metrics; revenue requires a checkout sale.
+- **Refunds** — no refund or credit-note concept; a recorded sale permanently contributes to earned.
+- **Per-client drill-down** — beyond the aggregate new/returning mix, there is no per-client breakdown.
+- **Service category aggregation** — Top services groups by individual service name, not category.
+- **Export** — CSV/PDF export is not yet implemented (stub button only).
 
 ---
 
@@ -119,6 +177,7 @@ Both surfaces use the same underlying query (`useAnalyticsQuery`). When both are
 
 - [Appointments](./appointments.md) — appointment lifecycle; only `completed` appointments affect analytics metrics
 - [Checkout](./checkout.md) — the workflow that creates sales; all earned revenue and top-services data comes from checkout
-- [Payment Types](./payment-types.md) — payment method recorded on each sale; not currently surfaced in analytics metrics
-- [Analytics Entity](../code/analytics-entity.md) — TypeScript types, `periodToDateRange`, `useAnalyticsQuery`, RPC calling convention
-- [Analytics & Home Dashboard](../architecture/analytics-and-home.md) — page and widget architecture, component tree, state ownership
+- [Payment Types](./payment-types.md) — payment method recorded on each sale; not surfaced in analytics metrics
+- [Data Model](./data-model.md) — `sale`, `sale_item`, `appointments`, `service` tables the RPCs query
+- [Analytics Entity](../code/analytics-entity.md) — TypeScript types, period-v2 helpers, `useAnalyticsQueryV2`, RPC signatures and JSON blocks
+- [Analytics & Home Dashboard](../architecture/analytics-and-home.md) — page and widget architecture, component tree, Chart.js wrapper
