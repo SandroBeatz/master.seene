@@ -402,6 +402,9 @@ export default {
       export: 'Экспорт',
       exportComingSoon: 'Экспорт скоро появится',
       apply: 'Применить',
+      vs: 'vs',
+      prevPeriod: 'Предыдущий период',
+      nextPeriod: 'Следующий период',
     },
     revenue: {
       title: 'Доход по времени',

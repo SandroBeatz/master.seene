@@ -8,6 +8,16 @@ import {
   today,
 } from '@internationalized/date'
 import type { AnalyticsPeriodPreset, AnalyticsPeriodV2 } from '@entities/analytics'
+import {
+  PERIOD_PRESETS,
+  canStepForward as canStepForwardFrom,
+  fromCalendarDate,
+  resolveRange,
+  shiftRange,
+  stepPeriod,
+  toCalendarDate,
+  type DateRange,
+} from '../model/period-step'
 
 const period = defineModel<AnalyticsPeriodV2>({ required: true })
 const compare = defineModel<boolean>('compare', { default: false })
@@ -15,19 +25,19 @@ const compare = defineModel<boolean>('compare', { default: false })
 const { t, locale } = useI18n()
 const toast = useToast()
 
+const tz = getLocalTimeZone()
+
+// Chip order mirrors the design: current periods first, then past ones.
 const PRESET_KEYS: Record<AnalyticsPeriodPreset, string> = {
   today: 'analytics.period.today',
   this_week: 'analytics.period.thisWeek',
-  last_week: 'analytics.period.lastWeek',
   this_month: 'analytics.period.thisMonth',
+  last_week: 'analytics.period.lastWeek',
   last_month: 'analytics.period.lastMonth',
 }
 
 const presetTabs = computed(() =>
-  (Object.keys(PRESET_KEYS) as AnalyticsPeriodPreset[]).map((value) => ({
-    value,
-    label: t(PRESET_KEYS[value]),
-  })),
+  PERIOD_PRESETS.map((value) => ({ value, label: t(PRESET_KEYS[value]) })),
 )
 
 function isCustom(
@@ -45,6 +55,38 @@ function chipClass(active: boolean) {
     : 'text-muted hover:text-default'
 }
 
+// --- Prev / next period stepping --------------------------------------------
+
+function step(dir: 1 | -1) {
+  period.value = stepPeriod(period.value, dir)
+}
+
+const canStepForward = computed(() => canStepForwardFrom(period.value))
+
+// --- Resolved-dates caption --------------------------------------------------
+
+const resolvedRange = computed(() => resolveRange(period.value, today(tz)))
+
+function fmtDate(d: CalendarDate): string {
+  const opts: Intl.DateTimeFormatOptions =
+    d.year === today(tz).year
+      ? { day: 'numeric', month: 'short' }
+      : { day: 'numeric', month: 'short', year: 'numeric' }
+  return new DateFormatter(locale.value, opts).format(d.toDate(tz))
+}
+
+function fmtRange(r: DateRange): string {
+  return r.start.compare(r.end) === 0 ? fmtDate(r.start) : `${fmtDate(r.start)} – ${fmtDate(r.end)}`
+}
+
+/** "Jun 1 – Jun 30" and, when comparing, "… vs May 1 – May 31". */
+const rangeCaption = computed(() => {
+  const current = fmtRange(resolvedRange.value)
+  if (!compare.value) return current
+  const previous = fmtRange(shiftRange(resolvedRange.value, -1))
+  return `${current} ${t('analytics.toolbar.vs')} ${previous}`
+})
+
 // --- Custom range picker ---------------------------------------------------
 
 const open = ref(false)
@@ -53,22 +95,16 @@ const draft = shallowRef<{ start: CalendarDate | null; end: CalendarDate | null 
   end: null,
 })
 
+/** Analytics only looks at the past — the calendar stops at today. */
+const maxDate = today(tz)
+
 const df = computed(() => new DateFormatter(locale.value, { dateStyle: 'medium' }))
-
-function toCalendarDate(value: string): CalendarDate {
-  const [y = 0, m = 1, d = 1] = value.split('-').map(Number)
-  return new CalendarDate(y, m, d)
-}
-
-function fromCalendarDate(d: CalendarDate): string {
-  return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
-}
 
 /** Label of the Custom chip: the picked range, or the generic "Custom" word. */
 const customLabel = computed(() => {
   if (!isCustom(period.value)) return t('analytics.period.custom')
   const { from, to } = period.value.range
-  const fmt = (s: string) => df.value.format(toCalendarDate(s).toDate(getLocalTimeZone()))
+  const fmt = (s: string) => df.value.format(toCalendarDate(s).toDate(tz))
   return `${fmt(from)} – ${fmt(to)}`
 })
 
@@ -81,7 +117,7 @@ function onOpenChange(value: boolean) {
       end: toCalendarDate(period.value.range.to),
     }
   } else {
-    const t0 = today(getLocalTimeZone())
+    const t0 = today(tz)
     draft.value = { start: t0.subtract({ days: 6 }), end: t0 }
   }
 }
@@ -96,7 +132,7 @@ function applyCustom() {
   open.value = false
 }
 
-// --- Export (stub — real implementation is T12) ----------------------------
+// --- Export (stub — real implementation is a separate task) -----------------
 
 function onExport() {
   toast.add({
@@ -108,62 +144,88 @@ function onExport() {
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <!-- Period segment -->
-    <div class="inline-flex max-w-full gap-1 overflow-x-auto rounded-xl bg-elevated p-1">
-      <button
-        v-for="tab in presetTabs"
-        :key="tab.value"
-        type="button"
-        class="shrink-0 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors"
-        :class="chipClass(activeKey === tab.value)"
-        @click="period = tab.value"
-      >
-        {{ tab.label }}
-      </button>
-
-      <UPopover v-model:open="open" @update:open="onOpenChange">
-        <button
-          type="button"
-          class="flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors"
-          :class="chipClass(activeKey === 'custom')"
+  <div class="space-y-2">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <!-- Period stepper + segment -->
+      <div class="flex w-full min-w-0 items-center gap-1 lg:w-auto">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-chevron-left"
+          :aria-label="t('analytics.toolbar.prevPeriod')"
+          @click="step(-1)"
+        />
+        <div
+          class="inline-flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl bg-elevated p-1 lg:flex-none"
         >
-          <UIcon name="i-lucide-calendar" class="size-4" />
-          {{ customLabel }}
-        </button>
+          <button
+            v-for="tab in presetTabs"
+            :key="tab.value"
+            type="button"
+            class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors sm:px-4"
+            :class="chipClass(activeKey === tab.value)"
+            @click="period = tab.value"
+          >
+            {{ tab.label }}
+          </button>
 
-        <template #content>
-          <div class="p-2">
-            <UCalendar v-model="draft" range />
-            <div class="flex justify-end gap-2 px-1 pt-2">
-              <UButton color="neutral" variant="ghost" size="sm" @click="open = false">
-                {{ t('common.cancel') }}
-              </UButton>
-              <UButton
-                color="primary"
-                size="sm"
-                :disabled="!draft.start || !draft.end"
-                @click="applyCustom"
-              >
-                {{ t('analytics.toolbar.apply') }}
-              </UButton>
-            </div>
-          </div>
-        </template>
-      </UPopover>
+          <UPopover v-model:open="open" @update:open="onOpenChange">
+            <button
+              type="button"
+              class="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors sm:px-4"
+              :class="chipClass(activeKey === 'custom')"
+            >
+              <UIcon name="i-lucide-calendar" class="size-4" />
+              {{ customLabel }}
+            </button>
+
+            <template #content>
+              <div class="p-2">
+                <UCalendar v-model="draft" range :max-value="maxDate" />
+                <div class="flex justify-end gap-2 px-1 pt-2">
+                  <UButton color="neutral" variant="ghost" size="sm" @click="open = false">
+                    {{ t('common.cancel') }}
+                  </UButton>
+                  <UButton
+                    color="primary"
+                    size="sm"
+                    :disabled="!draft.start || !draft.end"
+                    @click="applyCustom"
+                  >
+                    {{ t('analytics.toolbar.apply') }}
+                  </UButton>
+                </div>
+              </div>
+            </template>
+          </UPopover>
+        </div>
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-chevron-right"
+          :disabled="!canStepForward"
+          :aria-label="t('analytics.toolbar.nextPeriod')"
+          @click="step(1)"
+        />
+      </div>
+
+      <!-- Compare + Export -->
+      <div class="flex items-center gap-3">
+        <USwitch v-model="compare" :label="t('analytics.toolbar.compare')" />
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-download"
+          @click="onExport"
+        >
+          {{ t('analytics.toolbar.export') }}
+        </UButton>
+      </div>
     </div>
 
-    <!-- Compare + Export -->
-    <div class="flex items-center gap-3">
-      <USwitch v-model="compare" :label="t('analytics.toolbar.compare')" />
-      <UButton
-        color="neutral"
-        variant="outline"
-        icon="i-lucide-download"
-        @click="onExport"
-      >
-        {{ t('analytics.toolbar.export') }}
-      </UButton>
-    </div>
+    <!-- Resolved dates of the selection (and the comparison window) -->
+    <p class="px-1 text-xs text-muted">{{ rangeCaption }}</p>
   </div>
 </template>

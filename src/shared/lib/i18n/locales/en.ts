@@ -407,6 +407,9 @@ export default {
       export: 'Export',
       exportComingSoon: 'Export is coming soon',
       apply: 'Apply',
+      vs: 'vs',
+      prevPeriod: 'Previous period',
+      nextPeriod: 'Next period',
     },
     revenue: {
       title: 'Revenue over time',

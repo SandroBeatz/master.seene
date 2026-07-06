@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
 import { useAnalyticsQueryV2 } from '@entities/analytics'
@@ -13,7 +13,51 @@ import {
 } from '@widgets/analytics'
 
 const { t } = useI18n()
-const period = ref<AnalyticsPeriodV2>('this_month')
+// The last selected period survives page reloads.
+const PERIOD_STORAGE_KEY = 'analytics:period'
+const PRESETS = ['today', 'this_week', 'last_week', 'this_month', 'last_month']
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function loadStoredPeriod(): AnalyticsPeriodV2 {
+  try {
+    const raw = localStorage.getItem(PERIOD_STORAGE_KEY)
+    if (!raw) return 'this_month'
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed === 'string' && PRESETS.includes(parsed)) {
+      return parsed as AnalyticsPeriodV2
+    }
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'kind' in parsed &&
+      parsed.kind === 'custom' &&
+      'range' in parsed
+    ) {
+      const range = (parsed as { range: { from?: unknown; to?: unknown } }).range
+      if (
+        typeof range.from === 'string' &&
+        typeof range.to === 'string' &&
+        ISO_DATE.test(range.from) &&
+        ISO_DATE.test(range.to)
+      ) {
+        return { kind: 'custom', range: { from: range.from, to: range.to } }
+      }
+    }
+  } catch {
+    // corrupted value — fall back to the default below
+  }
+  return 'this_month'
+}
+
+const period = ref<AnalyticsPeriodV2>(loadStoredPeriod())
+watch(period, (value) => {
+  try {
+    localStorage.setItem(PERIOD_STORAGE_KEY, JSON.stringify(value))
+  } catch {
+    // storage unavailable (private mode) — selection just won't persist
+  }
+})
+
 const compare = ref(false)
 const { data, isPending, isPlaceholderData } = useAnalyticsQueryV2(period)
 

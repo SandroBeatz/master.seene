@@ -410,6 +410,9 @@ export default {
       export: 'Exporter',
       exportComingSoon: "L'export arrive bientôt",
       apply: 'Appliquer',
+      vs: 'vs',
+      prevPeriod: 'Période précédente',
+      nextPeriod: 'Période suivante',
     },
     revenue: {
       title: 'Revenus dans le temps',
