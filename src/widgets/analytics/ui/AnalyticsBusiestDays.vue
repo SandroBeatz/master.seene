@@ -60,7 +60,15 @@ const peakRange = computed(() => {
         <p class="text-xs text-muted">{{ t('analytics.busiest.peakHours') }} {{ peakRange }}</p>
       </div>
 
-      <div v-if="loading" class="h-44 w-full animate-pulse rounded-lg bg-elevated" />
+      <!-- 7 weekday bars placeholder mirroring the chart layout -->
+      <div v-if="loading" class="flex h-44 items-end gap-3 px-2">
+        <USkeleton
+          v-for="(h, i) in [50, 35, 60, 45, 75, 90, 40]"
+          :key="i"
+          class="flex-1 rounded-t-md rounded-b-none"
+          :style="{ height: `${h}%` }"
+        />
+      </div>
       <div v-else class="h-44">
         <BaseBarChart :data="chartData" :options="options" />
       </div>

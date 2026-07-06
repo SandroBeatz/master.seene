@@ -57,7 +57,10 @@ const options = computed<ChartOptions<'bar'>>(() => ({
       <div class="flex items-start justify-between gap-4">
         <div>
           <p class="text-sm font-semibold">{{ t('analytics.revenue.title') }}</p>
-          <div v-if="loading" class="mt-1 h-7 w-28 animate-pulse rounded bg-elevated" />
+          <div v-if="loading" class="mt-1 space-y-1.5">
+            <USkeleton class="h-7 w-28" />
+            <USkeleton class="h-3 w-16" />
+          </div>
           <template v-else>
             <p class="text-2xl font-semibold">{{ formats.price(earned) }}</p>
             <p class="text-xs text-muted">{{ periodLabel }}</p>
@@ -76,7 +79,15 @@ const options = computed<ChartOptions<'bar'>>(() => ({
         </div>
       </div>
 
-      <div v-if="loading" class="h-56 w-full animate-pulse rounded-lg bg-elevated" />
+      <!-- Bar-shaped placeholder mirroring the chart layout -->
+      <div v-if="loading" class="flex h-56 items-end gap-4 px-2">
+        <USkeleton
+          v-for="(h, i) in [45, 70, 55, 85, 40, 65, 50]"
+          :key="i"
+          class="flex-1 rounded-t-md rounded-b-none"
+          :style="{ height: `${h}%` }"
+        />
+      </div>
       <div v-else class="h-56">
         <BaseBarChart :data="chartData" :options="options" />
       </div>

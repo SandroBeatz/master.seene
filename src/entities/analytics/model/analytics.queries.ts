@@ -12,4 +12,7 @@ export const useAnalyticsQueryV2 = (period: Ref<AnalyticsPeriodV2>) =>
   useQuery({
     key: () => ['analytics-v2', periodKey(period.value)],
     query: () => getAnalyticsV2(period.value),
+    // Keep the previous period's data on screen while the new one loads —
+    // skeletons only appear on the very first visit (isPending).
+    placeholderData: (previousData) => previousData,
   })

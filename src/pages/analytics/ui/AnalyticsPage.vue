@@ -15,7 +15,7 @@ import {
 const { t } = useI18n()
 const period = ref<AnalyticsPeriodV2>('this_month')
 const compare = ref(false)
-const { data, isLoading } = useAnalyticsQueryV2(period)
+const { data, isPending, isPlaceholderData } = useAnalyticsQueryV2(period)
 
 const EMPTY_MIX = { new: 0, returning: 0, total: 0 }
 const EMPTY_DAYS = [0, 0, 0, 0, 0, 0, 0]
@@ -53,29 +53,36 @@ const compareLabel = computed(() =>
     <UPageBody>
       <div class="space-y-6">
         <AnalyticsToolbar v-model="period" v-model:compare="compare" />
-        <AnalyticsStatCards
-          :data="data"
-          :loading="isLoading"
-          :compare="compare"
-          :compare-label="compareLabel"
-        />
-        <AnalyticsRevenueChart
-          :series="data?.revenue_series ?? []"
-          :earned="data?.current.earned ?? 0"
-          :period-label="periodLabel"
-          :compare="compare"
-          :loading="isLoading"
-        />
-        <div class="grid gap-6 lg:grid-cols-2">
-          <AnalyticsTopServices :services="data?.top_services ?? []" :loading="isLoading" />
-          <div class="space-y-6">
-            <AnalyticsClientMix :mix="data?.client_mix ?? EMPTY_MIX" :loading="isLoading" />
-            <AnalyticsBusiestDays
-              :days="data?.busiest_days ?? EMPTY_DAYS"
-              :peak-from="data?.peak_hour_from ?? null"
-              :peak-to="data?.peak_hour_to ?? null"
-              :loading="isLoading"
-            />
+        <!-- While a new period loads, previous data stays visible but dimmed. -->
+        <div
+          class="space-y-6 transition-opacity duration-200"
+          :class="{ 'pointer-events-none opacity-50': isPlaceholderData }"
+          :aria-busy="isPlaceholderData"
+        >
+          <AnalyticsStatCards
+            :data="data"
+            :loading="isPending"
+            :compare="compare"
+            :compare-label="compareLabel"
+          />
+          <AnalyticsRevenueChart
+            :series="data?.revenue_series ?? []"
+            :earned="data?.current.earned ?? 0"
+            :period-label="periodLabel"
+            :compare="compare"
+            :loading="isPending"
+          />
+          <div class="grid gap-6 lg:grid-cols-2">
+            <AnalyticsTopServices :services="data?.top_services ?? []" :loading="isPending" />
+            <div class="space-y-6">
+              <AnalyticsClientMix :mix="data?.client_mix ?? EMPTY_MIX" :loading="isPending" />
+              <AnalyticsBusiestDays
+                :days="data?.busiest_days ?? EMPTY_DAYS"
+                :peak-from="data?.peak_hour_from ?? null"
+                :peak-to="data?.peak_hour_to ?? null"
+                :loading="isPending"
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -125,7 +125,10 @@ const cards = computed<Card[]>(() => {
           </template>
         </div>
 
-        <div v-if="loading" class="h-8 w-24 animate-pulse rounded bg-elevated" />
+        <div v-if="loading" class="space-y-1.5">
+          <USkeleton class="h-7 w-24" />
+          <USkeleton class="h-4 w-20" />
+        </div>
         <div v-else class="space-y-0.5">
           <p class="text-2xl font-semibold">{{ card.value }}</p>
           <p class="text-sm font-medium">{{ card.label }}</p>

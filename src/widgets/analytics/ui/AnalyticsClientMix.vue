@@ -58,10 +58,10 @@ const legend = computed(() => [
       </div>
 
       <div v-if="loading" class="flex items-center gap-6">
-        <div class="size-32 shrink-0 animate-pulse rounded-full bg-elevated" />
+        <USkeleton class="size-32 shrink-0 rounded-full" />
         <div class="flex-1 space-y-3">
-          <div class="h-5 w-24 animate-pulse rounded bg-elevated" />
-          <div class="h-5 w-20 animate-pulse rounded bg-elevated" />
+          <USkeleton class="h-5 w-24" />
+          <USkeleton class="h-5 w-20" />
         </div>
       </div>
 
