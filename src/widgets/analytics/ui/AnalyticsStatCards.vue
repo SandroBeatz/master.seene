@@ -8,6 +8,8 @@ const props = defineProps<{
   data: AnalyticsResultV2 | null | undefined
   loading: boolean
   compare: boolean
+  /** "vs last month" — the comparison period caption under the label. */
+  compareLabel: string
 }>()
 
 const { t } = useI18n()
@@ -31,6 +33,8 @@ interface Card {
   key: string
   label: string
   icon: string
+  iconClass: string
+  iconBgClass: string
   value: string | number
   current: number
   previous: number
@@ -45,6 +49,8 @@ const cards = computed<Card[]>(() => {
       key: 'earned',
       label: t('analytics.totalEarned'),
       icon: 'i-lucide-banknote',
+      iconClass: 'text-green-600 dark:text-green-400',
+      iconBgClass: 'bg-green-100 dark:bg-green-900/30',
       value: formats.price(cur?.earned ?? 0),
       current: cur?.earned ?? 0,
       previous: prev?.earned ?? 0,
@@ -56,6 +62,8 @@ const cards = computed<Card[]>(() => {
       key: 'clients',
       label: t('analytics.clientsServed'),
       icon: 'i-lucide-users',
+      iconClass: 'text-violet-600 dark:text-violet-400',
+      iconBgClass: 'bg-violet-100 dark:bg-violet-900/30',
       value: cur?.clients_served ?? 0,
       current: cur?.clients_served ?? 0,
       previous: prev?.clients_served ?? 0,
@@ -64,6 +72,8 @@ const cards = computed<Card[]>(() => {
       key: 'hours',
       label: t('analytics.hoursWorked'),
       icon: 'i-lucide-clock',
+      iconClass: 'text-amber-600 dark:text-amber-400',
+      iconBgClass: 'bg-amber-100 dark:bg-amber-900/30',
       value: workingHoursLabel(cur?.working_minutes ?? 0),
       current: cur?.working_minutes ?? 0,
       previous: prev?.working_minutes ?? 0,
@@ -72,6 +82,8 @@ const cards = computed<Card[]>(() => {
       key: 'appointments',
       label: t('analytics.appointments'),
       icon: 'i-lucide-calendar-check',
+      iconClass: 'text-blue-600 dark:text-blue-400',
+      iconBgClass: 'bg-blue-100 dark:bg-blue-900/30',
       value: cur?.appointments_count ?? 0,
       current: cur?.appointments_count ?? 0,
       previous: prev?.appointments_count ?? 0,
@@ -83,11 +95,13 @@ const cards = computed<Card[]>(() => {
 <template>
   <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <UCard v-for="card in cards" :key="card.key" :ui="{ root: 'shadow-panel ring-0' }">
-      <div class="space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 text-muted">
-            <UIcon :name="card.icon" class="size-4" />
-            <span class="text-xs font-medium uppercase">{{ card.label }}</span>
+      <div class="space-y-3">
+        <div class="flex items-start justify-between gap-2">
+          <div
+            class="flex size-11 shrink-0 items-center justify-center rounded-lg"
+            :class="card.iconBgClass"
+          >
+            <UIcon :name="card.icon" class="size-5" :class="card.iconClass" />
           </div>
           <template v-if="compare && data && !loading">
             <UBadge
@@ -111,11 +125,14 @@ const cards = computed<Card[]>(() => {
           </template>
         </div>
 
-        <div v-if="loading" class="h-7 w-24 animate-pulse rounded bg-elevated" />
-        <template v-else>
+        <div v-if="loading" class="h-8 w-24 animate-pulse rounded bg-elevated" />
+        <div v-else class="space-y-0.5">
           <p class="text-2xl font-semibold">{{ card.value }}</p>
-          <p v-if="card.secondary" class="text-xs text-muted">{{ card.secondary }}</p>
-        </template>
+          <p class="text-sm font-medium">{{ card.label }}</p>
+          <p v-if="compare || card.secondary" class="text-xs text-muted">
+            {{ compare ? compareLabel : card.secondary }}
+          </p>
+        </div>
       </div>
     </UCard>
   </div>

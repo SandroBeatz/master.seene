@@ -27,6 +27,20 @@ const periodLabel = computed(() =>
       )
     : t('analytics.period.custom'),
 )
+
+/** What the current period is compared against, e.g. "vs last month". */
+const COMPARE_KEYS: Record<string, string> = {
+  today: 'yesterday',
+  this_week: 'lastWeek',
+  last_week: 'prevWeek',
+  this_month: 'lastMonth',
+  last_month: 'prevMonth',
+}
+const compareLabel = computed(() =>
+  t(
+    `analytics.compareVs.${typeof period.value === 'string' ? COMPARE_KEYS[period.value] : 'prevPeriod'}`,
+  ),
+)
 </script>
 
 <template>
@@ -39,7 +53,12 @@ const periodLabel = computed(() =>
     <UPageBody>
       <div class="space-y-6">
         <AnalyticsToolbar v-model="period" v-model:compare="compare" />
-        <AnalyticsStatCards :data="data" :loading="isLoading" :compare="compare" />
+        <AnalyticsStatCards
+          :data="data"
+          :loading="isLoading"
+          :compare="compare"
+          :compare-label="compareLabel"
+        />
         <AnalyticsRevenueChart
           :series="data?.revenue_series ?? []"
           :earned="data?.current.earned ?? 0"
