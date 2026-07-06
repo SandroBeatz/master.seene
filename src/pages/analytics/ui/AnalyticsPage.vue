@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
-import { useAnalyticsQueryV2 } from '@entities/analytics'
+import { useAnalyticsQueryV2, useAnalyticsWidgetsQueryV2 } from '@entities/analytics'
 import {
   AnalyticsToolbar,
   AnalyticsStatCards,
@@ -60,6 +60,8 @@ watch(period, (value) => {
 
 const compare = ref(false)
 const { data, isPending, isPlaceholderData } = useAnalyticsQueryV2(period)
+// Fixed rolling windows — independent of the period filter above.
+const { data: widgets, isPending: widgetsPending } = useAnalyticsWidgetsQueryV2()
 
 const EMPTY_MIX = { new: 0, returning: 0, total: 0 }
 const EMPTY_DAYS = [0, 0, 0, 0, 0, 0, 0]
@@ -116,17 +118,23 @@ const compareLabel = computed(() =>
             :compare="compare"
             :loading="isPending"
           />
-          <div class="grid gap-6 lg:grid-cols-2">
-            <AnalyticsTopServices :services="data?.top_services ?? []" :loading="isPending" />
-            <div class="space-y-6">
-              <AnalyticsClientMix :mix="data?.client_mix ?? EMPTY_MIX" :loading="isPending" />
-              <AnalyticsBusiestDays
-                :days="data?.busiest_days ?? EMPTY_DAYS"
-                :peak-from="data?.peak_hour_from ?? null"
-                :peak-to="data?.peak_hour_to ?? null"
-                :loading="isPending"
-              />
-            </div>
+        </div>
+
+        <!-- Fixed-window widgets: unaffected by the period filter, so they sit
+             outside the dimming wrapper and never refetch on period switch. -->
+        <div class="grid gap-6 lg:grid-cols-2">
+          <AnalyticsTopServices
+            :services="widgets?.top_services ?? []"
+            :loading="widgetsPending"
+          />
+          <div class="space-y-6">
+            <AnalyticsClientMix :mix="widgets?.client_mix ?? EMPTY_MIX" :loading="widgetsPending" />
+            <AnalyticsBusiestDays
+              :days="widgets?.busiest_days ?? EMPTY_DAYS"
+              :peak-from="widgets?.peak_hour_from ?? null"
+              :peak-to="widgets?.peak_hour_to ?? null"
+              :loading="widgetsPending"
+            />
           </div>
         </div>
       </div>

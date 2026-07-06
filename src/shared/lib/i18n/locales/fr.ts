@@ -462,6 +462,11 @@ export default {
     },
     topServicesTitle: 'Top services',
     topServicesSubtitle: 'Classés par revenu',
+    windows: {
+      last30Days: '30 derniers jours',
+      last90Days: '90 derniers jours',
+      last8Weeks: '8 dernières semaines',
+    },
     serviceAppointments: '{count} rendez-vous',
   },
   settings: {

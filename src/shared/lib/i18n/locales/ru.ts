@@ -454,6 +454,11 @@ export default {
     },
     topServicesTitle: 'Топ услуг',
     topServicesSubtitle: 'По доходу',
+    windows: {
+      last30Days: 'последние 30 дней',
+      last90Days: 'последние 90 дней',
+      last8Weeks: 'последние 8 недель',
+    },
     serviceAppointments: '{count} записей',
   },
   settings: {

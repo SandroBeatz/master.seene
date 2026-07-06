@@ -459,6 +459,11 @@ export default {
     },
     topServicesTitle: 'Top services',
     topServicesSubtitle: 'Ranked by revenue',
+    windows: {
+      last30Days: 'last 30 days',
+      last90Days: 'last 90 days',
+      last8Weeks: 'last 8 weeks',
+    },
     serviceAppointments: '{count} appointments',
   },
   settings: {

@@ -17,7 +17,9 @@ const formats = useFormats()
     <div class="space-y-4">
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.topServicesTitle') }}</p>
-        <p class="text-xs text-muted">{{ t('analytics.topServicesSubtitle') }}</p>
+        <p class="text-xs text-muted">
+          {{ t('analytics.topServicesSubtitle') }} · {{ t('analytics.windows.last30Days') }}
+        </p>
       </div>
 
       <!-- Row-shaped placeholders: name/price line, progress bar, meta line -->

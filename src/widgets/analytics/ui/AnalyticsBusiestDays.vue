@@ -57,7 +57,10 @@ const peakRange = computed(() => {
     <div class="space-y-4">
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.busiest.title') }}</p>
-        <p class="text-xs text-muted">{{ t('analytics.busiest.peakHours') }} {{ peakRange }}</p>
+        <p class="text-xs text-muted">
+          {{ t('analytics.busiest.peakHours') }} {{ peakRange }} ·
+          {{ t('analytics.windows.last8Weeks') }}
+        </p>
       </div>
 
       <!-- 7 weekday bars placeholder mirroring the chart layout -->

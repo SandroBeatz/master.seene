@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { AnalyticsPeriodV2 } from '../types'
-import { periodGranularity, periodToDateRangeV2, previousPeriodRange } from '../period-v2'
+import {
+  periodGranularity,
+  periodToDateRangeV2,
+  previousPeriodRange,
+  rollingWindowRange,
+} from '../period-v2'
 
 const iso = (
   y: number,
@@ -137,5 +142,28 @@ describe('periodGranularity', () => {
     expect(periodGranularity(range('2026-03-01', '2026-03-20'))).toBe('day') // ~20 days
     expect(periodGranularity(range('2026-01-01', '2026-03-01'))).toBe('week') // ~60 days
     expect(periodGranularity(range('2026-01-01', '2026-12-31'))).toBe('month') // ~365 days
+  })
+})
+
+describe('rollingWindowRange', () => {
+  it('spans the last N local days including today', () => {
+    const now = new Date(2026, 6, 6, 14, 30) // Mon Jul 6 2026
+    expect(rollingWindowRange(30, now)).toEqual({
+      from: iso(2026, 5, 7, 0, 0, 0, 0), // Jun 7 — 30 full days incl. today
+      to: iso(2026, 6, 6, 23, 59, 59, 999),
+    })
+  })
+
+  it('a 1-day window is exactly today', () => {
+    const now = new Date(2026, 6, 6, 8, 0)
+    expect(rollingWindowRange(1, now)).toEqual({
+      from: iso(2026, 6, 6, 0, 0, 0, 0),
+      to: iso(2026, 6, 6, 23, 59, 59, 999),
+    })
+  })
+
+  it('crosses month boundaries by calendar days', () => {
+    const now = new Date(2026, 2, 10, 12, 0) // Mar 10
+    expect(rollingWindowRange(56, now).from).toBe(iso(2026, 0, 14, 0, 0, 0, 0)) // Jan 14
   })
 })

@@ -58,9 +58,28 @@ export interface RevenuePoint {
   previous: number
 }
 
+/** Filter-driven blocks — follow the dashboard's global period filter. */
 export interface AnalyticsResultV2 {
   current: AnalyticsMetrics
   previous: AnalyticsMetrics
+  revenue_series: RevenuePoint[]
+}
+
+// --- Fixed-window widgets (get_analytics_widgets_v2 RPC) --------------------
+
+/**
+ * Rolling windows (in days) for the widgets that do NOT follow the global
+ * date filter — short periods make them meaningless (top services over one
+ * day is noise; repeat rate and weekday distribution need weeks of data).
+ * 56 days = 8 full weeks, so every weekday is sampled exactly 8 times.
+ */
+export const ANALYTICS_WIDGET_WINDOWS = {
+  topServicesDays: 30,
+  clientMixDays: 90,
+  busiestDaysDays: 56,
+} as const
+
+export interface AnalyticsWidgetsV2 {
   top_services: TopServiceV2[]
   client_mix: ClientMix
   /** 7 counts of completed appointments, Monday..Sunday (index 0 = Monday). */
@@ -68,5 +87,4 @@ export interface AnalyticsResultV2 {
   /** Busiest hour-of-day window (local zone); null when no appointments. */
   peak_hour_from: number | null
   peak_hour_to: number | null
-  revenue_series: RevenuePoint[]
 }

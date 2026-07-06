@@ -121,6 +121,19 @@ export function previousPeriodRange(
   return prevAnchor[period]()
 }
 
+/**
+ * A rolling window of the last `days` local calendar days, including today —
+ * e.g. `rollingWindowRange(30)` spans 30 full days ending at today 23:59:59.
+ * Used by the fixed-window widgets (top services / client mix / busiest days).
+ */
+export function rollingWindowRange(
+  days: number,
+  now = new Date(),
+): { from: string; to: string } {
+  const from = addDays(startOfDay(now), -(days - 1))
+  return { from: from.toISOString(), to: endOfDay(now).toISOString() }
+}
+
 const MS_PER_DAY = 86_400_000
 
 /** Bucket size for the revenue time-series of the given period. */

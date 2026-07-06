@@ -53,7 +53,8 @@ const legend = computed(() => [
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.clientMix.title') }}</p>
         <p class="text-xs text-muted">
-          {{ t('analytics.clientMix.uniqueClients', { count: mix.total }) }}
+          {{ t('analytics.clientMix.uniqueClients', { count: mix.total }) }} ·
+          {{ t('analytics.windows.last90Days') }}
         </p>
       </div>
 
