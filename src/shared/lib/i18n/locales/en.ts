@@ -4,6 +4,7 @@ export default {
     calendar: 'Calendar',
     clients: 'Clients',
     services: 'Services',
+    analytics: 'Analytics',
     notifications: 'Notifications',
     settings: 'Settings',
     logout: 'Logout',
@@ -418,6 +419,8 @@ export default {
       title: 'Revenue over time',
       thisPeriod: 'This period',
       previous: 'Previous',
+      chartTypeLine: 'Line chart',
+      chartTypeBar: 'Bar chart',
     },
     clientMix: {
       title: 'Client mix',

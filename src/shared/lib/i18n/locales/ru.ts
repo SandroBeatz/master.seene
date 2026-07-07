@@ -4,6 +4,7 @@ export default {
     calendar: 'Календарь',
     clients: 'Клиенты',
     services: 'Услуги',
+    analytics: 'Аналитика',
     notifications: 'Уведомления',
     settings: 'Настройки',
     logout: 'Выйти',
@@ -413,6 +414,8 @@ export default {
       title: 'Доход по времени',
       thisPeriod: 'Текущий период',
       previous: 'Предыдущий',
+      chartTypeLine: 'Линейный график',
+      chartTypeBar: 'Столбчатый график',
     },
     clientMix: {
       title: 'Состав клиентов',

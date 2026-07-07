@@ -1,12 +1,12 @@
 ---
-version: 2.0
-date: 2026-07-06
+version: 2.1
+date: 2026-07-07
 category: business
 ---
 
 # Analytics
 
-> Version 2.0 · 2026-07-06 · [Business](../)
+> Version 2.1 · 2026-07-07 · [Business](../)
 
 ## Overview
 
@@ -23,22 +23,25 @@ Analytics is read-only and fully server-side — no client-side aggregation. Met
 
 ### Periods
 
-The period filter offers five presets plus a custom range. All boundaries are computed in the **master's local timezone** (the browser's system zone via JavaScript's `Date`), then passed to the RPC as `TIMESTAMPTZ` instants.
+The period filter is built from **anchored kinds** plus a free custom range. Each anchored kind carries an *anchor date* (`YYYY-MM-DD`) that can land anywhere inside the unit; the concrete window is derived from it. All boundaries are computed in the **master's local timezone** (the browser's system zone via JavaScript's `Date`), then passed to the RPC as `TIMESTAMPTZ` instants.
 
-| Preset | Window |
+| Kind | Window |
 |---|---|
-| **Today** | 00:00:00 → 23:59:59 of the current calendar day |
-| **This week** | Monday 00:00:00 → Sunday 23:59:59 of the current week |
-| **Last week** | The Monday→Sunday week immediately before this week |
-| **This month** | 1st 00:00:00 → last day 23:59:59 of the current month |
-| **Last month** | 1st → last day of the previous calendar month |
+| **Day** | 00:00:00 → 23:59:59 of the anchor day |
+| **Week** | Monday 00:00:00 → Sunday 23:59:59 of the anchor week |
+| **Month** | 1st 00:00:00 → last day 23:59:59 of the anchor month |
+| **Year** | Jan 1 00:00:00 → Dec 31 23:59:59 of the anchor year |
 | **Custom** | Start-of-from-day 00:00:00 → end-of-to-day 23:59:59, picked in a calendar capped at today |
 
 Week starts on **Monday**. Sunday belongs to the *preceding* week, not the current one.
 
-The toolbar also supports **← / → stepping**: the arrows shift the selection to the adjacent period. Full calendar months step by one month; every other selection shifts by its own length in days. Forward stepping is disabled once the next period would start in the future. Stepping collapses back to a preset chip when the resulting range exactly matches one (e.g. stepping back from *This week* highlights *Last week*).
+The toolbar exposes three controls:
 
-The last selected period is persisted to `localStorage` under `analytics:period` and restored on reload; the default on first visit is **This month**.
+- A **kind dropdown** (Day / Week / Month / Year / Custom). Picking a kind jumps to the *current* unit of that kind (e.g. "Week" → this week); "Custom" opens a calendar modal.
+- A **jump-to-current** button ("Today" / "This week" / "This month" / "This year"), shown only when the selection isn't already the current period.
+- **← / →** stepping that shifts the selection to the adjacent unit of the same kind (day↔day, month↔month, …); custom ranges shift by their own length in days. The kind never collapses — stepping back from this week yields last week *as a week selection*, not a preset. Forward stepping is disabled once the next period would start in the future.
+
+The last selected period is persisted to `localStorage` under `analytics:period` and restored on reload; the default on first visit is the **current month**.
 
 ### Comparison and deltas
 
@@ -46,11 +49,10 @@ When *Compare* is toggled on, every headline metric shows a percentage delta aga
 
 | Current period | Compared against |
 |---|---|
-| Today | Yesterday |
-| This week | Last week |
-| Last week | The week before last |
-| This month | Last month |
-| Last month | The month before last |
+| Day | The previous day |
+| Week | The previous week |
+| Month | The previous month |
+| Year | The previous year |
 | Custom (length *N*) | The *N*-length block ending immediately before the start |
 
 The delta is `ROUND((current − previous) / previous × 100)`. When the previous value is `0` there is no baseline, so instead of an infinite percentage the card shows a neutral **"new"** badge. A positive delta is rendered green with an up-arrow, negative red with a down-arrow. The revenue chart additionally overlays a second (previous-period) series when comparing.
@@ -99,12 +101,14 @@ Up to **6** services ranked by revenue in the 30-day window. Revenue is summed f
 
 #### Client mix (new vs returning)
 
-Of the clients served in the 90-day window, each is classified by their **earliest completed appointment ever**:
+Of the clients served (a completed appointment) in the 90-day window, each is classified by their **total number of completed appointments over their entire history**:
 
-- **New** — the client's first-ever completed appointment falls inside the window.
-- **Returning** — the client's first-ever completed appointment predates the window.
+- **New** — exactly **1** completed appointment all-time (a genuine first-timer).
+- **Returning** — **2 or more** completed appointments all-time (they have come back).
 
-Returns `{ new, returning, total }`. The doughnut shows the **returning share** in its center. Note the classification looks at the client's entire history, not just the window, so "new" genuinely means first-time.
+Returns `{ new, returning, total }`, where `total` is the count of distinct clients served in the window (`new + returning`). The doughnut shows the **returning share** in its center. The visit count spans the client's whole history, not just the window — so a client whose first-ever visit predates the window but who was served inside it counts as returning.
+
+> Prior to this rule (docs v2.0) a client counted as returning only when their first-ever visit predated the window, which mislabeled every client as "new" for masters whose clients all first appeared within 90 days. The classification is now by lifetime visit count.
 
 #### Busiest days + peak hours
 
@@ -112,19 +116,22 @@ A 7-element array of completed-appointment counts per ISO weekday, ordered **Mon
 
 ### Revenue over time
 
-The `revenue_series` is the period bucketed by a granularity chosen from the period length:
+The `revenue_series` buckets the period by a granularity derived from the period:
 
 | Period | Granularity |
 |---|---|
-| Today | hour |
-| This / Last week | day |
-| This / Last month | week |
+| Day | hour |
+| Week | day |
+| Month | day |
+| Year | month |
 | Custom ≤ 2 days | hour |
 | Custom ≤ 31 days | day |
 | Custom ≤ 92 days | week |
 | Custom > 92 days | month |
 
-Each bucket carries a server-formatted `label` (e.g. `08:00`, `05 Mar`, `W24`, `Mar 2026`), the `current` revenue, and the `previous`-period revenue aligned to the same bucket (shifted back by the offset between the two periods). The chart draws the previous series only when *Compare* is on.
+Buckets run from `date_trunc(granularity, from)` up to **`LEAST(to, now())`** — an ongoing period (the current week/month) stops at the present bucket instead of trailing empty future buckets. Each bucket carries the `current` revenue and the `previous`-period revenue aligned to the same bucket (shifted back by the offset between the two periods). The previous series is drawn only when *Compare* is on.
+
+Each bucket also carries a server-formatted `label` (`08:00`, `05 Mar`, `W24`, `Mar 2026`). For **week** and **month** views the x-axis labels are re-formatted client-side from the bucket timestamp into the master's locale — week → short weekday + day-of-month ("Mon 7"), month → day-of-month ("7"); other granularities keep the server label. The chart renders as a **line chart by default**, with a line/bar toggle in the card header.
 
 ### Security
 
@@ -143,7 +150,7 @@ Both RPCs are `SECURITY DEFINER` with `search_path = public`, filter every query
 | Avg check | derived | — | earned / appointments | filter |
 | Revenue series | `sale` | `paid_at` | bucketed | filter |
 | Top services | `sale_item` → `sale` | `sale.paid_at` | within window | 30 days |
-| Client mix | `appointments` | first-ever `start_at` vs window | new/returning | 90 days |
+| Client mix | `appointments` | lifetime completed-visit count | new (1) / returning (≥2) | 90 days |
 | Busiest days / peak | `appointments` | `start_at` (status=completed) | ISODOW / hour | 56 days |
 
 ---
@@ -152,7 +159,7 @@ Both RPCs are `SECURITY DEFINER` with `search_path = public`, filter every query
 
 ### Analytics page (`/analytics`)
 
-The dedicated dashboard: toolbar (period presets + custom range + ← / → stepper + Compare switch + Export button), four stat cards, the revenue chart, and the three fixed-window widgets. **Export is a stub** — the button shows a "coming soon" toast; CSV/PDF export is tracked as a separate backlog task.
+The dedicated dashboard: toolbar (kind dropdown + jump-to-current + ← / → stepper + Compare switch), four stat cards, the revenue chart (with a line/bar type toggle), and the three fixed-window widgets. The **Export** control is currently **hidden** — CSV/PDF export is tracked as a separate backlog task.
 
 ### Home page (`/home`)
 
@@ -169,7 +176,7 @@ Both surfaces share `useAnalyticsQueryV2`; @pinia/colada caches per period key, 
 - **Refunds** — no refund or credit-note concept; a recorded sale permanently contributes to earned.
 - **Per-client drill-down** — beyond the aggregate new/returning mix, there is no per-client breakdown.
 - **Service category aggregation** — Top services groups by individual service name, not category.
-- **Export** — CSV/PDF export is not yet implemented (stub button only).
+- **Export** — CSV/PDF export is not yet implemented (the toolbar button is hidden).
 
 ---
 

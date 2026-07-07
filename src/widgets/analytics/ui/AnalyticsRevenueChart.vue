@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DateFormatter } from '@internationalized/date'
 import type { ChartData, ChartOptions } from 'chart.js'
 import type { AnalyticsPeriodKind, RevenuePoint } from '@entities/analytics'
-import { BaseLineChart, useChartTheme } from '@shared/ui/chart'
+import { BaseBarChart, BaseLineChart, useChartTheme } from '@shared/ui/chart'
 import { useFormats } from '@shared/lib/formats'
 
 const props = defineProps<{
@@ -21,6 +21,35 @@ const { t, locale } = useI18n()
 const formats = useFormats()
 const theme = useChartTheme()
 
+// --- Chart type toggle (line / bar), persisted across reloads ---------------
+
+type ChartType = 'line' | 'bar'
+const CHART_TYPE_KEY = 'analytics:chartType'
+
+function loadChartType(): ChartType {
+  try {
+    return localStorage.getItem(CHART_TYPE_KEY) === 'bar' ? 'bar' : 'line'
+  } catch {
+    return 'line'
+  }
+}
+
+const chartType = ref<ChartType>(loadChartType())
+watch(chartType, (value) => {
+  try {
+    localStorage.setItem(CHART_TYPE_KEY, value)
+  } catch {
+    // storage unavailable (private mode) — selection just won't persist
+  }
+})
+
+const chartTypeItems = computed<{ value: ChartType; icon: string; label: string }[]>(() => [
+  { value: 'line', icon: 'i-lucide-chart-line', label: t('analytics.revenue.chartTypeLine') },
+  { value: 'bar', icon: 'i-lucide-chart-column', label: t('analytics.revenue.chartTypeBar') },
+])
+
+// --- Data mapping -----------------------------------------------------------
+
 /**
  * X-axis label for a bucket. Week → localized weekday + day ("Mon 7"),
  * month → day-of-month ("7"). Other granularities keep the server label.
@@ -35,6 +64,10 @@ function labelFor(p: RevenuePoint): string {
   }
   return p.label
 }
+
+const labels = computed(() => props.series.map(labelFor))
+const currentData = computed(() => props.series.map((p) => p.current))
+const previousData = computed(() => props.series.map((p) => p.previous))
 
 function lineDataset(
   label: string,
@@ -53,32 +86,50 @@ function lineDataset(
   }
 }
 
-const chartData = computed<ChartData<'line'>>(() => {
+function barDataset(
+  label: string,
+  data: number[],
+  color: string,
+): ChartData<'bar'>['datasets'][number] {
+  return { label, data, backgroundColor: color, categoryPercentage: 0.6, barPercentage: 0.85 }
+}
+
+const lineChartData = computed<ChartData<'line'>>(() => {
   const datasets: ChartData<'line'>['datasets'] = [
-    lineDataset(
-      t('analytics.revenue.thisPeriod'),
-      props.series.map((p) => p.current),
-      theme.value.primary,
-    ),
+    lineDataset(t('analytics.revenue.thisPeriod'), currentData.value, theme.value.primary),
   ]
   if (props.compare) {
     datasets.push(
-      lineDataset(
-        t('analytics.revenue.previous'),
-        props.series.map((p) => p.previous),
-        theme.value.neutralSoft,
-      ),
+      lineDataset(t('analytics.revenue.previous'), previousData.value, theme.value.neutralSoft),
     )
   }
-  return { labels: props.series.map(labelFor), datasets }
+  return { labels: labels.value, datasets }
 })
 
-const options = computed<ChartOptions<'line'>>(() => ({
+const barChartData = computed<ChartData<'bar'>>(() => {
+  const datasets: ChartData<'bar'>['datasets'] = [
+    barDataset(t('analytics.revenue.thisPeriod'), currentData.value, theme.value.primary),
+  ]
+  if (props.compare) {
+    datasets.push(
+      barDataset(t('analytics.revenue.previous'), previousData.value, theme.value.neutralSoft),
+    )
+  }
+  return { labels: labels.value, datasets }
+})
+
+const lineOptions = computed<ChartOptions<'line'>>(() => ({
   plugins: {
     tooltip: {
-      callbacks: {
-        label: (ctx) => `${ctx.dataset.label}: ${formats.price(ctx.parsed.y)}`,
-      },
+      callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formats.price(ctx.parsed.y)}` },
+    },
+  },
+}))
+
+const barOptions = computed<ChartOptions<'bar'>>(() => ({
+  plugins: {
+    tooltip: {
+      callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formats.price(ctx.parsed.y)}` },
     },
   },
 }))
@@ -100,16 +151,19 @@ const options = computed<ChartOptions<'line'>>(() => ({
           </template>
         </div>
 
-        <div class="flex shrink-0 items-center gap-3 text-xs text-muted">
-          <span class="flex items-center gap-1.5">
-            <span class="size-2.5 rounded-full bg-primary" />
-            {{ t('analytics.revenue.thisPeriod') }}
-          </span>
-          <span v-if="compare" class="flex items-center gap-1.5">
-            <span class="size-2.5 rounded-full bg-muted" />
-            {{ t('analytics.revenue.previous') }}
-          </span>
-        </div>
+        <!-- Chart type switch (line / bar) -->
+        <UFieldGroup v-if="!loading" size="sm" class="shrink-0">
+          <UButton
+            v-for="item in chartTypeItems"
+            :key="item.value"
+            :variant="chartType === item.value ? 'solid' : 'outline'"
+            :icon="item.icon"
+            :aria-label="item.label"
+            :title="item.label"
+            color="neutral"
+            @click="chartType = item.value"
+          />
+        </UFieldGroup>
       </div>
 
       <!-- Placeholder mirroring the chart height -->
@@ -122,7 +176,20 @@ const options = computed<ChartOptions<'line'>>(() => ({
         />
       </div>
       <div v-else class="h-56">
-        <BaseLineChart :data="chartData" :options="options" />
+        <BaseLineChart v-if="chartType === 'line'" :data="lineChartData" :options="lineOptions" />
+        <BaseBarChart v-else :data="barChartData" :options="barOptions" />
+      </div>
+
+      <!-- Legend under the chart; dot colours match the line/dataset colours. -->
+      <div v-if="!loading" class="flex items-center justify-center gap-4 text-xs text-muted">
+        <span class="flex items-center gap-1.5">
+          <span class="size-2.5 rounded-full" :style="{ backgroundColor: theme.primary }" />
+          {{ t('analytics.revenue.thisPeriod') }}
+        </span>
+        <span v-if="compare" class="flex items-center gap-1.5">
+          <span class="size-2.5 rounded-full" :style="{ backgroundColor: theme.neutralSoft }" />
+          {{ t('analytics.revenue.previous') }}
+        </span>
       </div>
     </div>
   </UCard>

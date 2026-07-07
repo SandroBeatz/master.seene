@@ -4,6 +4,7 @@ export default {
     calendar: 'Calendrier',
     clients: 'Clients',
     services: 'Services',
+    analytics: 'Analytique',
     notifications: 'Notifications',
     settings: 'Paramètres',
     logout: 'Déconnexion',
@@ -422,6 +423,8 @@ export default {
       title: 'Revenus dans le temps',
       thisPeriod: 'Cette période',
       previous: 'Précédent',
+      chartTypeLine: 'Graphique en courbes',
+      chartTypeBar: 'Graphique en barres',
     },
     clientMix: {
       title: 'Répartition clients',

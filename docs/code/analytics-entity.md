@@ -1,12 +1,12 @@
 ---
-version: 2.0
-date: 2026-07-06
+version: 2.1
+date: 2026-07-07
 category: code
 ---
 
 # Analytics Entity
 
-> Version 2.0 · 2026-07-06 · [Code](../)
+> Version 2.1 · 2026-07-07 · [Code](../)
 
 ## Overview
 
@@ -21,7 +21,7 @@ The entity splits into two independent data paths: the **filter-driven** path (f
 ### Filter-driven data flow
 
 ```
-AnalyticsPeriodV2  (preset string | { kind: 'custom', range })
+AnalyticsPeriodV2  ({ kind: 'day'|'week'|'month'|'year', date } | { kind: 'custom', range })
        │
        ├─ periodToDateRangeV2(period)   → { from, to }             current window
        ├─ previousPeriodRange(period)   → { from, to }             comparison window
@@ -58,9 +58,9 @@ AnalyticsTopServices · AnalyticsClientMix · AnalyticsBusiestDays
 
 Three pure functions, all computing boundaries in the **master's local timezone** (native `Date`, not UTC). Week starts Monday; Sunday belongs to the previous week.
 
-- **`periodToDateRangeV2(period, now?)`** → `{ from, to }` ISO instants for the selected period. Custom ranges normalize to start-of-from-day and end-of-to-day.
-- **`previousPeriodRange(period, now?)`** → the comparison window. Presets map to their matching preceding calendar period (today→yesterday, this_week→last week, this_month→last month, etc.); custom ranges become an equal-length block ending 1 ms before `from`.
-- **`periodGranularity(period, now?)`** → the revenue-series bucket size. Presets are fixed (today→hour, weeks→day, months→week); custom ranges pick by length (≤2d hour, ≤31d day, ≤92d week, else month).
+- **`periodToDateRangeV2(period)`** → `{ from, to }` ISO instants for the selected period. Anchored kinds resolve to the calendar unit around their `date`; custom ranges normalize to start-of-from-day and end-of-to-day.
+- **`previousPeriodRange(period)`** → the comparison window. Anchored kinds map to the matching preceding unit (day→previous day, week→previous week, month→previous month, year→previous year); custom ranges become an equal-length block ending 1 ms before `from`.
+- **`periodGranularity(period)`** → the revenue-series bucket size. Anchored kinds are fixed (day→hour, week→day, month→day, year→month); custom ranges pick by length (≤2d hour, ≤31d day, ≤92d week, else month).
 - **`rollingWindowRange(days, now?)`** → a window of the last `days` local calendar days including today (`from` = start of `today − (days−1)`, `to` = end of today). Used by the fixed-window widgets.
 
 ```typescript
@@ -111,17 +111,23 @@ avg_check           = ROUND(earned / appointments_count, 2)  -- NULL when count 
 
 Note the asymmetry: `earned` filters on `sale.paid_at`; the appointment-based metrics filter on `appointments.start_at`.
 
-The **revenue series** buckets `[date_trunc(granularity, p_from) … p_to]` by a step interval, summing `sale.amount` per bucket for the current period and for the previous period shifted back by `p_from − p_prev_from`. Labels are server-formatted per granularity (`HH24:00`, `DD Mon`, `"W"IW`, `Mon YYYY`).
+The **revenue series** buckets `[date_trunc(granularity, p_from) … LEAST(p_to, now())]` by a step interval, summing `sale.amount` per bucket for the current period and for the previous period shifted back by `p_from − p_prev_from`. Capping the upper bound at `now()` keeps an in-progress period (current week/month) from emitting empty future buckets. Labels are server-formatted per granularity (`HH24:00`, `DD Mon`, `"W"IW`, `Mon YYYY`); the chart re-formats week/month x-axis labels client-side from `RevenuePoint.bucket` into the master's locale.
 
 ## Types
 
 ```typescript
 // src/entities/analytics/model/types.ts
 
-type AnalyticsPeriodPreset = 'today' | 'this_week' | 'last_week' | 'this_month' | 'last_month'
+type AnalyticsPeriodKind = 'day' | 'week' | 'month' | 'year' | 'custom'
 interface AnalyticsCustomRange { from: string; to: string }        // 'YYYY-MM-DD' local dates
-type AnalyticsPeriodV2 = AnalyticsPeriodPreset | { kind: 'custom'; range: AnalyticsCustomRange }
-type AnalyticsGranularity = 'hour' | 'day' | 'week' | 'month'
+type AnalyticsPeriodV2 =
+  | { kind: 'day'; date: string }        // anchor date (YYYY-MM-DD) anywhere inside the unit
+  | { kind: 'week'; date: string }
+  | { kind: 'month'; date: string }
+  | { kind: 'year'; date: string }
+  | { kind: 'custom'; range: AnalyticsCustomRange }
+type AnalyticsAnchoredKind = Exclude<AnalyticsPeriodKind, 'custom'>  // day | week | month | year
+type AnalyticsGranularity = 'hour' | 'day' | 'week' | 'month'       // revenue-chart bucket size
 
 interface AnalyticsMetrics {          // shared by current + previous
   earned: number
@@ -184,7 +190,12 @@ const { data: widgets, isPending: widgetsPending } = useAnalyticsWidgetsQueryV2(
 
 ```typescript
 // src/widgets/home/ui/HomeOverviewWidget.vue
-const periodToAnalytics = { day: 'today', week: 'this_week', month: 'this_month' } as const
+// Home anchors every kind at today's date (anchorISO = 'YYYY-MM-DD').
+const periodToAnalytics: Record<'day' | 'week' | 'month', AnalyticsPeriodV2> = {
+  day: { kind: 'day', date: anchorISO },
+  week: { kind: 'week', date: anchorISO },
+  month: { kind: 'month', date: anchorISO },
+}
 const analyticsPeriod = computed(() => periodToAnalytics[activeTab.value])
 const { data, isPending } = useAnalyticsQueryV2(analyticsPeriod)
 const metrics = computed(() => data.value?.current)   // earned / appointments_count / working_minutes
@@ -226,7 +237,9 @@ supabase/migrations/
 ├── 20260515130000_add_get_analytics_rpc.sql          # V1 get_analytics (legacy, orphaned)
 ├── 20260515140000_secure_get_analytics_rpc.sql       # V1 privilege restriction
 ├── 20260629230000_add_get_analytics_v2_rpc.sql       # get_analytics_v2 + analytics_period_metrics
-└── 20260706120000_split_analytics_widgets_rpc.sql    # slims v2, adds get_analytics_widgets_v2
+├── 20260706120000_split_analytics_widgets_rpc.sql    # slims v2, adds get_analytics_widgets_v2
+├── 20260707120000_fix_client_mix_returning.sql       # client mix: returning = ≥2 lifetime visits
+└── 20260707130000_analytics_series_cap_today.sql     # revenue series capped at LEAST(p_to, now())
 ```
 
 ## Cross-references

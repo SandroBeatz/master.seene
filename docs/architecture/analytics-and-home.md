@@ -1,18 +1,18 @@
 ---
-version: 2.0
-date: 2026-07-06
+version: 2.1
+date: 2026-07-07
 category: architecture
 ---
 
 # Analytics & Home Dashboard
 
-> Version 2.0 · 2026-07-06 · [Architecture](../)
+> Version 2.1 · 2026-07-07 · [Architecture](../)
 
 ## Overview
 
 Two surfaces expose analytics to the master:
 
-- **`/analytics`** — the full dashboard: a period toolbar (presets + custom range + ← / → stepping + Compare), four stat cards, a revenue time-series chart, and three fixed-window widgets (top services, client mix, busiest days).
+- **`/analytics`** — the full dashboard: a period toolbar (kind dropdown + jump-to-current + custom range + ← / → stepping + Compare), four stat cards, a revenue time-series chart, and three fixed-window widgets (top services, client mix, busiest days).
 - **`/home`** — an action-oriented dashboard whose `HomeOverviewWidget` surfaces three headline metrics with its own Day / Week / Month switcher.
 
 Both consume the `analytics` entity. The dashboard's filter-driven blocks use `useAnalyticsQueryV2`; the fixed-window widgets use `useAnalyticsWidgetsQueryV2`. See [Analytics Entity](../code/analytics-entity.md) for the data layer and [Analytics](../business/analytics.md) for the metric rules.
@@ -25,7 +25,7 @@ All analytics **presentation** lives in the `src/widgets/analytics/` slice (FSD 
 
 ```
 AnalyticsPage.vue (src/pages/analytics/ui/)
-├── period:  Ref<AnalyticsPeriodV2>   ← persisted to localStorage ('analytics:period'), default 'this_month'
+├── period:  Ref<AnalyticsPeriodV2>   ← persisted to localStorage ('analytics:period'), default = current month ({ kind: 'month', date: today })
 ├── compare: Ref<boolean>
 ├── useAnalyticsQueryV2(period)        → data (current/previous/revenue_series), isPending, isPlaceholderData
 ├── useAnalyticsWidgetsQueryV2()       → widgets (top_services/client_mix/busiest_days/peak), widgetsPending
@@ -34,7 +34,7 @@ AnalyticsPage.vue (src/pages/analytics/ui/)
 │
 ├── ── dimming wrapper (opacity-50 + pointer-events-none while isPlaceholderData) ──
 │   ├── AnalyticsStatCards   (:data :loading=isPending :compare :compare-label)
-│   └── AnalyticsRevenueChart(:series :earned :period-label :compare :loading)
+│   └── AnalyticsRevenueChart(:series :earned :period-label :period-kind :compare :loading)
 │
 └── ── grid lg:grid-cols-2 (outside the dimming wrapper) ──
     ├── AnalyticsTopServices (:services :loading=widgetsPending)
@@ -59,7 +59,7 @@ HomePage.vue (src/pages/home/ui/)
     └── HomeScheduleWidget        ← day schedule timeline (see Appointments docs)
 ```
 
-Only `HomeOverviewWidget` touches analytics. It calls `useAnalyticsQueryV2` with a period derived from its local `day`/`week`/`month` tab (`today` / `this_week` / `this_month`) and reads `data.current` for earned, appointments, and hours. It intentionally omits clients-served, deltas, the revenue chart, and the fixed-window widgets. The appointment/schedule widgets fetch their own data and are documented with the appointments feature.
+Only `HomeOverviewWidget` touches analytics. It calls `useAnalyticsQueryV2` with a period derived from its local `day`/`week`/`month` tab — each mapped to the matching anchored kind anchored at today (`{ kind: 'day'|'week'|'month', date: today }`) — and reads `data.current` for earned, appointments, and hours. It intentionally omits clients-served, deltas, the revenue chart, and the fixed-window widgets. The appointment/schedule widgets fetch their own data and are documented with the appointments feature.
 
 ---
 
@@ -71,12 +71,12 @@ Only `HomeOverviewWidget` touches analytics. It calls `useAnalyticsQueryV2` with
 
 `defineModel<AnalyticsPeriodV2>` + `defineModel<boolean>('compare')`. Renders:
 
-- A pill segment of preset chips (`today`, `this_week`, `this_month`, `last_week`, `last_month`) plus a **Custom** chip that opens a `UPopover` with a range `UCalendar` capped at today.
-- **← / →** stepper buttons flanking the segment. Forward is disabled once the next period would start in the future.
-- A **Compare** `USwitch` and an **Export** `UButton` (stub — shows a "coming soon" toast).
-- A caption line showing the resolved dates, and, when comparing, `… vs <previous range>`.
+- A **kind `USelect`** (Day / Week / Month / Year / Custom). Picking a kind jumps to the current unit of that kind; "Custom" opens a `UModal` with a range `UCalendar` capped at today.
+- A **jump-to-current** `UButton` ("Today" / "This week" / "This month" / "This year"), shown only when the selection isn't already the current period.
+- **← / →** stepper buttons around a center caption showing the resolved period. Forward is disabled once the next period would start in the future. When comparing, the `… vs <previous range>` caption sits directly under the center label.
+- A **Compare** `USwitch`. (The **Export** button is currently hidden until export is implemented.)
 
-Stepping/range math is delegated to the pure `model/period-step.ts` (built on `@internationalized/date`): `resolveRange`, `shiftRange`, `stepPeriod`, `canStepForward`, `matchPreset`. `stepPeriod` collapses a stepped range back to a preset chip when it matches one exactly.
+Stepping/range math is delegated to the pure `model/period-step.ts` (built on `@internationalized/date`): `resolveRange`, `previousRange`, `shiftRange`, `stepPeriod`, `canStepForward`, `currentPeriod`, `isCurrentPeriod`. Stepping keeps the selection's kind — there is no collapsing to presets.
 
 #### `AnalyticsStatCards.vue`
 
@@ -93,7 +93,7 @@ When `compare` is on and data is loaded, each card shows a delta badge: green up
 
 #### `AnalyticsRevenueChart.vue`
 
-`:series :earned :periodLabel :compare :loading`. Maps `RevenuePoint[]` to a `BaseBarChart`: the `current` values as the primary (amber) dataset, and — only when `compare` is on — a second (`previous`, zinc-soft) dataset. Labels come pre-formatted from the server. Shows the earned total and period caption above the chart; a bar-shaped skeleton while loading.
+`:series :earned :periodLabel :periodKind :compare :loading`. Maps `RevenuePoint[]` to either a `BaseLineChart` (default) or `BaseBarChart`, switched by a **line/bar `UFieldGroup`** toggle in the card header (icon buttons, persisted to `localStorage` under `analytics:chartType`). The `current` values are the primary (amber) dataset; a second (`previous`, zinc-soft) dataset is added only when `compare` is on. X-axis labels are re-formatted client-side from the bucket timestamp for week (short weekday + day) and month (day-of-month) views, otherwise the server label is used. The legend sits **below** the chart with dot colors matching the series. Shows the earned total and period caption above; a skeleton while loading.
 
 #### `AnalyticsTopServices.vue`
 
@@ -126,7 +126,8 @@ Three metric cards (earned / appointments / hours) with icon tiles and a pill Da
 |---|---|---|
 | Analytics period | `AnalyticsPage.vue` | `AnalyticsToolbar` via `v-model` (persisted to localStorage) |
 | Compare toggle | `AnalyticsPage.vue` | `AnalyticsToolbar` via `v-model:compare` |
-| Custom-range draft | `AnalyticsToolbar.vue` | `UCalendar` in the popover, applied on confirm |
+| Custom-range draft | `AnalyticsToolbar.vue` | `UCalendar` in the modal, applied on confirm |
+| Revenue chart type (line/bar) | `AnalyticsRevenueChart.vue` | header `UFieldGroup` toggle (persisted to localStorage) |
 | Home overview period | `HomeOverviewWidget.vue` | its Day/Week/Month `UTabs` |
 
 ---
@@ -137,7 +138,7 @@ All keys exist in `en`, `fr`, `ru`.
 
 ```
 analytics.title / .description
-analytics.period.today / .thisWeek / .lastWeek / .thisMonth / .lastMonth / .custom
+analytics.period.day / .week / .month / .year / .custom   ·   .today / .thisWeek / .thisMonth / .thisYear (jump labels)
 analytics.toolbar.compare / .export / .exportComingSoon / .apply / .prevPeriod / .nextPeriod / .vs
 analytics.totalEarned / .clientsServed / .hoursWorked / .appointments / .avgCheckInline / .deltaNew
 analytics.compareVs.{yesterday,lastWeek,prevWeek,lastMonth,prevMonth,prevPeriod}
@@ -145,7 +146,7 @@ analytics.hoursUnit / .minutesUnit
 analytics.topServicesTitle / .topServicesSubtitle / .noTopServices / .serviceAppointments
 analytics.clientMix.title / .returning / .new / .uniqueClients
 analytics.busiest.title / .peakHours   ·   analytics.weekdaysShort.{mon…sun}
-analytics.revenue.title / .thisPeriod / .previous
+analytics.revenue.title / .thisPeriod / .previous / .chartTypeLine / .chartTypeBar
 analytics.windows.last30Days / .last90Days / .last8Weeks
 
 home.overview.title / .earnedToday / .appointments / .workingHours
@@ -162,9 +163,9 @@ src/
 │   └── AnalyticsPage.vue                 # orchestrator: owns period + compare, both queries
 ├── widgets/analytics/
 │   ├── ui/
-│   │   ├── AnalyticsToolbar.vue           # presets + custom range + ←/→ + compare + export stub
+│   │   ├── AnalyticsToolbar.vue           # kind dropdown + jump + custom range + ←/→ + compare
 │   │   ├── AnalyticsStatCards.vue         # 4 cards with deltas
-│   │   ├── AnalyticsRevenueChart.vue      # bar chart, current vs previous
+│   │   ├── AnalyticsRevenueChart.vue      # line/bar chart (toggle), current vs previous
 │   │   ├── AnalyticsTopServices.vue       # ranked colored bars (30d)
 │   │   ├── AnalyticsClientMix.vue         # doughnut new/returning (90d)
 │   │   └── AnalyticsBusiestDays.vue       # weekday bars + peak hours (8wk)
@@ -186,4 +187,4 @@ src/
 - [Analytics Entity](../code/analytics-entity.md) — types, period-v2 helpers, `useAnalyticsQueryV2` / `useAnalyticsWidgetsQueryV2`, RPC signatures
 - [Analytics](../business/analytics.md) — metric definitions, period and window rules, comparison semantics
 - [Data Model](../business/data-model.md) — `sale`, `appointments`, `service` tables
-- [Nuxt UI Components](../ui/nuxt-ui-components.md) — `UCard`, `UPopover`, `UCalendar`, `USwitch`, `UTabs`, `UBadge` used throughout
+- [Nuxt UI Components](../ui/nuxt-ui-components.md) — `UCard`, `USelect`, `UModal`, `UCalendar`, `USwitch`, `UFieldGroup`, `UTabs`, `UBadge` used throughout

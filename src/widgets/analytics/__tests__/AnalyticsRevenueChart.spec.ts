@@ -24,7 +24,13 @@ function mountWidget(over: { compare?: boolean; loading?: boolean } = {}) {
     messages: {
       en: {
         analytics: {
-          revenue: { title: 'Revenue over time', thisPeriod: 'This period', previous: 'Previous' },
+          revenue: {
+            title: 'Revenue over time',
+            thisPeriod: 'This period',
+            previous: 'Previous',
+            chartTypeLine: 'Line chart',
+            chartTypeBar: 'Bar chart',
+          },
         },
       },
     },
@@ -71,6 +77,18 @@ describe('AnalyticsRevenueChart', () => {
   it('legend shows the previous-period chip only when comparing', () => {
     expect(mountWidget({ compare: false }).text()).not.toContain('Previous')
     expect(mountWidget({ compare: true }).text()).toContain('Previous')
+  })
+
+  it('switching to bar → renders BaseBarChart with backgroundColor datasets', async () => {
+    const wrapper = mountWidget()
+    expect(wrapper.findComponent({ name: 'BaseLineChart' }).exists()).toBe(true)
+
+    await wrapper.get('button[aria-label="Bar chart"]').trigger('click')
+
+    const bar = wrapper.getComponent({ name: 'BaseBarChart' })
+    const data = bar.props('data') as ChartData<'bar'>
+    expect(wrapper.findComponent({ name: 'BaseLineChart' }).exists()).toBe(false)
+    expect(data.datasets[0]!.backgroundColor).toBe(MOCK_THEME.primary)
   })
 
   it('loading → skeletons instead of the chart and the total', () => {
