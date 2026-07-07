@@ -12,7 +12,10 @@ export async function listPaymentTypes(userId: string): Promise<PaymentType[]> {
   return data as PaymentType[]
 }
 
-export async function createPaymentType(userId: string, dto: CreatePaymentTypeDto): Promise<PaymentType> {
+export async function createPaymentType(
+  userId: string,
+  dto: CreatePaymentTypeDto,
+): Promise<PaymentType> {
   const { data, error } = await supabase
     .from('payment_type')
     .insert({ ...dto, user_id: userId })

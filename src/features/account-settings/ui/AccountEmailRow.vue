@@ -48,7 +48,11 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
       { emailRedirectTo: window.location.origin },
     )
     if (error) {
-      toast.add({ title: t('settings.account.email.errorToast'), description: error.message, color: 'error' })
+      toast.add({
+        title: t('settings.account.email.errorToast'),
+        description: error.message,
+        color: 'error',
+      })
       return
     }
     toast.add({ title: t('settings.account.email.confirmationSentToast'), color: 'success' })
@@ -68,7 +72,9 @@ function submitForm() {
   <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex flex-col gap-0.5">
       <span class="font-medium text-highlighted">{{ t('settings.account.email.label') }}</span>
-      <span class="text-sm text-muted">{{ currentEmail || t('settings.account.email.notSet') }}</span>
+      <span class="text-sm text-muted">{{
+        currentEmail || t('settings.account.email.notSet')
+      }}</span>
     </div>
     <UButton
       class="shrink-0"

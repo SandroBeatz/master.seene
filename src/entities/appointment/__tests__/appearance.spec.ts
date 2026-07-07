@@ -56,9 +56,9 @@ describe('getAppointmentServiceColors', () => {
   })
 
   it('skips services that are missing from the map or have no color', () => {
-    expect(getAppointmentServiceColors(makeAppointment(['s1', 'unknown', 's3']), serviceMap)).toEqual(
-      ['#ff0000'],
-    )
+    expect(
+      getAppointmentServiceColors(makeAppointment(['s1', 'unknown', 's3']), serviceMap),
+    ).toEqual(['#ff0000'])
   })
 
   it('returns an empty array for an empty service list', () => {

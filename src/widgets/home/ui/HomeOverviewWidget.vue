@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { getLocalTimeZone, today } from '@internationalized/date'
 import type { TabsItem } from '@nuxt/ui'
-import type { AnalyticsPeriod } from '@entities/analytics'
-import { useAnalyticsQuery } from '@entities/analytics'
+import type { AnalyticsPeriodV2 } from '@entities/analytics'
+import { useAnalyticsQueryV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
 
@@ -15,14 +15,21 @@ type PeriodKey = 'day' | 'week' | 'month'
 
 const activeTab = ref<PeriodKey>('day')
 
-const periodToAnalytics: Record<PeriodKey, AnalyticsPeriod> = {
-  day: 'today',
-  week: 'week',
-  month: 'month',
+// Home always shows the current day/week/month — anchor the period at today.
+const anchor = today(getLocalTimeZone())
+const anchorISO = `${anchor.year}-${String(anchor.month).padStart(2, '0')}-${String(anchor.day).padStart(2, '0')}`
+
+const periodToAnalytics: Record<PeriodKey, AnalyticsPeriodV2> = {
+  day: { kind: 'day', date: anchorISO },
+  week: { kind: 'week', date: anchorISO },
+  month: { kind: 'month', date: anchorISO },
 }
 
 const analyticsPeriod = computed(() => periodToAnalytics[activeTab.value])
-const { data, isPending } = useAnalyticsQuery(analyticsPeriod)
+const { data, isPending } = useAnalyticsQueryV2(analyticsPeriod)
+
+// Home shows three headline metrics from the current-period block.
+const metrics = computed(() => data.value?.current)
 
 const periods = computed<TabsItem[]>(() => [
   { label: t('home.overview.period.day'), value: 'day' },
@@ -54,7 +61,7 @@ const periodSubtext = computed(() => {
 })
 
 const hoursLabel = computed(() => {
-  const minutes = data.value?.working_minutes
+  const minutes = metrics.value?.working_minutes
   if (minutes === undefined) return '—'
   if (minutes === 0) return `0${t('analytics.hoursUnit')}`
   const h = Math.floor(minutes / 60)
@@ -70,7 +77,7 @@ const overviewCards = computed(() => [
     iconClass: 'text-green-600 dark:text-green-400',
     iconBgClass: 'bg-green-100 dark:bg-green-900/30',
     label: t('home.overview.earnedToday'),
-    value: formats.price(data.value?.earned ?? 0),
+    value: formats.price(metrics.value?.earned ?? 0),
     skeletonClass: 'w-24',
     subtext: periodSubtext.value.earned,
   },
@@ -80,7 +87,7 @@ const overviewCards = computed(() => [
     iconClass: 'text-violet-600 dark:text-violet-400',
     iconBgClass: 'bg-violet-100 dark:bg-violet-900/30',
     label: t('home.overview.appointments'),
-    value: String(data.value?.completed_count ?? 0),
+    value: String(metrics.value?.appointments_count ?? 0),
     skeletonClass: 'w-16',
     subtext: periodSubtext.value.appointments,
   },
@@ -142,10 +149,7 @@ const tabsUI = {
             <UIcon :name="card.icon" class="size-6" :class="card.iconClass" />
           </div>
           <div class="min-w-0">
-            <Typography
-              variant="endnote"
-              class="font-semibold uppercase tracking-wider text-muted"
-            >
+            <Typography variant="endnote" class="font-semibold uppercase tracking-wider text-muted">
               {{ card.label }}
             </Typography>
 

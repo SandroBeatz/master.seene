@@ -82,7 +82,8 @@ function normalizeBreaks(raw: unknown): MasterScheduleBreak[] {
   return raw
     .filter(
       (item): item is MasterScheduleBreak =>
-        Boolean(item) && isValidHHmm((item as MasterScheduleBreak).start) &&
+        Boolean(item) &&
+        isValidHHmm((item as MasterScheduleBreak).start) &&
         isValidHHmm((item as MasterScheduleBreak).end),
     )
     .map((item) => ({ start: item.start, end: item.end }))

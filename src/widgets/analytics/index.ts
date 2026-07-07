@@ -1,0 +1,6 @@
+export { default as AnalyticsToolbar } from './ui/AnalyticsToolbar.vue'
+export { default as AnalyticsStatCards } from './ui/AnalyticsStatCards.vue'
+export { default as AnalyticsRevenueChart } from './ui/AnalyticsRevenueChart.vue'
+export { default as AnalyticsTopServices } from './ui/AnalyticsTopServices.vue'
+export { default as AnalyticsClientMix } from './ui/AnalyticsClientMix.vue'
+export { default as AnalyticsBusiestDays } from './ui/AnalyticsBusiestDays.vue'

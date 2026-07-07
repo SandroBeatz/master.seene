@@ -73,7 +73,11 @@ const LANGUAGES: { value: AppLanguage; label: string }[] = [
 const themes = computed(() => [
   { value: 'light' as const, label: t('settings.systemRegion.themeLight'), icon: 'i-lucide-sun' },
   { value: 'dark' as const, label: t('settings.systemRegion.themeDark'), icon: 'i-lucide-moon' },
-  { value: 'auto' as const, label: t('settings.systemRegion.themeSystem'), icon: 'i-lucide-monitor' },
+  {
+    value: 'auto' as const,
+    label: t('settings.systemRegion.themeSystem'),
+    icon: 'i-lucide-monitor',
+  },
 ])
 
 const currencyItems = CURRENCIES.map((currency) => ({
@@ -213,8 +217,12 @@ const hostUI = {
       <!-- Interface language -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.language') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.languageDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.language')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.languageDescription')
+          }}</span>
         </div>
         <USelect
           v-model="state.language"
@@ -247,8 +255,12 @@ const hostUI = {
       <!-- Currency -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.currency') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.currencyDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.currency')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.currencyDescription')
+          }}</span>
         </div>
         <USelectMenu
           v-model="state.currency"
@@ -261,8 +273,12 @@ const hostUI = {
       <!-- Time format -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.timeFormat') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.timeFormatDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.timeFormat')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.timeFormatDescription')
+          }}</span>
         </div>
         <UFieldGroup>
           <UButton
@@ -285,8 +301,12 @@ const hostUI = {
       <!-- Date format -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.dateFormat') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.dateFormatDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.dateFormat')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.dateFormatDescription')
+          }}</span>
         </div>
         <USelect
           v-model="state.dateFormat"
@@ -299,8 +319,12 @@ const hostUI = {
       <!-- Time zone -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.timeZone') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.timeZoneDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.timeZone')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.timeZoneDescription')
+          }}</span>
         </div>
         <USelectMenu
           v-model="state.timezone"
@@ -313,8 +337,12 @@ const hostUI = {
       <!-- First day of week -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.firstDay') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.firstDayDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.firstDay')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.firstDayDescription')
+          }}</span>
         </div>
         <UFieldGroup>
           <UButton
@@ -337,8 +365,12 @@ const hostUI = {
       <!-- Default calendar view -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.calendarView') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.calendarViewDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.calendarView')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.calendarViewDescription')
+          }}</span>
         </div>
         <UFieldGroup>
           <UButton
@@ -368,8 +400,12 @@ const hostUI = {
       <!-- Time slot granularity -->
       <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.slotStep') }}</span>
-          <span class="text-sm text-muted">{{ t('settings.systemRegion.slotStepDescription') }}</span>
+          <span class="font-medium text-highlighted">{{
+            t('settings.systemRegion.slotStep')
+          }}</span>
+          <span class="text-sm text-muted">{{
+            t('settings.systemRegion.slotStepDescription')
+          }}</span>
         </div>
         <USelect
           v-model="state.slotStepMinutes"

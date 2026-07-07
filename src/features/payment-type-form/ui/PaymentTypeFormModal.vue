@@ -130,7 +130,11 @@ function submitForm() {
 <template>
   <UModal
     v-model:open="isOpen"
-    :title="isEdit ? $t('settings.paymentTypes.form.titleEdit') : $t('settings.paymentTypes.form.titleCreate')"
+    :title="
+      isEdit
+        ? $t('settings.paymentTypes.form.titleEdit')
+        : $t('settings.paymentTypes.form.titleCreate')
+    "
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>
@@ -179,7 +183,11 @@ function submitForm() {
         {{ $t('settings.paymentTypes.form.cancel') }}
       </UButton>
       <UButton color="primary" :loading="isLoading" @click="submitForm">
-        {{ isEdit ? $t('settings.paymentTypes.form.submitEdit') : $t('settings.paymentTypes.form.submitCreate') }}
+        {{
+          isEdit
+            ? $t('settings.paymentTypes.form.submitEdit')
+            : $t('settings.paymentTypes.form.submitCreate')
+        }}
       </UButton>
     </template>
   </UModal>

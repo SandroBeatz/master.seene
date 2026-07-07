@@ -1,182 +1,250 @@
 ---
-version: 1.0
-date: 2026-05-15
+version: 2.1
+date: 2026-07-07
 category: code
 ---
 
 # Analytics Entity
 
-> Version 1.0 · 2026-05-15 · [Code](../)
+> Version 2.1 · 2026-07-07 · [Code](../)
 
 ## Overview
 
-The `analytics` entity (`src/entities/analytics/`) is the data layer for all revenue and appointment metrics in Seene. It exposes three public exports: TypeScript types, a pure `periodToDateRange` utility, and a `useAnalyticsQuery` composable backed by a single Supabase RPC call.
+The `analytics` entity (`src/entities/analytics/`) is the data layer for all revenue and appointment metrics in Seene. It exposes the V2 period model, pure period helpers, TypeScript result types, and two `@pinia/colada` query composables backed by two Supabase RPCs.
 
-All metric computation happens server-side in the `get_analytics` PostgreSQL function. The frontend is purely a rendering layer — no client-side aggregation.
+All metric computation happens server-side in PostgreSQL (`get_analytics_v2` and `get_analytics_widgets_v2`). The frontend is purely a rendering layer — no client-side aggregation. The V1 API (`AnalyticsPeriod`, `periodToDateRange`, `useAnalyticsQuery`, `AnalyticsResult`) has been fully removed from the frontend; the legacy `get_analytics` RPC still exists in the database but is no longer called by any code.
 
 ## Architecture
 
-### Data flow
+The entity splits into two independent data paths: the **filter-driven** path (follows the dashboard period) and the **fixed-window** path (rolling windows, period-independent).
+
+### Filter-driven data flow
 
 ```
-AnalyticsPeriod ('today' | 'week' | 'month')
+AnalyticsPeriodV2  ({ kind: 'day'|'week'|'month'|'year', date } | { kind: 'custom', range })
+       │
+       ├─ periodToDateRangeV2(period)   → { from, to }             current window
+       ├─ previousPeriodRange(period)   → { from, to }             comparison window
+       └─ periodGranularity(period)     → 'hour'|'day'|'week'|'month'
        │
        ▼
-periodToDateRange(period)  ←─ pure function, testable in isolation
-       │  returns { from: ISO string, to: ISO string }
+getAnalyticsV2(period)  ← supabase.rpc('get_analytics_v2', { p_from, p_to, p_prev_from, p_prev_to, p_granularity, p_tz })
+       │  returns AnalyticsResultV2 { current, previous, revenue_series }
        ▼
-getAnalytics(period)  ←─ API call, calls supabase.rpc('get_analytics', { p_from, p_to })
-       │  returns AnalyticsResult
+useAnalyticsQueryV2(period: Ref<AnalyticsPeriodV2>)  ← useQuery, key ['analytics-v2', periodKey]
+       │  placeholderData keeps previous data on screen while the next loads
        ▼
-useAnalyticsQuery(period: Ref<AnalyticsPeriod>)  ←─ @pinia/colada useQuery wrapper
-       │  reactive key: ['analytics', period.value]
-       ▼
-components receive { data, isLoading }
+AnalyticsStatCards · AnalyticsRevenueChart · HomeOverviewWidget
 ```
 
-### Period → date range conversion
+### Fixed-window data flow
 
-`periodToDateRange` computes ISO 8601 timestamps in the **user's local timezone** (via JavaScript's `Date` constructor, not UTC). This is intentional — a master works in their local timezone.
+```
+ANALYTICS_WIDGET_WINDOWS { topServicesDays: 30, clientMixDays: 90, busiestDaysDays: 56 }
+       │
+       └─ rollingWindowRange(days)  → { from, to }   (one per widget, computed client-side)
+       │
+       ▼
+getAnalyticsWidgetsV2()  ← supabase.rpc('get_analytics_widgets_v2', { p_top_from/to, p_mix_from/to, p_days_from/to, p_tz })
+       │  returns AnalyticsWidgetsV2 { top_services, client_mix, busiest_days, peak_hour_from, peak_hour_to }
+       ▼
+useAnalyticsWidgetsQueryV2()  ← useQuery, key ['analytics-widgets-v2', localDayKey]
+       │  keyed by local calendar day only — never refetches on period switch
+       ▼
+AnalyticsTopServices · AnalyticsClientMix · AnalyticsBusiestDays
+```
 
-| Period | `from` | `to` |
-|--------|--------|------|
-| `today` | 00:00:00.000 today | 23:59:59.999 today |
-| `week` | 00:00:00.000 Monday of current week | 23:59:59.999 Sunday of same week |
-| `month` | 00:00:00.000 1st of current month | 23:59:59.999 last day of current month |
+### Period → date range conversion (`model/period-v2.ts`)
 
-Week always starts on Monday. Sunday is treated as the last day of the previous week (offset `−6` instead of `1 − 0`).
+Three pure functions, all computing boundaries in the **master's local timezone** (native `Date`, not UTC). Week starts Monday; Sunday belongs to the previous week.
+
+- **`periodToDateRangeV2(period)`** → `{ from, to }` ISO instants for the selected period. Anchored kinds resolve to the calendar unit around their `date`; custom ranges normalize to start-of-from-day and end-of-to-day.
+- **`previousPeriodRange(period)`** → the comparison window. Anchored kinds map to the matching preceding unit (day→previous day, week→previous week, month→previous month, year→previous year); custom ranges become an equal-length block ending 1 ms before `from`.
+- **`periodGranularity(period)`** → the revenue-series bucket size. Anchored kinds are fixed (day→hour, week→day, month→day, year→month); custom ranges pick by length (≤2d hour, ≤31d day, ≤92d week, else month).
+- **`rollingWindowRange(days, now?)`** → a window of the last `days` local calendar days including today (`from` = start of `today − (days−1)`, `to` = end of today). Used by the fixed-window widgets.
 
 ```typescript
-// src/entities/analytics/model/period.ts
-const day = now.getDay() // 0 = Sun
+// Monday-start week math (period-v2.ts)
+const day = d.getDay() // 0 = Sun
 const toMonday = day === 0 ? -6 : 1 - day
 ```
 
-Month end uses the "day 0 of next month" trick — `new Date(y, mo + 1, 0)` — which resolves to the last calendar day of the current month without needing a lookup table.
-
 ### Query caching
 
-`useAnalyticsQuery` uses `@pinia/colada`'s `useQuery` with a reactive key:
+`useAnalyticsQueryV2` keys on the period; custom ranges get a stable key fragment from their from/to so distinct ranges cache separately:
 
 ```typescript
-key: () => ['analytics', period.value]
+key: () => ['analytics-v2', periodKey(period.value)]  // periodKey → 'today' | 'custom:2026-03-05:2026-03-20'
+placeholderData: (previousData) => previousData        // no skeleton flash on period switch
 ```
 
-When `period.value` changes, the key changes, and @pinia/colada fetches fresh data. Results for each period are cached independently — switching back from `week` to `today` reuses the cached `today` result rather than re-fetching.
+`useAnalyticsWidgetsQueryV2` keys on the **local calendar day** (`localDayKey()` → `'2026-07-06'`). The rolling windows only move once a day, so switching the dashboard period never refetches the widgets, and the result is reused all day.
 
-### Database function
+### Database functions
 
-The `get_analytics(p_from TIMESTAMPTZ, p_to TIMESTAMPTZ)` PostgreSQL function:
-- `SECURITY DEFINER` — runs with owner privileges, filters data by `auth.uid()`
-- Access is restricted: `EXECUTE` granted to `authenticated` role only, revoked from `anon` and `PUBLIC`
-- Returns a single JSON object (not a set of rows), so `supabase.rpc()` returns the object directly in `data`
+Both RPCs are `STABLE SECURITY DEFINER SET search_path = public`, filter by `auth.uid()`, and grant `EXECUTE` to `authenticated` only (revoked from `anon` / `PUBLIC`). Each returns a single JSON object, so `supabase.rpc()` yields the object directly in `data`. Both call `set_config('timezone', p_tz, true)` so `date_trunc` / `EXTRACT` / `to_char` run in the master's local zone (weekday, hour, bucket alignment); period filtering itself uses absolute instants and is timezone-independent.
 
-Metric computations (simplified):
+**`get_analytics_v2(p_from, p_to, p_prev_from, p_prev_to, p_granularity DEFAULT 'day', p_tz DEFAULT 'UTC')`** returns:
+
+```json
+{ "current": { …metrics }, "previous": { …metrics }, "revenue_series": [ …points ] }
+```
+
+**`get_analytics_widgets_v2(p_top_from, p_top_to, p_mix_from, p_mix_to, p_days_from, p_days_to, p_tz DEFAULT 'UTC')`** returns:
+
+```json
+{ "top_services": [ … ], "client_mix": { "new", "returning", "total" },
+  "busiest_days": [7 ints Mon..Sun], "peak_hour_from": int|null, "peak_hour_to": int|null }
+```
+
+Both delegate the scalar metrics to a private helper:
+
+**`analytics_period_metrics(p_uid, p_from, p_to)`** → JSON `{ earned, appointments_count, clients_served, working_minutes, avg_check }`. `SECURITY DEFINER` but **not granted to any role** — callable only from within the two RPCs (which run as the function owner). Computes:
 
 ```sql
--- Earned: sum of sale.amount for sales paid in period
-SELECT COALESCE(SUM(amount), 0) FROM sale
-WHERE user_id = auth.uid() AND paid_at BETWEEN p_from AND p_to
-
--- Completed count + working minutes: from completed appointments
-SELECT COUNT(*), COALESCE(SUM(duration), 0) FROM appointments
-WHERE user_id = auth.uid() AND status = 'completed' AND start_at BETWEEN p_from AND p_to
-
--- Avg check: earned / completed_count, NULL when count = 0
-
--- Top services: sale_item joined to sale, grouped by name_snapshot, top 5 by revenue
+earned              = COALESCE(SUM(sale.amount), 0)      WHERE paid_at BETWEEN p_from AND p_to
+appointments_count  = COUNT(*)              \
+working_minutes     = COALESCE(SUM(duration),0) > FROM appointments
+clients_served      = COUNT(DISTINCT client_id) /  WHERE status='completed' AND start_at BETWEEN …
+avg_check           = ROUND(earned / appointments_count, 2)  -- NULL when count = 0
 ```
 
-Note: `earned` uses `sale.paid_at` (payment date), while `completed_count` and `working_minutes` use `appointments.start_at` (appointment date). These can differ if a client pays on a different day than the appointment.
+Note the asymmetry: `earned` filters on `sale.paid_at`; the appointment-based metrics filter on `appointments.start_at`.
+
+The **revenue series** buckets `[date_trunc(granularity, p_from) … LEAST(p_to, now())]` by a step interval, summing `sale.amount` per bucket for the current period and for the previous period shifted back by `p_from − p_prev_from`. Capping the upper bound at `now()` keeps an in-progress period (current week/month) from emitting empty future buckets. Labels are server-formatted per granularity (`HH24:00`, `DD Mon`, `"W"IW`, `Mon YYYY`); the chart re-formats week/month x-axis labels client-side from `RevenuePoint.bucket` into the master's locale.
 
 ## Types
 
 ```typescript
 // src/entities/analytics/model/types.ts
 
-type AnalyticsPeriod = 'today' | 'week' | 'month'
+type AnalyticsPeriodKind = 'day' | 'week' | 'month' | 'year' | 'custom'
+interface AnalyticsCustomRange { from: string; to: string }        // 'YYYY-MM-DD' local dates
+type AnalyticsPeriodV2 =
+  | { kind: 'day'; date: string }        // anchor date (YYYY-MM-DD) anywhere inside the unit
+  | { kind: 'week'; date: string }
+  | { kind: 'month'; date: string }
+  | { kind: 'year'; date: string }
+  | { kind: 'custom'; range: AnalyticsCustomRange }
+type AnalyticsAnchoredKind = Exclude<AnalyticsPeriodKind, 'custom'>  // day | week | month | year
+type AnalyticsGranularity = 'hour' | 'day' | 'week' | 'month'       // revenue-chart bucket size
 
-interface TopService {
-  name: string       // service name at time of sale (name_snapshot)
-  revenue: number    // total revenue from this service in period
-  percentage: number // revenue / total_earned * 100, rounded to integer
-}
-
-interface AnalyticsResult {
+interface AnalyticsMetrics {          // shared by current + previous
   earned: number
-  completed_count: number
-  working_minutes: number      // always ≥ 0, even when no completed appointments
-  avg_check: number | null     // null when completed_count = 0
-  top_services: TopService[]   // up to 5 items, sorted by revenue DESC; [] when none
+  appointments_count: number
+  clients_served: number
+  working_minutes: number
+  avg_check: number | null            // null when appointments_count = 0
 }
+
+interface RevenuePoint {
+  bucket: string                       // ISO bucket start
+  label: string                        // pre-formatted server-side
+  current: number
+  previous: number
+}
+
+interface AnalyticsResultV2 {          // get_analytics_v2 — follows the period filter
+  current: AnalyticsMetrics
+  previous: AnalyticsMetrics
+  revenue_series: RevenuePoint[]
+}
+
+interface TopServiceV2 {
+  name: string                         // name_snapshot at sale time
+  revenue: number
+  percentage: number                   // ROUND(revenue / window_earned * 100)
+  count: number                        // sale-item count
+  color: string                        // service.color, or '#a1a1aa' fallback
+}
+interface ClientMix { new: number; returning: number; total: number }
+
+interface AnalyticsWidgetsV2 {         // get_analytics_widgets_v2 — fixed rolling windows
+  top_services: TopServiceV2[]         // up to 6
+  client_mix: ClientMix
+  busiest_days: number[]               // 7 counts, index 0 = Monday
+  peak_hour_from: number | null
+  peak_hour_to: number | null          // from + 1, or null
+}
+
+// Rolling windows (days), computed client-side:
+const ANALYTICS_WIDGET_WINDOWS = { topServicesDays: 30, clientMixDays: 90, busiestDaysDays: 56 }
 ```
 
 ## Usage
 
-### Analytics page (period selector)
+### Analytics page
 
 ```typescript
 // src/pages/analytics/ui/AnalyticsPage.vue
-import { ref } from 'vue'
-import type { AnalyticsPeriod } from '@entities/analytics'
-import { useAnalyticsQuery } from '@entities/analytics'
+import { useAnalyticsQueryV2, useAnalyticsWidgetsQueryV2 } from '@entities/analytics'
 
-const period = ref<AnalyticsPeriod>('today')
-const { data, isLoading } = useAnalyticsQuery(period)
-// data is Ref<AnalyticsResult | null | undefined>
-// changing period.value triggers an automatic refetch
+const period = ref<AnalyticsPeriodV2>(loadStoredPeriod())   // persisted to localStorage
+const { data, isPending, isPlaceholderData } = useAnalyticsQueryV2(period)
+const { data: widgets, isPending: widgetsPending } = useAnalyticsWidgetsQueryV2()
 ```
 
-### Home page (always today)
+`isPlaceholderData` is used to dim (not skeleton) the filter-driven blocks while a new period loads; the fixed-window widgets sit outside that wrapper and never react to period changes.
+
+### Home page
 
 ```typescript
-// src/pages/home/ui/HomePage.vue
-const period = ref<AnalyticsPeriod>('today')
-const { data, isLoading } = useAnalyticsQuery(period)
-// same cache key ['analytics', 'today'] as AnalyticsPage when on 'today' tab
-// — no duplicate request if both pages were rendered simultaneously
+// src/widgets/home/ui/HomeOverviewWidget.vue
+// Home anchors every kind at today's date (anchorISO = 'YYYY-MM-DD').
+const periodToAnalytics: Record<'day' | 'week' | 'month', AnalyticsPeriodV2> = {
+  day: { kind: 'day', date: anchorISO },
+  week: { kind: 'week', date: anchorISO },
+  month: { kind: 'month', date: anchorISO },
+}
+const analyticsPeriod = computed(() => periodToAnalytics[activeTab.value])
+const { data, isPending } = useAnalyticsQueryV2(analyticsPeriod)
+const metrics = computed(() => data.value?.current)   // earned / appointments_count / working_minutes
 ```
 
-### Rendering working hours
+### Delta and hours helpers
 
-`working_minutes` is always an integer number of minutes. Display helper:
+The pure presentation helpers live in the analytics widget slice, not the entity, so they can be unit-tested without a component:
 
 ```typescript
-const h = Math.floor(working_minutes / 60)
-const m = working_minutes % 60
-// e.g. 390 minutes → "6 h 30 min" (en) / "6 ч 30 мин" (ru)
-// if m === 0 → "6 h" / "6 ч"
+// src/widgets/analytics/lib/stat-format.ts
+deltaPct(current, previous)        // ROUND((cur-prev)/prev*100), null when prev === 0 (→ "new" badge)
+workingHoursLabel(minutes, t)      // "0 h" | "8 h" | "7 h 30 min"
 ```
 
-### Rendering avg_check
-
-`avg_check` is `null` when there are no completed appointments. Always guard:
-
-```typescript
-props.data?.avg_check != null ? formats.price(props.data.avg_check) : '—'
-```
+`avg_check` is `null` when there are no completed appointments — always guard: `cur?.avg_check != null ? formats.price(cur.avg_check) : '—'`.
 
 ## File structure
 
 ```
 src/entities/analytics/
 ├── api/
-│   └── analytics.api.ts          # getAnalytics(period) — Supabase RPC call
+│   └── analytics.api.ts          # getAnalyticsV2, getAnalyticsWidgetsV2 — RPC calls + p_tz
 ├── model/
-│   ├── types.ts                  # AnalyticsPeriod, AnalyticsResult, TopService
-│   ├── period.ts                 # periodToDateRange(period, now?) — pure function
-│   ├── analytics.queries.ts      # useAnalyticsQuery(period: Ref) — @pinia/colada
+│   ├── types.ts                  # period model + result types + ANALYTICS_WIDGET_WINDOWS
+│   ├── period-v2.ts              # periodToDateRangeV2 / previousPeriodRange / periodGranularity / rollingWindowRange
+│   ├── analytics.queries.ts      # useAnalyticsQueryV2, useAnalyticsWidgetsQueryV2
 │   └── __tests__/
-│       └── period.spec.ts        # 6 unit tests for period boundary cases
-└── index.ts                      # public barrel: types + periodToDateRange + useAnalyticsQuery
+│       └── period-v2.spec.ts     # boundary, comparison, granularity, rolling-window cases
+└── index.ts                      # public barrel (V2 only)
+
+src/widgets/analytics/            # presentation (see architecture doc)
+├── lib/stat-format.ts            # deltaPct, workingHoursLabel (+ __tests__/stat-format.spec.ts)
+└── model/period-step.ts          # toolbar ←/→ stepping (+ __tests__/period-step.spec.ts)
+
+src/shared/ui/chart/             # Chart.js + vue-chartjs wrappers + theme (see architecture doc)
 
 supabase/migrations/
-├── 20260515130000_add_get_analytics_rpc.sql    # creates get_analytics function
-└── 20260515140000_secure_get_analytics_rpc.sql # REVOKE/GRANT privilege restriction
+├── 20260515130000_add_get_analytics_rpc.sql          # V1 get_analytics (legacy, orphaned)
+├── 20260515140000_secure_get_analytics_rpc.sql       # V1 privilege restriction
+├── 20260629230000_add_get_analytics_v2_rpc.sql       # get_analytics_v2 + analytics_period_metrics
+├── 20260706120000_split_analytics_widgets_rpc.sql    # slims v2, adds get_analytics_widgets_v2
+├── 20260707120000_fix_client_mix_returning.sql       # client mix: returning = ≥2 lifetime visits
+└── 20260707130000_analytics_series_cap_today.sql     # revenue series capped at LEAST(p_to, now())
 ```
 
 ## Cross-references
 
-- [Analytics & Home Dashboard](../architecture/analytics-and-home.md) — pages and widgets that consume this entity
-- [Data Model](../business/data-model.md) — `sale`, `sale_item`, `appointments` tables that the RPC queries
+- [Analytics](../business/analytics.md) — metric definitions, period rules, comparison and window semantics
+- [Analytics & Home Dashboard](../architecture/analytics-and-home.md) — pages, widgets, and the Chart.js wrapper that consume this entity
+- [Data Model](../business/data-model.md) — `sale`, `sale_item`, `appointments`, `service` tables the RPCs query
 - [Supabase Integration](../integrations/supabase.md) — RPC calling conventions and client setup

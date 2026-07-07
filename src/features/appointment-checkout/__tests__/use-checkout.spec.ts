@@ -177,11 +177,9 @@ describe('useCheckout', () => {
 
   it('buildPayload uses serviceAmounts as item prices and total as sale amount', () => {
     const services = [makeService('svc-1', 1200), makeService('svc-2', 800)]
-    const { serviceAmounts, buildPayload } = useCheckout(
-      makeAppointment(),
-      services,
-      [makePaymentType('pt-1', true)],
-    )
+    const { serviceAmounts, buildPayload } = useCheckout(makeAppointment(), services, [
+      makePaymentType('pt-1', true),
+    ])
     serviceAmounts.value[0] = 1000
     expect(buildPayload()).toEqual({
       appointment_id: 'appt-1',

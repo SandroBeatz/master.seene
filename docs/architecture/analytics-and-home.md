@@ -1,187 +1,156 @@
 ---
-version: 1.0
-date: 2026-05-15
+version: 2.1
+date: 2026-07-07
 category: architecture
 ---
 
 # Analytics & Home Dashboard
 
-> Version 1.0 · 2026-05-15 · [Architecture](../)
+> Version 2.1 · 2026-07-07 · [Architecture](../)
 
 ## Overview
 
-Two surfaces expose analytics and appointment management to the master:
+Two surfaces expose analytics to the master:
 
-- **`/analytics`** — full metrics view with a period switcher (Today / Week / Month)
-- **`/home`** — action-oriented dashboard with inline appointment management and today's stats
+- **`/analytics`** — the full dashboard: a period toolbar (kind dropdown + jump-to-current + custom range + ← / → stepping + Compare), four stat cards, a revenue time-series chart, and three fixed-window widgets (top services, client mix, busiest days).
+- **`/home`** — an action-oriented dashboard whose `HomeOverviewWidget` surfaces three headline metrics with its own Day / Week / Month switcher.
 
-Both surfaces share the same `useAnalyticsQuery` composable from `@entities/analytics`. When both pages are open simultaneously and showing `today`, @pinia/colada serves a single cached result under the key `['analytics', 'today']`.
+Both consume the `analytics` entity. The dashboard's filter-driven blocks use `useAnalyticsQueryV2`; the fixed-window widgets use `useAnalyticsWidgetsQueryV2`. See [Analytics Entity](../code/analytics-entity.md) for the data layer and [Analytics](../business/analytics.md) for the metric rules.
+
+All analytics **presentation** lives in the `src/widgets/analytics/` slice (FSD widget layer) — the page component only orchestrates. Charts are rendered through a shared Chart.js wrapper in `src/shared/ui/chart/`. Chart.js and vue-chartjs are dependencies introduced with V2.
 
 ## Architecture
 
 ### Analytics page
 
 ```
-AnalyticsPage.vue
-├── period: Ref<AnalyticsPeriod>           ← local ref, defaults to 'today'
-├── useAnalyticsQuery(period)              ← single fetch for all metrics
+AnalyticsPage.vue (src/pages/analytics/ui/)
+├── period:  Ref<AnalyticsPeriodV2>   ← persisted to localStorage ('analytics:period'), default = current month ({ kind: 'month', date: today })
+├── compare: Ref<boolean>
+├── useAnalyticsQueryV2(period)        → data (current/previous/revenue_series), isPending, isPlaceholderData
+├── useAnalyticsWidgetsQueryV2()       → widgets (top_services/client_mix/busiest_days/peak), widgetsPending
 │
-├── AnalyticsPeriodTabs (v-model="period") ← changes period → triggers refetch
-├── AnalyticsStatCards  (:data :loading)   ← 4 stat cards
-└── AnalyticsTopServices (:services)       ← progress bar list
+├── AnalyticsToolbar (v-model=period, v-model:compare)
+│
+├── ── dimming wrapper (opacity-50 + pointer-events-none while isPlaceholderData) ──
+│   ├── AnalyticsStatCards   (:data :loading=isPending :compare :compare-label)
+│   └── AnalyticsRevenueChart(:series :earned :period-label :period-kind :compare :loading)
+│
+└── ── grid lg:grid-cols-2 (outside the dimming wrapper) ──
+    ├── AnalyticsTopServices (:services :loading=widgetsPending)
+    └── column
+        ├── AnalyticsClientMix   (:mix :loading)
+        └── AnalyticsBusiestDays (:days :peak-from :peak-to :loading)
 ```
 
-**Period switching** is handled entirely in `AnalyticsPage.vue`. The `period` ref is passed as a `Ref` into `useAnalyticsQuery`. Changing its value changes the query key `['analytics', period.value]`, causing @pinia/colada to issue a new request (or return a cached result for that key).
+**Filter-driven vs fixed-window split.** The stat cards and revenue chart follow the period filter and sit inside a wrapper that dims (not skeletons) while the next period loads — `placeholderData` in the query keeps the old values on screen. The three widgets deliberately sit **outside** that wrapper: their query is keyed by the local calendar day, so switching the period never refetches or dims them.
+
+**Period switching** is owned entirely by `AnalyticsToolbar` through `v-model`. Changing `period` changes the query key and triggers a refetch (or a cache hit). The period is written to `localStorage` on every change and restored on mount.
 
 ### Home page
 
 ```
-HomePage.vue
-├── period = ref<AnalyticsPeriod>('today') ← fixed, no switcher
-├── useAnalyticsQuery(period)              ← today's stats only
-│
-├── Left column
-│   ├── UpcomingAppointmentsWidget         ← fetches its own data
-│   └── ActionAppointmentsWidget           ← fetches its own data
-│
-└── Right column (280px fixed)
-    ├── HomeEarnedTodayCard   (:earned :loading)    ← links to /analytics
-    ├── HomeCompletedCountCard (:count :loading)
-    └── HomeWorkingHoursCard  (:minutes :loading)
+HomePage.vue (src/pages/home/ui/)
+├── header-left:  HomeUserWidget
+├── header-right: HomeTodayWidget
+├── HomeOverviewWidget           ← analytics: 3 headline metrics, Day/Week/Month tabs
+└── grid xl:[2fr / 0.8fr]
+    ├── HomeNextUpWidget          ← upcoming appointments (see Appointments docs)
+    └── HomeScheduleWidget        ← day schedule timeline (see Appointments docs)
 ```
 
-**Grid layout:** `grid-cols-1 lg:grid-cols-[1fr_280px] gap-6`. On mobile both columns stack vertically — widgets appear above stat cards.
+Only `HomeOverviewWidget` touches analytics. It calls `useAnalyticsQueryV2` with a period derived from its local `day`/`week`/`month` tab — each mapped to the matching anchored kind anchored at today (`{ kind: 'day'|'week'|'month', date: today }`) — and reads `data.current` for earned, appointments, and hours. It intentionally omits clients-served, deltas, the revenue chart, and the fixed-window widgets. The appointment/schedule widgets fetch their own data and are documented with the appointments feature.
 
 ---
 
 ## Components
 
-### Analytics page (`src/pages/analytics/ui/`)
+### Analytics widgets (`src/widgets/analytics/ui/`)
 
-#### `AnalyticsPeriodTabs.vue`
+#### `AnalyticsToolbar.vue`
 
-`defineModel<AnalyticsPeriod>`. Renders three buttons in a pill container. Active tab: `bg-default text-highlighted shadow-sm`. Uses `v-model` binding — parent owns the period state.
+`defineModel<AnalyticsPeriodV2>` + `defineModel<boolean>('compare')`. Renders:
+
+- A **kind `USelect`** (Day / Week / Month / Year / Custom). Picking a kind jumps to the current unit of that kind; "Custom" opens a `UModal` with a range `UCalendar` capped at today.
+- A **jump-to-current** `UButton` ("Today" / "This week" / "This month" / "This year"), shown only when the selection isn't already the current period.
+- **← / →** stepper buttons around a center caption showing the resolved period. Forward is disabled once the next period would start in the future. When comparing, the `… vs <previous range>` caption sits directly under the center label.
+- A **Compare** `USwitch`. (The **Export** button is currently hidden until export is implemented.)
+
+Stepping/range math is delegated to the pure `model/period-step.ts` (built on `@internationalized/date`): `resolveRange`, `previousRange`, `shiftRange`, `stepPeriod`, `canStepForward`, `currentPeriod`, `isCurrentPeriod`. Stepping keeps the selection's kind — there is no collapsing to presets.
 
 #### `AnalyticsStatCards.vue`
 
-Receives `data: AnalyticsResult | null | undefined` and `loading: boolean`. Renders four `UPageCard` components in a 2/4-column grid:
+`:data :loading :compare :compareLabel`. Four `UCard` cards with colored icon tiles:
 
-| Card | Field | Empty state | Format |
-|------|-------|-------------|--------|
-| Earned | `data.earned` | `₽0` | `formats.price()` |
-| Completed | `data.completed_count` | `0` | integer |
-| Working hours | `data.working_minutes` | `0 ч` | `Xh Ymin`, drops minutes if 0 |
-| Avg check | `data.avg_check` | `—` | `formats.price()`, `null` → `—` |
+| Card | Field | Format | Secondary |
+|---|---|---|---|
+| Total earned | `current.earned` | `formats.price()` | avg check (`current.avg_check`, `null`→`—`) |
+| Clients served | `current.clients_served` | integer | — |
+| Hours worked | `current.working_minutes` | `Xh Ym` (drops 0 min) | — |
+| Appointments | `current.appointments_count` | integer | — |
 
-During loading: `animate-pulse` skeleton replaces the value (label and icon remain visible).
+When `compare` is on and data is loaded, each card shows a delta badge: green up / red down via `deltaPct`, or a neutral **"new"** badge when the previous value is 0. The compare caption replaces the secondary text. During loading a `USkeleton` replaces each value. Delta/hours logic is the pure `lib/stat-format.ts` (`deltaPct`, `workingHoursLabel`), unit-tested independently.
+
+#### `AnalyticsRevenueChart.vue`
+
+`:series :earned :periodLabel :periodKind :compare :loading`. Maps `RevenuePoint[]` to either a `BaseLineChart` (default) or `BaseBarChart`, switched by a **line/bar `UFieldGroup`** toggle in the card header (icon buttons, persisted to `localStorage` under `analytics:chartType`). The `current` values are the primary (amber) dataset; a second (`previous`, zinc-soft) dataset is added only when `compare` is on. X-axis labels are re-formatted client-side from the bucket timestamp for week (short weekday + day) and month (day-of-month) views, otherwise the server label is used. The legend sits **below** the chart with dot colors matching the series. Shows the earned total and period caption above; a skeleton while loading.
 
 #### `AnalyticsTopServices.vue`
 
-Receives `services: TopService[]`. Renders up to 5 progress bars. Bar width is `service.percentage`% via inline style. Key is `service.name` — guaranteed unique because the SQL groups by `name_snapshot` before applying `LIMIT 5`. Empty state: i18n key `analytics.noTopServices`.
+`:services :loading`. Ranked rows (up to 6) with a colored progress bar whose width is `service.percentage`% and color is `service.color`, plus revenue and appointment count. Subtitle notes the 30-day window. Empty state `analytics.noTopServices`; row skeletons while loading.
 
----
+#### `AnalyticsClientMix.vue`
 
-### Home page stat cards (`src/pages/home/ui/`)
+`:mix :loading`. A `BaseDoughnutChart` of `[returning, new]` with the returning share shown as a percentage in the center, and a legend with both counts. Empty mix renders a single muted placeholder slice and `0%`. Subtitle notes the 90-day window.
 
-These three components receive already-resolved fields from `AnalyticsResult` as optional props (the parent passes `data?.field`, which is `undefined` while loading).
+#### `AnalyticsBusiestDays.vue`
 
-#### `HomeEarnedTodayCard.vue`
+`:days :peakFrom :peakTo :loading`. A `BaseBarChart` of the 7 weekday counts (Mon→Sun), with the busiest bar highlighted and all others muted. Peak hours render as `HH:MM – HH:MM` in the master's 12/24h format (`formats.time`), or `—` when unknown. Subtitle notes the 8-week window.
 
-Wrapped in `<RouterLink to="/analytics">` inside a `UPageCard as-child`. Arrow icon has `aria-hidden="true"` (decorative). Shows `formats.price(earned ?? 0)`.
+### Shared chart wrapper (`src/shared/ui/chart/`)
 
-#### `HomeCompletedCountCard.vue`
+`BaseBarChart.vue`, `BaseLineChart.vue`, `BaseDoughnutChart.vue` wrap vue-chartjs's `Bar` / `Line` / `Doughnut`. Each takes `data` and optional `options`, deep-merging the caller's options over a themed base (`baseChartOptions` + `cartesianScales`) via `mergeDeep`.
 
-Shows `completed_count` as a plain integer.
+- `register.ts` — registers the required Chart.js controllers/elements exactly once (vue-chartjs v5 does not auto-register) and sets rounded-bar and font defaults.
+- `theme.ts` — `useChartTheme()` returns reactive brand colors (amber primary / zinc neutral) plus mode-aware chrome colors read from CSS variables; recomputes on color-mode change.
 
-#### `HomeWorkingHoursCard.vue`
+### Home overview widget (`src/widgets/home/ui/HomeOverviewWidget.vue`)
 
-Same hours/minutes formatting as `AnalyticsStatCards`. Prop type is `number | undefined` (not `null`) — matches `data?.working_minutes` optional chaining output.
-
----
-
-### Widgets
-
-#### `ActionAppointmentsWidget` (`src/widgets/action-appointments/ui/`)
-
-Fetches the "actionable" appointment list: appointments that need immediate action from the master.
-
-**Query:** `useActionableAppointmentsQuery` — calls `listActionableAppointments` which uses a Supabase OR filter:
-
-```
-status = 'pending'
-OR (status = 'confirmed' AND start_at < now())
-```
-
-Ordered by `start_at` ascending (most urgent first).
-
-**`ActionAppointmentCard`** renders each appointment with conditional action buttons:
-
-| Condition | Buttons shown |
-|-----------|---------------|
-| `status = 'pending'` and `start_at > now()` | Confirm + Complete |
-| `status = 'pending'` and `start_at ≤ now()` | Complete only |
-| `status = 'confirmed'` and `start_at < now()` | Complete only |
-
-**Confirm flow:**
-1. Calls `updateAppointment({ id, status: 'confirmed' })`
-2. If `start_at > now()` → `refresh()` (card leaves the list)
-3. If `start_at ≤ now()` → no refresh (card stays, now shows only Complete)
-
-**Complete flow:**
-1. Opens `AppointmentCheckoutModal` (existing feature from `@features/appointment-checkout`)
-2. On successful sale → `refresh()` + success toast
-3. On `already_completed` error → warning toast, modal closes (idempotent)
-
-Also fetches clients, services, and payment types to display card content and populate the checkout modal.
-
-#### `UpcomingAppointmentsWidget` (`src/widgets/upcoming-appointments/ui/`)
-
-Shows a scrollable day selector and a chronological appointment list for the selected day.
-
-**`WeekDayStrip.vue`** (`defineModel<Date>`):
-- Renders 7 days: today through today+6
-- Today is selected by default
-- Selected day: `bg-primary text-white`; uses `day.date.toISOString()` as `:key` to avoid collisions when the 7-day window spans two months
-- Does not gate on same-day clicks — parent's computed normalises dates
-
-**`AppointmentTimeline.vue`** (pure presentational):
-- Receives `appointments`, `clients`, `services` as props — no fetch of its own
-- Filters to `['pending', 'confirmed', 'completed']` only (excludes `cancelled`, `no_show`)
-- Time formatted with `Intl.DateTimeFormat` (locale-aware, `hour12: false`)
-- Empty state with `i-lucide-calendar-x` icon
-
-**`UpcomingAppointmentsWidget.vue`** owns the fetch:
-- `selectedDate: Ref<Date>` — passed as `v-model` to `WeekDayStrip`
-- `dateRange` computed: midnight-to-midnight ISO range for `selectedDate`
-- `useAppointmentsQuery(userId, dateRange)` — reactive to date changes
-- Also fetches clients and services to resolve names in the timeline
+Three metric cards (earned / appointments / hours) with icon tiles and a pill Day/Week/Month `UTabs`. Reads `data.current` from `useAnalyticsQueryV2`; `USkeleton` per value while `isPending`. Hours use the same `Xh Ym` formatting as the stat cards (inlined here).
 
 ---
 
 ## State ownership
 
 | State | Owner | How updated |
-|-------|-------|-------------|
-| Analytics period | `AnalyticsPage.vue` | `AnalyticsPeriodTabs` via `v-model` |
-| Selected day (upcoming) | `UpcomingAppointmentsWidget.vue` | `WeekDayStrip` via `v-model` |
-| Actionable appointments | `ActionAppointmentsWidget.vue` | `refresh()` after mutation |
-| Checkout modal open | `ActionAppointmentsWidget.vue` | `handleComplete` / `handleCheckoutConfirm` |
+|---|---|---|
+| Analytics period | `AnalyticsPage.vue` | `AnalyticsToolbar` via `v-model` (persisted to localStorage) |
+| Compare toggle | `AnalyticsPage.vue` | `AnalyticsToolbar` via `v-model:compare` |
+| Custom-range draft | `AnalyticsToolbar.vue` | `UCalendar` in the modal, applied on confirm |
+| Revenue chart type (line/bar) | `AnalyticsRevenueChart.vue` | header `UFieldGroup` toggle (persisted to localStorage) |
+| Home overview period | `HomeOverviewWidget.vue` | its Day/Week/Month `UTabs` |
 
 ---
 
 ## i18n keys
 
-All keys exist in `en`, `fr`, `ru` locales.
+All keys exist in `en`, `fr`, `ru`.
 
 ```
-analytics.period.today / .week / .month
-analytics.earned / .completedCount / .workingHours / .avgCheck
-analytics.topServices / .noTopServices
+analytics.title / .description
+analytics.period.day / .week / .month / .year / .custom   ·   .today / .thisWeek / .thisMonth / .thisYear (jump labels)
+analytics.toolbar.compare / .export / .exportComingSoon / .apply / .prevPeriod / .nextPeriod / .vs
+analytics.totalEarned / .clientsServed / .hoursWorked / .appointments / .avgCheckInline / .deltaNew
+analytics.compareVs.{yesterday,lastWeek,prevWeek,lastMonth,prevMonth,prevPeriod}
 analytics.hoursUnit / .minutesUnit
+analytics.topServicesTitle / .topServicesSubtitle / .noTopServices / .serviceAppointments
+analytics.clientMix.title / .returning / .new / .uniqueClients
+analytics.busiest.title / .peakHours   ·   analytics.weekdaysShort.{mon…sun}
+analytics.revenue.title / .thisPeriod / .previous / .chartTypeLine / .chartTypeBar
+analytics.windows.last30Days / .last90Days / .last8Weeks
 
-home.earnedToday / .completedCount / .workingHours
-home.actionAppointments.title / .empty / .confirm / .complete
-home.upcoming.title / .empty
+home.overview.title / .earnedToday / .appointments / .workingHours
+home.overview.period.{day,week,month} / .subtext.{today,thisWeek,thisMonth,bookedToday,…}
 ```
 
 ---
@@ -190,30 +159,32 @@ home.upcoming.title / .empty
 
 ```
 src/
-├── pages/
-│   ├── analytics/ui/
-│   │   ├── AnalyticsPage.vue          # root, owns period ref
-│   │   ├── AnalyticsPeriodTabs.vue    # today/week/month tab switcher
-│   │   ├── AnalyticsStatCards.vue     # 4-card grid (earned/completed/hours/avg)
-│   │   └── AnalyticsTopServices.vue   # top 5 services with progress bars
-│   └── home/ui/
-│       ├── HomePage.vue               # 2-col layout, always 'today' period
-│       ├── HomeEarnedTodayCard.vue    # clickable → /analytics
-│       ├── HomeCompletedCountCard.vue
-│       └── HomeWorkingHoursCard.vue
+├── pages/analytics/ui/
+│   └── AnalyticsPage.vue                 # orchestrator: owns period + compare, both queries
+├── widgets/analytics/
+│   ├── ui/
+│   │   ├── AnalyticsToolbar.vue           # kind dropdown + jump + custom range + ←/→ + compare
+│   │   ├── AnalyticsStatCards.vue         # 4 cards with deltas
+│   │   ├── AnalyticsRevenueChart.vue      # line/bar chart (toggle), current vs previous
+│   │   ├── AnalyticsTopServices.vue       # ranked colored bars (30d)
+│   │   ├── AnalyticsClientMix.vue         # doughnut new/returning (90d)
+│   │   └── AnalyticsBusiestDays.vue       # weekday bars + peak hours (8wk)
+│   ├── lib/stat-format.ts                 # deltaPct, workingHoursLabel (+ tests)
+│   ├── model/period-step.ts               # ←/→ range stepping (+ tests)
+│   └── __tests__/                         # component + helper specs
 │
-└── widgets/
-    ├── action-appointments/ui/
-    │   ├── ActionAppointmentsWidget.vue  # orchestrator: fetches, handles mutations
-    │   └── ActionAppointmentCard.vue     # single card with confirm/complete buttons
-    └── upcoming-appointments/ui/
-        ├── UpcomingAppointmentsWidget.vue # orchestrator: fetches, owns selectedDate
-        ├── WeekDayStrip.vue               # horizontal 7-day selector
-        └── AppointmentTimeline.vue        # presentational: list of time+client+service
+├── widgets/home/ui/
+│   └── HomeOverviewWidget.vue             # 3 metrics, day/week/month tabs (uses useAnalyticsQueryV2)
+│
+└── shared/ui/chart/
+    ├── BaseBarChart.vue / BaseLineChart.vue / BaseDoughnutChart.vue
+    ├── register.ts                        # one-time Chart.js registration + defaults
+    └── theme.ts                           # useChartTheme, baseChartOptions, cartesianScales, mergeDeep
 ```
 
 ## Cross-references
 
-- [Analytics Entity](../code/analytics-entity.md) — types, `useAnalyticsQuery`, `periodToDateRange`
-- [Data Model](../business/data-model.md) — `sale`, `appointments` tables
-- [Nuxt UI Components](../ui/nuxt-ui-components.md) — `UPageCard`, `UPageHeader`, `UPage`, `UButton` used throughout
+- [Analytics Entity](../code/analytics-entity.md) — types, period-v2 helpers, `useAnalyticsQueryV2` / `useAnalyticsWidgetsQueryV2`, RPC signatures
+- [Analytics](../business/analytics.md) — metric definitions, period and window rules, comparison semantics
+- [Data Model](../business/data-model.md) — `sale`, `appointments`, `service` tables
+- [Nuxt UI Components](../ui/nuxt-ui-components.md) — `UCard`, `USelect`, `UModal`, `UCalendar`, `USwitch`, `UFieldGroup`, `UTabs`, `UBadge` used throughout
