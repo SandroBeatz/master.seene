@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { AnalyticsPeriodV2 } from '@entities/analytics'
+import { getLocalTimeZone, today } from '@internationalized/date'
+import type {
+  AnalyticsAnchoredKind,
+  AnalyticsPeriodKind,
+  AnalyticsPeriodV2,
+} from '@entities/analytics'
 import { useAnalyticsQueryV2, useAnalyticsWidgetsQueryV2 } from '@entities/analytics'
 import {
   AnalyticsToolbar,
@@ -15,26 +20,34 @@ import {
 const { t } = useI18n()
 // The last selected period survives page reloads.
 const PERIOD_STORAGE_KEY = 'analytics:period'
-const PRESETS = ['today', 'this_week', 'last_week', 'this_month', 'last_month']
+const ANCHORED_KINDS: readonly AnalyticsAnchoredKind[] = ['day', 'week', 'month', 'year']
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Local calendar date as 'YYYY-MM-DD' — the anchor for the default period. */
+function todayISO(): string {
+  const t0 = today(getLocalTimeZone())
+  return `${t0.year}-${String(t0.month).padStart(2, '0')}-${String(t0.day).padStart(2, '0')}`
+}
+
+/** Default: the current month. */
+function defaultPeriod(): AnalyticsPeriodV2 {
+  return { kind: 'month', date: todayISO() }
+}
 
 function loadStoredPeriod(): AnalyticsPeriodV2 {
   try {
     const raw = localStorage.getItem(PERIOD_STORAGE_KEY)
-    if (!raw) return 'this_month'
+    if (!raw) return defaultPeriod()
     const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed === 'string' && PRESETS.includes(parsed)) {
-      return parsed as AnalyticsPeriodV2
+    if (typeof parsed !== 'object' || parsed === null || !('kind' in parsed)) {
+      // legacy string presets or corrupted value — fall back to the default
+      return defaultPeriod()
     }
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      'kind' in parsed &&
-      parsed.kind === 'custom' &&
-      'range' in parsed
-    ) {
-      const range = (parsed as { range: { from?: unknown; to?: unknown } }).range
+    const kind = (parsed as { kind: unknown }).kind
+    if (kind === 'custom') {
+      const range = (parsed as { range?: { from?: unknown; to?: unknown } }).range
       if (
+        range &&
         typeof range.from === 'string' &&
         typeof range.to === 'string' &&
         ISO_DATE.test(range.from) &&
@@ -42,11 +55,18 @@ function loadStoredPeriod(): AnalyticsPeriodV2 {
       ) {
         return { kind: 'custom', range: { from: range.from, to: range.to } }
       }
+      return defaultPeriod()
+    }
+    if (typeof kind === 'string' && (ANCHORED_KINDS as readonly string[]).includes(kind)) {
+      const date = (parsed as { date?: unknown }).date
+      if (typeof date === 'string' && ISO_DATE.test(date)) {
+        return { kind: kind as AnalyticsAnchoredKind, date } as AnalyticsPeriodV2
+      }
     }
   } catch {
     // corrupted value — fall back to the default below
   }
-  return 'this_month'
+  return defaultPeriod()
 }
 
 const period = ref<AnalyticsPeriodV2>(loadStoredPeriod())
@@ -66,26 +86,19 @@ const { data: widgets, isPending: widgetsPending } = useAnalyticsWidgetsQueryV2(
 const EMPTY_MIX = { new: 0, returning: 0, total: 0 }
 const EMPTY_DAYS = [0, 0, 0, 0, 0, 0, 0]
 
-const periodLabel = computed(() =>
-  typeof period.value === 'string'
-    ? t(
-        `analytics.period.${period.value === 'this_week' ? 'thisWeek' : period.value === 'last_week' ? 'lastWeek' : period.value === 'this_month' ? 'thisMonth' : period.value === 'last_month' ? 'lastMonth' : 'today'}`,
-      )
-    : t('analytics.period.custom'),
-)
+/** Granularity caption under the revenue total, e.g. "Month". */
+const periodLabel = computed(() => t(`analytics.period.${period.value.kind}`))
 
 /** What the current period is compared against, e.g. "vs last month". */
-const COMPARE_KEYS: Record<string, string> = {
-  today: 'yesterday',
-  this_week: 'lastWeek',
-  last_week: 'prevWeek',
-  this_month: 'lastMonth',
-  last_month: 'prevMonth',
+const COMPARE_KEYS: Record<AnalyticsPeriodKind, string> = {
+  day: 'yesterday',
+  week: 'lastWeek',
+  month: 'lastMonth',
+  year: 'lastYear',
+  custom: 'prevPeriod',
 }
 const compareLabel = computed(() =>
-  t(
-    `analytics.compareVs.${typeof period.value === 'string' ? COMPARE_KEYS[period.value] : 'prevPeriod'}`,
-  ),
+  t(`analytics.compareVs.${COMPARE_KEYS[period.value.kind]}`),
 )
 </script>
 

@@ -1,11 +1,11 @@
 // --- V2 period model -------------------------------------------------------
 
-export type AnalyticsPeriodPreset =
-  | 'today'
-  | 'this_week'
-  | 'last_week'
-  | 'this_month'
-  | 'last_month'
+/**
+ * Which unit the period filter is anchored to. `custom` is a free date range;
+ * the rest carry an anchor date and resolve to that calendar unit around it.
+ * Not to be confused with `AnalyticsGranularity` (the revenue-chart bucket size).
+ */
+export type AnalyticsPeriodKind = 'day' | 'week' | 'month' | 'year' | 'custom'
 
 /** A user-picked custom range, expressed as local calendar dates (YYYY-MM-DD). */
 export interface AnalyticsCustomRange {
@@ -13,9 +13,20 @@ export interface AnalyticsCustomRange {
   to: string
 }
 
+/**
+ * The selected period. Anchored kinds carry a `date` (YYYY-MM-DD) that lands
+ * anywhere inside the unit — the day/week/month/year is derived from it. `custom`
+ * carries an explicit [from, to] range.
+ */
 export type AnalyticsPeriodV2 =
-  | AnalyticsPeriodPreset
+  | { kind: 'day'; date: string }
+  | { kind: 'week'; date: string }
+  | { kind: 'month'; date: string }
+  | { kind: 'year'; date: string }
   | { kind: 'custom'; range: AnalyticsCustomRange }
+
+/** An anchored (non-custom) period. */
+export type AnalyticsAnchoredKind = Exclude<AnalyticsPeriodKind, 'custom'>
 
 /** Granularity used to bucket the revenue time-series for a period. */
 export type AnalyticsGranularity = 'hour' | 'day' | 'week' | 'month'

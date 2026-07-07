@@ -43,7 +43,6 @@ declare module 'vue' {
     UPageGrid: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageGrid.vue')['default']
     UPageHeader: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageHeader.vue')['default']
     UPageList: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageList.vue')['default']
-    UPopover: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Popover.vue')['default']
     UProgress: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Progress.vue')['default']
     USelect: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Select.vue')['default']
     USelectMenu: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/SelectMenu.vue')['default']

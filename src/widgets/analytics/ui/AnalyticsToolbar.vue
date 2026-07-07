@@ -7,13 +7,14 @@ import {
   getLocalTimeZone,
   today,
 } from '@internationalized/date'
-import type { AnalyticsPeriodPreset, AnalyticsPeriodV2 } from '@entities/analytics'
+import type { AnalyticsPeriodKind, AnalyticsPeriodV2 } from '@entities/analytics'
 import {
-  PERIOD_PRESETS,
   canStepForward as canStepForwardFrom,
+  currentPeriod,
   fromCalendarDate,
+  isCurrentPeriod,
+  previousRange,
   resolveRange,
-  shiftRange,
   stepPeriod,
   toCalendarDate,
   type DateRange,
@@ -27,32 +28,49 @@ const toast = useToast()
 
 const tz = getLocalTimeZone()
 
-// Chip order mirrors the design: current periods first, then past ones.
-const PRESET_KEYS: Record<AnalyticsPeriodPreset, string> = {
-  today: 'analytics.period.today',
-  this_week: 'analytics.period.thisWeek',
-  this_month: 'analytics.period.thisMonth',
-  last_week: 'analytics.period.lastWeek',
-  last_month: 'analytics.period.lastMonth',
+// --- Granularity dropdown ---------------------------------------------------
+
+const KIND_KEYS: Record<AnalyticsPeriodKind, string> = {
+  day: 'analytics.period.day',
+  week: 'analytics.period.week',
+  month: 'analytics.period.month',
+  year: 'analytics.period.year',
+  custom: 'analytics.period.custom',
 }
 
-const presetTabs = computed(() =>
-  PERIOD_PRESETS.map((value) => ({ value, label: t(PRESET_KEYS[value]) })),
+const kindItems = computed(() =>
+  (['day', 'week', 'month', 'year', 'custom'] as const).map((value) => ({
+    value,
+    label: t(KIND_KEYS[value]),
+  })),
 )
 
-function isCustom(
-  p: AnalyticsPeriodV2,
-): p is { kind: 'custom'; range: { from: string; to: string } } {
-  return typeof p !== 'string'
+/** Picking a granularity jumps to its current period; "custom" opens the calendar. */
+function onKindChange(kind: AnalyticsPeriodKind) {
+  if (kind === 'custom') {
+    openCustom()
+    return
+  }
+  period.value = currentPeriod(kind)
 }
 
-/** Which chip is highlighted — a preset key or 'custom'. */
-const activeKey = computed(() => (isCustom(period.value) ? 'custom' : period.value))
+// --- "Jump to current" button ("Today" / "This week" / …) --------------------
 
-function chipClass(active: boolean) {
-  return active
-    ? 'bg-default text-highlighted shadow-sm'
-    : 'text-muted hover:text-default'
+const JUMP_KEYS: Record<AnalyticsPeriodKind, string> = {
+  day: 'analytics.period.today',
+  week: 'analytics.period.thisWeek',
+  month: 'analytics.period.thisMonth',
+  year: 'analytics.period.thisYear',
+  custom: '', // custom has no natural "current" — button is hidden
+}
+
+const showJump = computed(
+  () => period.value.kind !== 'custom' && !isCurrentPeriod(period.value),
+)
+const jumpLabel = computed(() => t(JUMP_KEYS[period.value.kind]))
+
+function jumpToCurrent() {
+  period.value = currentPeriod(period.value.kind)
 }
 
 // --- Prev / next period stepping --------------------------------------------
@@ -63,11 +81,12 @@ function step(dir: 1 | -1) {
 
 const canStepForward = computed(() => canStepForwardFrom(period.value))
 
-// --- Resolved-dates caption --------------------------------------------------
+// --- Centre caption ---------------------------------------------------------
 
-const resolvedRange = computed(() => resolveRange(period.value, today(tz)))
+const resolvedRange = computed(() => resolveRange(period.value))
 
-function fmtDate(d: CalendarDate): string {
+/** A single day: "6 Jul" (year added only when it isn't the current year). */
+function fmtDay(d: CalendarDate): string {
   const opts: Intl.DateTimeFormatOptions =
     d.year === today(tz).year
       ? { day: 'numeric', month: 'short' }
@@ -76,42 +95,49 @@ function fmtDate(d: CalendarDate): string {
 }
 
 function fmtRange(r: DateRange): string {
-  return r.start.compare(r.end) === 0 ? fmtDate(r.start) : `${fmtDate(r.start)} – ${fmtDate(r.end)}`
+  return r.start.compare(r.end) === 0
+    ? fmtDay(r.start)
+    : `${fmtDay(r.start)} – ${fmtDay(r.end)}`
 }
 
-/** "Jun 1 – Jun 30" and, when comparing, "… vs May 1 – May 31". */
-const rangeCaption = computed(() => {
-  const current = fmtRange(resolvedRange.value)
-  if (!compare.value) return current
-  const previous = fmtRange(shiftRange(resolvedRange.value, -1))
-  return `${current} ${t('analytics.toolbar.vs')} ${previous}`
+/** "June 2026". */
+function fmtMonth(d: CalendarDate): string {
+  return new DateFormatter(locale.value, { month: 'long', year: 'numeric' }).format(d.toDate(tz))
+}
+
+const centerLabel = computed(() => {
+  const r = resolvedRange.value
+  switch (period.value.kind) {
+    case 'day':
+      return fmtDay(r.start)
+    case 'month':
+      return fmtMonth(r.start)
+    case 'year':
+      return String(r.start.year)
+    default: // week | custom → a date range
+      return fmtRange(r)
+  }
 })
 
-// --- Custom range picker ---------------------------------------------------
+/** When comparing, the caption of the preceding window: "vs 1 – 31 May". */
+const compareCaption = computed(
+  () => `${t('analytics.toolbar.vs')} ${fmtRange(previousRange(period.value))}`,
+)
+
+// --- Custom range picker ----------------------------------------------------
 
 const open = ref(false)
-const draft = shallowRef<{ start: CalendarDate | null; end: CalendarDate | null }>({
-  start: null,
-  end: null,
+const draft = shallowRef<{ start: CalendarDate | undefined; end: CalendarDate | undefined }>({
+  start: undefined,
+  end: undefined,
 })
 
 /** Analytics only looks at the past — the calendar stops at today. */
 const maxDate = today(tz)
 
-const df = computed(() => new DateFormatter(locale.value, { dateStyle: 'medium' }))
-
-/** Label of the Custom chip: the picked range, or the generic "Custom" word. */
-const customLabel = computed(() => {
-  if (!isCustom(period.value)) return t('analytics.period.custom')
-  const { from, to } = period.value.range
-  const fmt = (s: string) => df.value.format(toCalendarDate(s).toDate(tz))
-  return `${fmt(from)} – ${fmt(to)}`
-})
-
-/** Seed the calendar when the popover opens — current custom range, else last 7 days. */
-function onOpenChange(value: boolean) {
-  if (!value) return
-  if (isCustom(period.value)) {
+/** Seed the calendar and open it — current custom range, else the last 7 days. */
+function openCustom() {
+  if (period.value.kind === 'custom') {
     draft.value = {
       start: toCalendarDate(period.value.range.from),
       end: toCalendarDate(period.value.range.to),
@@ -120,6 +146,7 @@ function onOpenChange(value: boolean) {
     const t0 = today(tz)
     draft.value = { start: t0.subtract({ days: 6 }), end: t0 }
   }
+  open.value = true
 }
 
 function applyCustom() {
@@ -146,8 +173,27 @@ function onExport() {
 <template>
   <div class="space-y-2">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <!-- Period stepper + segment -->
-      <div class="flex w-full min-w-0 items-center gap-1 lg:w-auto">
+      <!-- Granularity + jump-to-current -->
+      <div class="flex items-center gap-2">
+        <USelect
+          :model-value="period.kind"
+          :items="kindItems"
+          class="w-36"
+          @update:model-value="onKindChange"
+        />
+        <UButton
+          v-if="showJump"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          @click="jumpToCurrent"
+        >
+          {{ jumpLabel }}
+        </UButton>
+      </div>
+
+      <!-- Period stepper + caption -->
+      <div class="flex min-w-0 items-center gap-1">
         <UButton
           color="neutral"
           variant="ghost"
@@ -156,50 +202,9 @@ function onExport() {
           :aria-label="t('analytics.toolbar.prevPeriod')"
           @click="step(-1)"
         />
-        <div
-          class="inline-flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl bg-elevated p-1 lg:flex-none"
-        >
-          <button
-            v-for="tab in presetTabs"
-            :key="tab.value"
-            type="button"
-            class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors sm:px-4"
-            :class="chipClass(activeKey === tab.value)"
-            @click="period = tab.value"
-          >
-            {{ tab.label }}
-          </button>
-
-          <UPopover v-model:open="open" @update:open="onOpenChange">
-            <button
-              type="button"
-              class="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors sm:px-4"
-              :class="chipClass(activeKey === 'custom')"
-            >
-              <UIcon name="i-lucide-calendar" class="size-4" />
-              {{ customLabel }}
-            </button>
-
-            <template #content>
-              <div class="p-2">
-                <UCalendar v-model="draft" range :max-value="maxDate" />
-                <div class="flex justify-end gap-2 px-1 pt-2">
-                  <UButton color="neutral" variant="ghost" size="sm" @click="open = false">
-                    {{ t('common.cancel') }}
-                  </UButton>
-                  <UButton
-                    color="primary"
-                    size="sm"
-                    :disabled="!draft.start || !draft.end"
-                    @click="applyCustom"
-                  >
-                    {{ t('analytics.toolbar.apply') }}
-                  </UButton>
-                </div>
-              </div>
-            </template>
-          </UPopover>
-        </div>
+        <span class="min-w-40 text-center text-sm font-medium text-highlighted">
+          {{ centerLabel }}
+        </span>
         <UButton
           color="neutral"
           variant="ghost"
@@ -225,7 +230,29 @@ function onExport() {
       </div>
     </div>
 
-    <!-- Resolved dates of the selection (and the comparison window) -->
-    <p class="px-1 text-xs text-muted">{{ rangeCaption }}</p>
+    <!-- Comparison window, shown only while comparing -->
+    <p v-if="compare" class="px-1 text-xs text-muted">{{ compareCaption }}</p>
+
+    <!-- Custom range picker -->
+    <UModal v-model:open="open" :title="t('analytics.period.custom')">
+      <template #body>
+        <UCalendar v-model="draft" range :max-value="maxDate" />
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" @click="open = false">
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton
+            color="primary"
+            size="sm"
+            :disabled="!draft.start || !draft.end"
+            @click="applyCustom"
+          >
+            {{ t('analytics.toolbar.apply') }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

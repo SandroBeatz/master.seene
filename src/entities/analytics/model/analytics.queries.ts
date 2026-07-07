@@ -3,9 +3,11 @@ import type { Ref } from 'vue'
 import type { AnalyticsPeriodV2 } from './types'
 import { getAnalyticsV2, getAnalyticsWidgetsV2 } from '../api/analytics.api'
 
-/** Stable cache-key fragment for a V2 period (custom ranges vary by from/to). */
+/** Stable cache-key fragment for a V2 period (anchor or custom range). */
 function periodKey(period: AnalyticsPeriodV2): string {
-  return typeof period === 'string' ? period : `custom:${period.range.from}:${period.range.to}`
+  return period.kind === 'custom'
+    ? `custom:${period.range.from}:${period.range.to}`
+    : `${period.kind}:${period.date}`
 }
 
 export const useAnalyticsQueryV2 = (period: Ref<AnalyticsPeriodV2>) =>

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { CalendarDate } from '@internationalized/date'
+import type { AnalyticsPeriodV2 } from '@entities/analytics'
 import {
   canStepForward,
+  currentPeriod,
   fromCalendarDate,
-  matchPreset,
+  isCurrentPeriod,
   mondayOf,
-  presetRange,
+  previousRange,
   rangeDays,
   resolveRange,
   shiftRange,
@@ -14,6 +16,20 @@ import {
 
 // Thu Jul 2, 2026 — a fixed "today" so tests don't depend on the wall clock.
 const T0 = new CalendarDate(2026, 7, 2)
+
+const day = (date: string): AnalyticsPeriodV2 => ({ kind: 'day', date })
+const week = (date: string): AnalyticsPeriodV2 => ({ kind: 'week', date })
+const month = (date: string): AnalyticsPeriodV2 => ({ kind: 'month', date })
+const year = (date: string): AnalyticsPeriodV2 => ({ kind: 'year', date })
+const custom = (from: string, to: string): AnalyticsPeriodV2 => ({
+  kind: 'custom',
+  range: { from, to },
+})
+
+const iso = (r: { start: CalendarDate; end: CalendarDate }) => ({
+  start: fromCalendarDate(r.start),
+  end: fromCalendarDate(r.end),
+})
 
 describe('mondayOf', () => {
   it('returns the same day for a Monday', () => {
@@ -29,124 +45,154 @@ describe('mondayOf', () => {
   })
 })
 
-describe('presetRange', () => {
-  it('this_week spans Monday..Sunday around today', () => {
-    const r = presetRange('this_week', T0)
-    expect(fromCalendarDate(r.start)).toBe('2026-06-29')
-    expect(fromCalendarDate(r.end)).toBe('2026-07-05')
+describe('resolveRange', () => {
+  it('day: a single day', () => {
+    expect(iso(resolveRange(day('2026-07-02')))).toEqual({ start: '2026-07-02', end: '2026-07-02' })
   })
 
-  it('last_month is the full previous calendar month', () => {
-    const r = presetRange('last_month', T0)
-    expect(fromCalendarDate(r.start)).toBe('2026-06-01')
-    expect(fromCalendarDate(r.end)).toBe('2026-06-30')
-  })
-})
-
-describe('shiftRange', () => {
-  it('steps a full calendar month by month, not by day count', () => {
-    const july = { start: new CalendarDate(2026, 7, 1), end: new CalendarDate(2026, 7, 31) }
-    const prev = shiftRange(july, -1)
-    expect(fromCalendarDate(prev.start)).toBe('2026-06-01')
-    expect(fromCalendarDate(prev.end)).toBe('2026-06-30')
+  it('week: Monday..Sunday around the anchor', () => {
+    expect(iso(resolveRange(week('2026-07-02')))).toEqual({
+      start: '2026-06-29',
+      end: '2026-07-05',
+    })
   })
 
-  it('handles February when stepping from March', () => {
-    const march = { start: new CalendarDate(2026, 3, 1), end: new CalendarDate(2026, 3, 31) }
-    const prev = shiftRange(march, -1)
-    expect(fromCalendarDate(prev.start)).toBe('2026-02-01')
-    expect(fromCalendarDate(prev.end)).toBe('2026-02-28')
+  it('week: a Sunday anchor belongs to the week that just ended', () => {
+    expect(iso(resolveRange(week('2026-07-05')))).toEqual({
+      start: '2026-06-29',
+      end: '2026-07-05',
+    })
   })
 
-  it('steps a week range by exactly 7 days', () => {
-    const week = { start: new CalendarDate(2026, 6, 29), end: new CalendarDate(2026, 7, 5) }
-    const prev = shiftRange(week, -1)
-    expect(fromCalendarDate(prev.start)).toBe('2026-06-22')
-    expect(fromCalendarDate(prev.end)).toBe('2026-06-28')
+  it('month: first..last day of the anchor month', () => {
+    expect(iso(resolveRange(month('2026-07-15')))).toEqual({
+      start: '2026-07-01',
+      end: '2026-07-31',
+    })
   })
 
-  it('steps an arbitrary range by its own length', () => {
-    const r = { start: new CalendarDate(2026, 6, 10), end: new CalendarDate(2026, 6, 19) } // 10 days
-    const prev = shiftRange(r, -1)
-    expect(fromCalendarDate(prev.start)).toBe('2026-05-31')
-    expect(fromCalendarDate(prev.end)).toBe('2026-06-09')
+  it('year: Jan 1..Dec 31 of the anchor year', () => {
+    expect(iso(resolveRange(year('2026-07-02')))).toEqual({
+      start: '2026-01-01',
+      end: '2026-12-31',
+    })
   })
 
-  it('is symmetric: stepping back then forward returns the original range', () => {
-    const r = { start: new CalendarDate(2026, 6, 10), end: new CalendarDate(2026, 6, 19) }
-    const roundTrip = shiftRange(shiftRange(r, -1), 1)
-    expect(fromCalendarDate(roundTrip.start)).toBe('2026-06-10')
-    expect(fromCalendarDate(roundTrip.end)).toBe('2026-06-19')
+  it('custom: the picked range verbatim', () => {
+    expect(iso(resolveRange(custom('2026-06-10', '2026-06-19')))).toEqual({
+      start: '2026-06-10',
+      end: '2026-06-19',
+    })
   })
 })
 
-describe('rangeDays', () => {
+describe('shiftRange / rangeDays', () => {
   it('counts inclusive days', () => {
     expect(rangeDays({ start: T0, end: T0 })).toBe(1)
     expect(
       rangeDays({ start: new CalendarDate(2026, 6, 29), end: new CalendarDate(2026, 7, 5) }),
     ).toBe(7)
   })
+
+  it('steps an arbitrary range by its own length', () => {
+    const r = { start: new CalendarDate(2026, 6, 10), end: new CalendarDate(2026, 6, 19) } // 10 days
+    expect(iso(shiftRange(r, -1))).toEqual({ start: '2026-05-31', end: '2026-06-09' })
+  })
+
+  it('is symmetric: back then forward returns the original range', () => {
+    const r = { start: new CalendarDate(2026, 6, 10), end: new CalendarDate(2026, 6, 19) }
+    expect(iso(shiftRange(shiftRange(r, -1), 1))).toEqual({ start: '2026-06-10', end: '2026-06-19' })
+  })
 })
 
 describe('stepPeriod', () => {
-  it('this_month → back collapses to the last_month preset', () => {
-    expect(stepPeriod('this_month', -1, T0)).toBe('last_month')
+  it('day: keeps kind, shifts by one day', () => {
+    expect(stepPeriod(day('2026-07-02'), -1)).toEqual(day('2026-07-01'))
+    expect(stepPeriod(day('2026-07-02'), 1)).toEqual(day('2026-07-03'))
   })
 
-  it('last_month → forward collapses to this_month', () => {
-    expect(stepPeriod('last_month', 1, T0)).toBe('this_month')
+  it('week: shifts the anchor by 7 days, resolving to the adjacent week', () => {
+    const prev = stepPeriod(week('2026-07-02'), -1)
+    expect(prev).toEqual(week('2026-06-25'))
+    expect(iso(resolveRange(prev))).toEqual({ start: '2026-06-22', end: '2026-06-28' })
   })
 
-  it('last_month → back becomes a custom full-month range', () => {
-    expect(stepPeriod('last_month', -1, T0)).toEqual({
-      kind: 'custom',
-      range: { from: '2026-05-01', to: '2026-05-31' },
-    })
+  it('month: steps to the first of the adjacent month', () => {
+    expect(stepPeriod(month('2026-07-15'), -1)).toEqual(month('2026-06-01'))
   })
 
-  it('today → back becomes a custom single day (yesterday)', () => {
-    expect(stepPeriod('today', -1, T0)).toEqual({
-      kind: 'custom',
-      range: { from: '2026-07-01', to: '2026-07-01' },
-    })
+  it('month: steps across the year boundary (Jan → Dec)', () => {
+    expect(stepPeriod(month('2026-01-15'), -1)).toEqual(month('2025-12-01'))
   })
 
-  it('this_week → back collapses to last_week', () => {
-    expect(stepPeriod('this_week', -1, T0)).toBe('last_week')
+  it('year: keeps kind, shifts by one year', () => {
+    expect(stepPeriod(year('2026-07-02'), -1)).toEqual(year('2025-01-01'))
+    expect(stepPeriod(year('2026-07-02'), 1)).toEqual(year('2027-01-01'))
   })
 
-  it('a custom week range stepping forward can collapse to a preset', () => {
-    const twoWeeksAgo = {
-      kind: 'custom' as const,
-      range: { from: '2026-06-15', to: '2026-06-21' },
-    }
-    expect(stepPeriod(twoWeeksAgo, 1, T0)).toBe('last_week')
+  it('custom: shifts by its own length, staying custom', () => {
+    expect(stepPeriod(custom('2026-06-15', '2026-06-21'), -1)).toEqual(
+      custom('2026-06-08', '2026-06-14'),
+    )
+  })
+})
+
+describe('isCurrentPeriod', () => {
+  it('is true when the period contains today', () => {
+    expect(isCurrentPeriod(day('2026-07-02'), T0)).toBe(true)
+    expect(isCurrentPeriod(week('2026-07-02'), T0)).toBe(true)
+    expect(isCurrentPeriod(month('2026-07-15'), T0)).toBe(true)
+    expect(isCurrentPeriod(year('2026-03-01'), T0)).toBe(true)
+  })
+
+  it('is false for a past period', () => {
+    expect(isCurrentPeriod(day('2026-07-01'), T0)).toBe(false)
+    expect(isCurrentPeriod(week('2026-06-25'), T0)).toBe(false)
+    expect(isCurrentPeriod(month('2026-06-15'), T0)).toBe(false)
+    expect(isCurrentPeriod(year('2025-06-01'), T0)).toBe(false)
+  })
+})
+
+describe('currentPeriod', () => {
+  it('anchors each kind at today', () => {
+    expect(currentPeriod('day', T0)).toEqual(day('2026-07-02'))
+    expect(currentPeriod('week', T0)).toEqual(week('2026-07-02'))
+    expect(currentPeriod('month', T0)).toEqual(month('2026-07-02'))
+    expect(currentPeriod('year', T0)).toEqual(year('2026-07-02'))
+  })
+
+  it('custom defaults to the last 7 days', () => {
+    expect(currentPeriod('custom', T0)).toEqual(custom('2026-06-26', '2026-07-02'))
   })
 })
 
 describe('canStepForward', () => {
   it('blocks stepping into the future from current periods', () => {
-    expect(canStepForward('this_month', T0)).toBe(false)
-    expect(canStepForward('this_week', T0)).toBe(false)
-    expect(canStepForward('today', T0)).toBe(false)
+    expect(canStepForward(day('2026-07-02'), T0)).toBe(false)
+    expect(canStepForward(week('2026-07-02'), T0)).toBe(false)
+    expect(canStepForward(month('2026-07-15'), T0)).toBe(false)
+    expect(canStepForward(year('2026-03-01'), T0)).toBe(false)
   })
 
   it('allows stepping forward from past periods', () => {
-    expect(canStepForward('last_month', T0)).toBe(true)
-    expect(canStepForward('last_week', T0)).toBe(true)
+    expect(canStepForward(month('2026-05-15'), T0)).toBe(true)
+    expect(canStepForward(week('2026-06-01'), T0)).toBe(true)
+    expect(canStepForward(day('2026-07-01'), T0)).toBe(true)
   })
 })
 
-describe('matchPreset / resolveRange', () => {
-  it('recognises the resolved range of every preset', () => {
-    for (const preset of ['today', 'this_week', 'this_month', 'last_week', 'last_month'] as const) {
-      expect(matchPreset(resolveRange(preset, T0), T0)).toBe(preset)
-    }
+describe('previousRange', () => {
+  it('anchored: the preceding unit', () => {
+    expect(iso(previousRange(month('2026-07-15')))).toEqual({
+      start: '2026-06-01',
+      end: '2026-06-30',
+    })
   })
 
-  it('returns null for a non-preset range', () => {
-    const r = { start: new CalendarDate(2026, 6, 10), end: new CalendarDate(2026, 6, 19) }
-    expect(matchPreset(r, T0)).toBeNull()
+  it('custom: the preceding equal-length block', () => {
+    expect(iso(previousRange(custom('2026-06-15', '2026-06-21')))).toEqual({
+      start: '2026-06-08',
+      end: '2026-06-14',
+    })
   })
 })

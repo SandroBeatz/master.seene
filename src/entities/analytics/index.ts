@@ -1,7 +1,8 @@
 // V2 period model
 export type {
   AnalyticsPeriodV2,
-  AnalyticsPeriodPreset,
+  AnalyticsPeriodKind,
+  AnalyticsAnchoredKind,
   AnalyticsCustomRange,
   AnalyticsGranularity,
 } from './model/types'

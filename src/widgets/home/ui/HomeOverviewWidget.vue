@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { getLocalTimeZone, today } from '@internationalized/date'
 import type { TabsItem } from '@nuxt/ui'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
 import { useAnalyticsQueryV2 } from '@entities/analytics'
@@ -15,10 +15,14 @@ type PeriodKey = 'day' | 'week' | 'month'
 
 const activeTab = ref<PeriodKey>('day')
 
+// Home always shows the current day/week/month — anchor the period at today.
+const anchor = today(getLocalTimeZone())
+const anchorISO = `${anchor.year}-${String(anchor.month).padStart(2, '0')}-${String(anchor.day).padStart(2, '0')}`
+
 const periodToAnalytics: Record<PeriodKey, AnalyticsPeriodV2> = {
-  day: 'today',
-  week: 'this_week',
-  month: 'this_month',
+  day: { kind: 'day', date: anchorISO },
+  week: { kind: 'week', date: anchorISO },
+  month: { kind: 'month', date: anchorISO },
 }
 
 const analyticsPeriod = computed(() => periodToAnalytics[activeTab.value])

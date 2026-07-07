@@ -1,6 +1,6 @@
 import type {
+  AnalyticsAnchoredKind,
   AnalyticsGranularity,
-  AnalyticsPeriodPreset,
   AnalyticsPeriodV2,
 } from './types'
 
@@ -48,60 +48,69 @@ function parseLocalDate(value: string, time: readonly [number, number, number, n
   return new Date(y, m - 1, d, ...time)
 }
 
-function isCustom(period: AnalyticsPeriodV2): period is { kind: 'custom'; range: { from: string; to: string } } {
-  return typeof period !== 'string'
+function isCustom(
+  period: AnalyticsPeriodV2,
+): period is { kind: 'custom'; range: { from: string; to: string } } {
+  return period.kind === 'custom'
 }
 
-export function periodToDateRangeV2(
-  period: AnalyticsPeriodV2,
-  now = new Date(),
-): { from: string; to: string } {
+/** The [from, to] Date bounds of an anchored calendar unit around `anchor`. */
+function boundsFor(kind: AnalyticsAnchoredKind, anchor: Date): { from: Date; to: Date } {
+  switch (kind) {
+    case 'day':
+      return { from: startOfDay(anchor), to: endOfDay(anchor) }
+    case 'week': {
+      const from = startOfWeek(anchor)
+      return { from, to: endOfDay(addDays(from, 6)) }
+    }
+    case 'month':
+      return {
+        from: firstOfMonth(anchor),
+        to: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, ...DAY_END),
+      }
+    case 'year':
+      return {
+        from: new Date(anchor.getFullYear(), 0, 1, ...DAY_START),
+        to: new Date(anchor.getFullYear(), 11, 31, ...DAY_END),
+      }
+  }
+}
+
+/** The anchor date one unit of `kind` before `anchor` (for the comparison window). */
+function shiftAnchor(kind: AnalyticsAnchoredKind, anchor: Date): Date {
+  switch (kind) {
+    case 'day':
+      return addDays(anchor, -1)
+    case 'week':
+      return addDays(anchor, -7)
+    case 'month':
+      return firstOfMonth(anchor, -1)
+    case 'year':
+      return new Date(anchor.getFullYear() - 1, anchor.getMonth(), anchor.getDate(), ...DAY_START)
+  }
+}
+
+export function periodToDateRangeV2(period: AnalyticsPeriodV2): { from: string; to: string } {
   if (isCustom(period)) {
     const from = parseLocalDate(period.range.from, DAY_START)
     const to = parseLocalDate(period.range.to, DAY_END)
     return { from: from.toISOString(), to: to.toISOString() }
   }
 
-  let from: Date
-  let to: Date
-
-  switch (period) {
-    case 'today':
-      from = startOfDay(now)
-      to = endOfDay(now)
-      break
-    case 'this_week':
-      from = startOfWeek(now)
-      to = endOfDay(addDays(from, 6))
-      break
-    case 'last_week':
-      from = addDays(startOfWeek(now), -7)
-      to = endOfDay(addDays(from, 6))
-      break
-    case 'this_month':
-      from = firstOfMonth(now)
-      to = new Date(now.getFullYear(), now.getMonth() + 1, 0, ...DAY_END)
-      break
-    case 'last_month':
-      from = firstOfMonth(now, -1)
-      to = new Date(now.getFullYear(), now.getMonth(), 0, ...DAY_END)
-      break
-  }
-
+  const anchor = parseLocalDate(period.date, DAY_START)
+  const { from, to } = boundsFor(period.kind, anchor)
   return { from: from.toISOString(), to: to.toISOString() }
 }
 
 /**
- * The period to compare against. For calendar presets this is the matching
- * preceding calendar period (today→yesterday, this_week→last week, etc.). For a
- * custom range it is an equal-length block ending immediately before `from`.
+ * The period to compare against. For anchored kinds this is the matching
+ * preceding calendar unit (day→yesterday, week→last week, month→previous month,
+ * year→previous year). For a custom range it is an equal-length block ending
+ * immediately before `from`.
  */
-export function previousPeriodRange(
-  period: AnalyticsPeriodV2,
-  now = new Date(),
-): { from: string; to: string } {
+export function previousPeriodRange(period: AnalyticsPeriodV2): { from: string; to: string } {
   if (isCustom(period)) {
-    const { from, to } = periodToDateRangeV2(period, now)
+    const { from, to } = periodToDateRangeV2(period)
     const fromMs = Date.parse(from)
     const len = Date.parse(to) - fromMs
     return {
@@ -110,15 +119,9 @@ export function previousPeriodRange(
     }
   }
 
-  const prevAnchor: Record<AnalyticsPeriodPreset, () => { from: string; to: string }> = {
-    today: () => periodToDateRangeV2('today', addDays(now, -1)),
-    this_week: () => periodToDateRangeV2('this_week', addDays(now, -7)),
-    last_week: () => periodToDateRangeV2('this_week', addDays(now, -14)),
-    this_month: () => periodToDateRangeV2('this_month', firstOfMonth(now, -1)),
-    last_month: () => periodToDateRangeV2('this_month', firstOfMonth(now, -2)),
-  }
-
-  return prevAnchor[period]()
+  const anchor = parseLocalDate(period.date, DAY_START)
+  const { from, to } = boundsFor(period.kind, shiftAnchor(period.kind, anchor))
+  return { from: from.toISOString(), to: to.toISOString() }
 }
 
 /**
@@ -137,12 +140,9 @@ export function rollingWindowRange(
 const MS_PER_DAY = 86_400_000
 
 /** Bucket size for the revenue time-series of the given period. */
-export function periodGranularity(
-  period: AnalyticsPeriodV2,
-  now = new Date(),
-): AnalyticsGranularity {
+export function periodGranularity(period: AnalyticsPeriodV2): AnalyticsGranularity {
   if (isCustom(period)) {
-    const { from, to } = periodToDateRangeV2(period, now)
+    const { from, to } = periodToDateRangeV2(period)
     const days = (Date.parse(to) - Date.parse(from)) / MS_PER_DAY
     if (days <= 2) return 'hour'
     if (days <= 31) return 'day'
@@ -150,14 +150,14 @@ export function periodGranularity(
     return 'month'
   }
 
-  switch (period) {
-    case 'today':
+  switch (period.kind) {
+    case 'day':
       return 'hour'
-    case 'this_week':
-    case 'last_week':
+    case 'week':
       return 'day'
-    case 'this_month':
-    case 'last_month':
+    case 'month':
       return 'week'
+    case 'year':
+      return 'month'
   }
 }
