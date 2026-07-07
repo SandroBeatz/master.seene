@@ -53,7 +53,10 @@ function anchoredRange(kind: AnalyticsAnchoredKind, anchor: CalendarDate): DateR
     case 'month':
       return { start: startOfMonth(anchor), end: endOfMonth(anchor) }
     case 'year':
-      return { start: new CalendarDate(anchor.year, 1, 1), end: new CalendarDate(anchor.year, 12, 31) }
+      return {
+        start: new CalendarDate(anchor.year, 1, 1),
+        end: new CalendarDate(anchor.year, 12, 31),
+      }
   }
 }
 
@@ -102,7 +105,10 @@ export function previousRange(period: AnalyticsPeriodV2): DateRange {
 export function stepPeriod(period: AnalyticsPeriodV2, dir: 1 | -1): AnalyticsPeriodV2 {
   if (period.kind === 'custom') {
     const r = shiftRange(resolveRange(period), dir)
-    return { kind: 'custom', range: { from: fromCalendarDate(r.start), to: fromCalendarDate(r.end) } }
+    return {
+      kind: 'custom',
+      range: { from: fromCalendarDate(r.start), to: fromCalendarDate(r.end) },
+    }
   }
   const next = shiftAnchor(period.kind, toCalendarDate(period.date), dir)
   return { kind: period.kind, date: fromCalendarDate(next) }
@@ -133,9 +139,6 @@ export function currentPeriod(
 }
 
 /** Forward stepping stops once the next period would start in the future. */
-export function canStepForward(
-  period: AnalyticsPeriodV2,
-  t0 = today(getLocalTimeZone()),
-): boolean {
+export function canStepForward(period: AnalyticsPeriodV2, t0 = today(getLocalTimeZone())): boolean {
   return resolveRange(stepPeriod(period, 1)).start.compare(t0) <= 0
 }

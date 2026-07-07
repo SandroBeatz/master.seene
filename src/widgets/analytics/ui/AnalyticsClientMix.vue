@@ -21,7 +21,10 @@ const returningPct = computed(() =>
 
 const chartData = computed<ChartData<'doughnut'>>(() => {
   if (!hasData.value) {
-    return { labels: [], datasets: [{ data: [1], backgroundColor: [theme.value.muted], borderWidth: 0 }] }
+    return {
+      labels: [],
+      datasets: [{ data: [1], backgroundColor: [theme.value.muted], borderWidth: 0 }],
+    }
   }
   return {
     labels: [t('analytics.clientMix.returning'), t('analytics.clientMix.new')],
@@ -42,8 +45,18 @@ const options = computed<ChartOptions<'doughnut'>>(() => ({
 }))
 
 const legend = computed(() => [
-  { key: 'returning', label: t('analytics.clientMix.returning'), value: props.mix.returning, color: theme.value.primary },
-  { key: 'new', label: t('analytics.clientMix.new'), value: props.mix.new, color: theme.value.neutral },
+  {
+    key: 'returning',
+    label: t('analytics.clientMix.returning'),
+    value: props.mix.returning,
+    color: theme.value.primary,
+  },
+  {
+    key: 'new',
+    label: t('analytics.clientMix.new'),
+    value: props.mix.new,
+    color: theme.value.neutral,
+  },
 ])
 </script>
 
@@ -71,7 +84,9 @@ const legend = computed(() => [
           <BaseDoughnutChart :data="chartData" :options="options" />
           <div class="absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-xl font-semibold">{{ returningPct }}%</span>
-            <span class="text-[10px] uppercase text-muted">{{ t('analytics.clientMix.returning') }}</span>
+            <span class="text-[10px] uppercase text-muted">{{
+              t('analytics.clientMix.returning')
+            }}</span>
           </div>
         </div>
 

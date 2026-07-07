@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  CalendarDate,
-  DateFormatter,
-  getLocalTimeZone,
-  today,
-} from '@internationalized/date'
+import { CalendarDate, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
 import type { AnalyticsPeriodKind, AnalyticsPeriodV2 } from '@entities/analytics'
 import {
   canStepForward as canStepForwardFrom,
@@ -24,7 +19,6 @@ const period = defineModel<AnalyticsPeriodV2>({ required: true })
 const compare = defineModel<boolean>('compare', { default: false })
 
 const { t, locale } = useI18n()
-const toast = useToast()
 
 const tz = getLocalTimeZone()
 
@@ -64,9 +58,7 @@ const JUMP_KEYS: Record<AnalyticsPeriodKind, string> = {
   custom: '', // custom has no natural "current" — button is hidden
 }
 
-const showJump = computed(
-  () => period.value.kind !== 'custom' && !isCurrentPeriod(period.value),
-)
+const showJump = computed(() => period.value.kind !== 'custom' && !isCurrentPeriod(period.value))
 const jumpLabel = computed(() => t(JUMP_KEYS[period.value.kind]))
 
 function jumpToCurrent() {
@@ -95,9 +87,7 @@ function fmtDay(d: CalendarDate): string {
 }
 
 function fmtRange(r: DateRange): string {
-  return r.start.compare(r.end) === 0
-    ? fmtDay(r.start)
-    : `${fmtDay(r.start)} – ${fmtDay(r.end)}`
+  return r.start.compare(r.end) === 0 ? fmtDay(r.start) : `${fmtDay(r.start)} – ${fmtDay(r.end)}`
 }
 
 /** "June 2026". */
@@ -158,16 +148,6 @@ function applyCustom() {
   }
   open.value = false
 }
-
-// --- Export (stub — real implementation is a separate task) -----------------
-
-function onExport() {
-  toast.add({
-    title: t('analytics.toolbar.exportComingSoon'),
-    icon: 'i-lucide-clock',
-    color: 'neutral',
-  })
-}
 </script>
 
 <template>
@@ -181,13 +161,7 @@ function onExport() {
           class="w-36"
           @update:model-value="onKindChange"
         />
-        <UButton
-          v-if="showJump"
-          color="neutral"
-          variant="soft"
-          size="sm"
-          @click="jumpToCurrent"
-        >
+        <UButton v-if="showJump" color="neutral" variant="soft" size="sm" @click="jumpToCurrent">
           {{ jumpLabel }}
         </UButton>
       </div>
@@ -202,8 +176,9 @@ function onExport() {
           :aria-label="t('analytics.toolbar.prevPeriod')"
           @click="step(-1)"
         />
-        <span class="min-w-40 text-center text-sm font-medium text-highlighted">
-          {{ centerLabel }}
+        <span class="flex min-w-40 flex-col items-center text-center">
+          <span class="text-sm font-medium text-highlighted">{{ centerLabel }}</span>
+          <span v-if="compare" class="text-xs text-muted">{{ compareCaption }}</span>
         </span>
         <UButton
           color="neutral"
@@ -216,22 +191,11 @@ function onExport() {
         />
       </div>
 
-      <!-- Compare + Export -->
+      <!-- Compare (Export button hidden until export is implemented — see task 1iwu) -->
       <div class="flex items-center gap-3">
         <USwitch v-model="compare" :label="t('analytics.toolbar.compare')" />
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-download"
-          @click="onExport"
-        >
-          {{ t('analytics.toolbar.export') }}
-        </UButton>
       </div>
     </div>
-
-    <!-- Comparison window, shown only while comparing -->
-    <p v-if="compare" class="px-1 text-xs text-muted">{{ compareCaption }}</p>
 
     <!-- Custom range picker -->
     <UModal v-model:open="open" :title="t('analytics.period.custom')">

@@ -74,9 +74,7 @@ function resetForm() {
     state.all_day = props.timeBlock.all_day
     state.date = start.date
     state.startDate = start.date
-    state.endDate = props.timeBlock.all_day
-      ? addDateInputDays(end.date, -1)
-      : end.date
+    state.endDate = props.timeBlock.all_day ? addDateInputDays(end.date, -1) : end.date
     state.startTime = start.time
     state.endTime = end.time
     state.notes = props.timeBlock.notes ?? ''
@@ -85,8 +83,7 @@ function resetForm() {
 
   const initial = getDateTimeInputValue(props.initialStartAt ?? new Date(), props.timeZone)
   const initialStartAt =
-    props.initialStartAt ??
-    toUtcIsoFromZonedDateTime(initial.date, initial.time, props.timeZone)
+    props.initialStartAt ?? toUtcIsoFromZonedDateTime(initial.date, initial.time, props.timeZone)
   const defaultEnd = getDateTimeInputValue(
     new Date(new Date(initialStartAt).getTime() + 60 * 60 * 1000),
     props.timeZone,
@@ -185,7 +182,11 @@ async function confirmDelete() {
 function buildDateRange(form: FormState): { startAt: string; endAt: string } | null {
   if (form.all_day) {
     const start = toUtcIsoFromZonedDateTime(form.startDate, '00:00', props.timeZone)
-    const end = toUtcIsoFromZonedDateTime(addDateInputDays(form.endDate, 1), '00:00', props.timeZone)
+    const end = toUtcIsoFromZonedDateTime(
+      addDateInputDays(form.endDate, 1),
+      '00:00',
+      props.timeZone,
+    )
 
     if (!isValidRange(start, end)) return null
 

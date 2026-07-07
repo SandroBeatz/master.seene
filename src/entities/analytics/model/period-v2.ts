@@ -1,8 +1,4 @@
-import type {
-  AnalyticsAnchoredKind,
-  AnalyticsGranularity,
-  AnalyticsPeriodV2,
-} from './types'
+import type { AnalyticsAnchoredKind, AnalyticsGranularity, AnalyticsPeriodV2 } from './types'
 
 /**
  * V2 period helpers. All boundaries are computed in the master's LOCAL timezone
@@ -129,10 +125,7 @@ export function previousPeriodRange(period: AnalyticsPeriodV2): { from: string; 
  * e.g. `rollingWindowRange(30)` spans 30 full days ending at today 23:59:59.
  * Used by the fixed-window widgets (top services / client mix / busiest days).
  */
-export function rollingWindowRange(
-  days: number,
-  now = new Date(),
-): { from: string; to: string } {
+export function rollingWindowRange(days: number, now = new Date()): { from: string; to: string } {
   const from = addDays(startOfDay(now), -(days - 1))
   return { from: from.toISOString(), to: endOfDay(now).toISOString() }
 }
@@ -156,7 +149,7 @@ export function periodGranularity(period: AnalyticsPeriodV2): AnalyticsGranulari
     case 'week':
       return 'day'
     case 'month':
-      return 'week'
+      return 'day'
     case 'year':
       return 'month'
   }

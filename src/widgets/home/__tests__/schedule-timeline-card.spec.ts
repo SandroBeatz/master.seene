@@ -13,9 +13,7 @@ const SERVICES: Service[] = [
   makeService('s2', 'Окрашивание', '#00ff00'),
 ]
 
-const CLIENTS: Client[] = [
-  { id: 'c1', first_name: 'Анна', last_name: 'Петрова' } as Client,
-]
+const CLIENTS: Client[] = [{ id: 'c1', first_name: 'Анна', last_name: 'Петрова' } as Client]
 
 // A weekday far in the past so "now line" logic never interferes.
 const PAST_DATE = new Date(2020, 0, 6) // Mon 2020-01-06

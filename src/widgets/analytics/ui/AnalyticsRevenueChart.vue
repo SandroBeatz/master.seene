@@ -1,46 +1,79 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { DateFormatter } from '@internationalized/date'
 import type { ChartData, ChartOptions } from 'chart.js'
-import type { RevenuePoint } from '@entities/analytics'
-import { BaseBarChart, useChartTheme } from '@shared/ui/chart'
+import type { AnalyticsPeriodKind, RevenuePoint } from '@entities/analytics'
+import { BaseLineChart, useChartTheme } from '@shared/ui/chart'
 import { useFormats } from '@shared/lib/formats'
 
 const props = defineProps<{
   series: RevenuePoint[]
   earned: number
   periodLabel: string
+  /** Drives the x-axis label format; omitted → the server-formatted label is used. */
+  periodKind?: AnalyticsPeriodKind
   compare: boolean
   loading: boolean
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const formats = useFormats()
 const theme = useChartTheme()
 
-const chartData = computed<ChartData<'bar'>>(() => {
-  const datasets: ChartData<'bar'>['datasets'] = [
-    {
-      label: t('analytics.revenue.thisPeriod'),
-      data: props.series.map((p) => p.current),
-      backgroundColor: theme.value.primary,
-      categoryPercentage: 0.6,
-      barPercentage: 0.85,
-    },
+/**
+ * X-axis label for a bucket. Week → localized weekday + day ("Mon 7"),
+ * month → day-of-month ("7"). Other granularities keep the server label.
+ */
+function labelFor(p: RevenuePoint): string {
+  const d = new Date(p.bucket)
+  if (props.periodKind === 'week') {
+    return new DateFormatter(locale.value, { weekday: 'short', day: 'numeric' }).format(d)
+  }
+  if (props.periodKind === 'month') {
+    return new DateFormatter(locale.value, { day: 'numeric' }).format(d)
+  }
+  return p.label
+}
+
+function lineDataset(
+  label: string,
+  data: number[],
+  color: string,
+): ChartData<'line'>['datasets'][number] {
+  return {
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: color,
+    tension: 0.3,
+    fill: false,
+    pointRadius: 2,
+    pointHoverRadius: 4,
+  }
+}
+
+const chartData = computed<ChartData<'line'>>(() => {
+  const datasets: ChartData<'line'>['datasets'] = [
+    lineDataset(
+      t('analytics.revenue.thisPeriod'),
+      props.series.map((p) => p.current),
+      theme.value.primary,
+    ),
   ]
   if (props.compare) {
-    datasets.push({
-      label: t('analytics.revenue.previous'),
-      data: props.series.map((p) => p.previous),
-      backgroundColor: theme.value.neutralSoft,
-      categoryPercentage: 0.6,
-      barPercentage: 0.85,
-    })
+    datasets.push(
+      lineDataset(
+        t('analytics.revenue.previous'),
+        props.series.map((p) => p.previous),
+        theme.value.neutralSoft,
+      ),
+    )
   }
-  return { labels: props.series.map((p) => p.label), datasets }
+  return { labels: props.series.map(labelFor), datasets }
 })
 
-const options = computed<ChartOptions<'bar'>>(() => ({
+const options = computed<ChartOptions<'line'>>(() => ({
   plugins: {
     tooltip: {
       callbacks: {
@@ -79,7 +112,7 @@ const options = computed<ChartOptions<'bar'>>(() => ({
         </div>
       </div>
 
-      <!-- Bar-shaped placeholder mirroring the chart layout -->
+      <!-- Placeholder mirroring the chart height -->
       <div v-if="loading" class="flex h-56 items-end gap-4 px-2">
         <USkeleton
           v-for="(h, i) in [45, 70, 55, 85, 40, 65, 50]"
@@ -89,7 +122,7 @@ const options = computed<ChartOptions<'bar'>>(() => ({
         />
       </div>
       <div v-else class="h-56">
-        <BaseBarChart :data="chartData" :options="options" />
+        <BaseLineChart :data="chartData" :options="options" />
       </div>
     </div>
   </UCard>

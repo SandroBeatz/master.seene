@@ -26,7 +26,8 @@ export default {
     discard: 'Annuler',
     saveChanges: 'Enregistrer',
     saving: 'Enregistrement…',
-    unsavedChangesConfirm: 'Vous avez des modifications non enregistrées. Quitter sans enregistrer ?',
+    unsavedChangesConfirm:
+      'Vous avez des modifications non enregistrées. Quitter sans enregistrer ?',
     validation: {
       required: 'Ce champ est obligatoire',
       tooLong: 'La valeur est trop longue',
@@ -524,7 +525,8 @@ export default {
     },
     contacts: {
       title: 'Contacts et réseaux',
-      subtitle: 'Comment vos clients peuvent vous joindre. Affiché sur votre page et dans les confirmations.',
+      subtitle:
+        'Comment vos clients peuvent vous joindre. Affiché sur votre page et dans les confirmations.',
       phone: 'Numéros de téléphone',
       phonePlaceholder: 'Saisissez un numéro',
       whatsapp: 'WhatsApp',
@@ -561,7 +563,8 @@ export default {
     },
     workingHours: {
       title: 'Heures de travail',
-      subtitle: 'Votre disponibilité hebdomadaire. Les clients ne peuvent réserver que pendant ces heures.',
+      subtitle:
+        'Votre disponibilité hebdomadaire. Les clients ne peuvent réserver que pendant ces heures.',
       dayOff: 'Jour de repos',
       break: 'Pause',
       addBreak: 'Ajouter une pause',
@@ -647,7 +650,8 @@ export default {
       upgrade: {
         planBadge: 'Forfait gratuit',
         title: 'Passer à Seene Pro',
-        description: 'Services illimités, domaine personnalisé, rappels automatiques et analytique.',
+        description:
+          'Services illimités, domaine personnalisé, rappels automatiques et analytique.',
         button: 'Améliorer',
       },
       plans: {
@@ -737,8 +741,7 @@ export default {
         step2Description:
           'C’est votre dernière chance de conserver votre compte. Aucune annulation possible ensuite.',
         finalConfirmButton: 'Supprimer mon compte',
-        deactivatedToast:
-          'Votre compte a été désactivé et sera supprimé dans 30 jours.',
+        deactivatedToast: 'Votre compte a été désactivé et sera supprimé dans 30 jours.',
         errorToast: 'Impossible de supprimer le compte',
       },
       deactivatedNotice:
@@ -757,13 +760,13 @@ export default {
       currency: 'Devise',
       currencyDescription: "Utilisée pour afficher les prix dans l'application.",
       timeFormat: "Format de l'heure",
-      timeFormatDescription: "Comment les heures sont affichées.",
+      timeFormatDescription: 'Comment les heures sont affichées.',
       timeFormat12: '12 heures',
       timeFormat24: '24 heures',
       dateFormat: 'Format de date',
       dateFormatDescription: 'Comment les dates sont affichées.',
       timeZone: 'Fuseau horaire',
-      timeZoneDescription: "Utilisé pour votre calendrier et vos rendez-vous.",
+      timeZoneDescription: 'Utilisé pour votre calendrier et vos rendez-vous.',
       firstDay: 'Premier jour de la semaine',
       firstDayDescription: 'Le jour où commence votre semaine de calendrier.',
       firstDayMonday: 'Lundi',

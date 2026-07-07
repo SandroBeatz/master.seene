@@ -19,7 +19,17 @@ describe('buildTimeOptions', () => {
 
   it('clamps options to an inclusive [min, max] range', () => {
     const options = buildTimeOptions({ min: '09:00', max: '11:00' })
-    expect(options).toEqual(['09:00', '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00'])
+    expect(options).toEqual([
+      '09:00',
+      '09:15',
+      '09:30',
+      '09:45',
+      '10:00',
+      '10:15',
+      '10:30',
+      '10:45',
+      '11:00',
+    ])
   })
 
   it('keeps an off-grid current value selectable and sorted', () => {

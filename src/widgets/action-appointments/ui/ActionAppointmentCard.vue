@@ -39,13 +39,13 @@ const serviceNames = computed(() =>
 
 const isPast = computed(() => new Date(props.appointment.start_at) < new Date())
 
-const showConfirm = computed(
-  () => props.appointment.status === 'pending',
-)
+const showConfirm = computed(() => props.appointment.status === 'pending')
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-3 rounded-xl border border-default bg-default px-4 py-3">
+  <div
+    class="flex items-center justify-between gap-3 rounded-xl border border-default bg-default px-4 py-3"
+  >
     <div class="min-w-0">
       <p class="truncate text-sm font-medium">{{ clientName }}</p>
       <p class="mt-0.5 truncate text-xs text-muted">{{ timeLabel }} · {{ serviceNames }}</p>

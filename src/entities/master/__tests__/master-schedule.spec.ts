@@ -107,9 +107,7 @@ describe('validateScheduleDay', () => {
   })
 
   it('accepts a well-formed day', () => {
-    expect(
-      validateScheduleDay(day({ breaks: [{ start: '12:00', end: '13:00' }] })),
-    ).toEqual([])
+    expect(validateScheduleDay(day({ breaks: [{ start: '12:00', end: '13:00' }] }))).toEqual([])
   })
 
   it('flags end before start', () => {
@@ -119,14 +117,16 @@ describe('validateScheduleDay', () => {
   })
 
   it('flags a break whose end is before its start', () => {
-    expect(
-      validateScheduleDay(day({ breaks: [{ start: '14:00', end: '13:00' }] })),
-    ).toEqual([{ code: 'breakEndBeforeStart', breakIndex: 0 }])
+    expect(validateScheduleDay(day({ breaks: [{ start: '14:00', end: '13:00' }] }))).toEqual([
+      { code: 'breakEndBeforeStart', breakIndex: 0 },
+    ])
   })
 
   it('flags a break outside working hours', () => {
     expect(
-      validateScheduleDay(day({ start: '10:00', end: '18:00', breaks: [{ start: '18:30', end: '19:00' }] })),
+      validateScheduleDay(
+        day({ start: '10:00', end: '18:00', breaks: [{ start: '18:30', end: '19:00' }] }),
+      ),
     ).toEqual([{ code: 'breakOutsideHours', breakIndex: 0 }])
   })
 

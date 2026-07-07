@@ -149,10 +149,7 @@ const tabsUI = {
             <UIcon :name="card.icon" class="size-6" :class="card.iconClass" />
           </div>
           <div class="min-w-0">
-            <Typography
-              variant="endnote"
-              class="font-semibold uppercase tracking-wider text-muted"
-            >
+            <Typography variant="endnote" class="font-semibold uppercase tracking-wider text-muted">
               {{ card.label }}
             </Typography>
 

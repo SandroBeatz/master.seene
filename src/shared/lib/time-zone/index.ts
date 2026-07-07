@@ -44,10 +44,7 @@ export function toUtcIsoFromZonedDateTime(
   return getUtcDateFromZonedParts(parts, timeZone).toISOString()
 }
 
-export function toUtcIsoFromCalendarDateString(
-  value: string,
-  timeZone = LOCAL_TIME_ZONE,
-): string {
+export function toUtcIsoFromCalendarDateString(value: string, timeZone = LOCAL_TIME_ZONE): string {
   const parts = parseCalendarDateString(value)
 
   if (!parts) return new Date(value).toISOString()
@@ -206,7 +203,10 @@ function formatTimeInputValue(parts: DateTimeParts): string {
   return [String(parts.hour).padStart(2, '0'), String(parts.minute).padStart(2, '0')].join(':')
 }
 
-function getPartValue(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string {
+function getPartValue(
+  parts: Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes,
+): string {
   return parts.find((part) => part.type === type)?.value ?? '0'
 }
 

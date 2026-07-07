@@ -1,5 +1,8 @@
 import { DEFAULT_CURRENCY_CODE, getCurrency } from '@shared/config/currencies'
-import { DEFAULT_DATE_FORMAT as CONFIG_DEFAULT_DATE_FORMAT, isSupportedDateFormat } from '@shared/config/date-formats'
+import {
+  DEFAULT_DATE_FORMAT as CONFIG_DEFAULT_DATE_FORMAT,
+  isSupportedDateFormat,
+} from '@shared/config/date-formats'
 import type {
   AppLanguage,
   BookingDefaultStatus,

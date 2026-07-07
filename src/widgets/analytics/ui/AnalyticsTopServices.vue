@@ -42,11 +42,7 @@ const formats = useFormats()
       </p>
 
       <ol v-else class="space-y-4">
-        <li
-          v-for="(service, index) in services"
-          :key="service.name"
-          class="flex items-start gap-3"
-        >
+        <li v-for="(service, index) in services" :key="service.name" class="flex items-start gap-3">
           <span class="w-4 shrink-0 pt-0.5 text-sm font-medium text-muted">{{ index + 1 }}</span>
           <div class="flex-1 space-y-1.5">
             <div class="flex items-center justify-between gap-2 text-sm">

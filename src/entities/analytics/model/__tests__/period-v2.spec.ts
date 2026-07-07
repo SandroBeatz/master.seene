@@ -154,7 +154,7 @@ describe('periodGranularity', () => {
   it('maps anchored kinds to fixed bucket sizes', () => {
     expect(periodGranularity(day('2026-05-15'))).toBe('hour')
     expect(periodGranularity(week('2026-05-15'))).toBe('day')
-    expect(periodGranularity(month('2026-05-15'))).toBe('week')
+    expect(periodGranularity(month('2026-05-15'))).toBe('day')
     expect(periodGranularity(year('2026-05-15'))).toBe('month')
   })
 

@@ -497,7 +497,8 @@ export default {
       lastName: 'Фамилия',
       lastNamePlaceholder: 'Ми',
       specialization: 'Специализация',
-      specializationHint: 'Выберите всё, что вы предлагаете — отображается тегами на вашей странице.',
+      specializationHint:
+        'Выберите всё, что вы предлагаете — отображается тегами на вашей странице.',
       bio: 'О себе',
       bioPlaceholder: 'Расскажите клиентам о своей работе, стиле и опыте.',
       username: 'Имя пользователя',
@@ -727,8 +728,7 @@ export default {
         step2Description:
           'Это последний шанс сохранить аккаунт. После подтверждения отменить будет нельзя.',
         finalConfirmButton: 'Удалить мой аккаунт',
-        deactivatedToast:
-          'Аккаунт деактивирован и будет удалён через 30 дней.',
+        deactivatedToast: 'Аккаунт деактивирован и будет удалён через 30 дней.',
         errorToast: 'Не удалось удалить аккаунт',
       },
       deactivatedNotice:

@@ -167,8 +167,8 @@ export function buildTimelineLayout(params: {
   }
   const totalHeight = top + bottomPadding
 
-  const ranges = segments.filter((s): s is Extract<TimelineSegment, { kind: 'range' }> =>
-    s.kind === 'range',
+  const ranges = segments.filter(
+    (s): s is Extract<TimelineSegment, { kind: 'range' }> => s.kind === 'range',
   )
 
   const topForMin = (min: number): number | null => {

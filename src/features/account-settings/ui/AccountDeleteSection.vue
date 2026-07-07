@@ -45,7 +45,11 @@ async function onConfirmDelete() {
       .update({ deactivated_at: new Date().toISOString() })
       .eq('user_id', userId)
     if (error) {
-      toast.add({ title: t('settings.account.delete.errorToast'), description: error.message, color: 'error' })
+      toast.add({
+        title: t('settings.account.delete.errorToast'),
+        description: error.message,
+        color: 'error',
+      })
       return
     }
 
@@ -63,8 +67,12 @@ async function onConfirmDelete() {
   <div class="rounded-lg p-4 ring-1 ring-error/30">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex flex-col gap-0.5">
-        <span class="font-semibold text-error">{{ t('settings.account.delete.sectionTitle') }}</span>
-        <span class="text-sm text-muted">{{ t('settings.account.delete.sectionDescription') }}</span>
+        <span class="font-semibold text-error">{{
+          t('settings.account.delete.sectionTitle')
+        }}</span>
+        <span class="text-sm text-muted">{{
+          t('settings.account.delete.sectionDescription')
+        }}</span>
       </div>
       <UButton
         class="shrink-0"
@@ -79,7 +87,11 @@ async function onConfirmDelete() {
 
     <UModal
       v-model:open="isOpen"
-      :title="step === 1 ? t('settings.account.delete.step1Title') : t('settings.account.delete.step2Title')"
+      :title="
+        step === 1
+          ? t('settings.account.delete.step1Title')
+          : t('settings.account.delete.step2Title')
+      "
       :ui="{ footer: 'justify-end' }"
     >
       <template #body>
@@ -109,7 +121,12 @@ async function onConfirmDelete() {
         <UButton color="neutral" variant="outline" @click="close">
           {{ t('common.cancel') }}
         </UButton>
-        <UButton v-if="step === 1" color="error" :disabled="!usernameMatches" @click="goToFinalStep">
+        <UButton
+          v-if="step === 1"
+          color="error"
+          :disabled="!usernameMatches"
+          @click="goToFinalStep"
+        >
           {{ t('settings.account.delete.continueButton') }}
         </UButton>
         <UButton v-else color="error" :loading="isLoading" @click="onConfirmDelete">

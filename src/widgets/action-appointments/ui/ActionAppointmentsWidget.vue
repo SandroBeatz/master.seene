@@ -88,7 +88,10 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
       {{ t('home.actionAppointments.title') }}
     </p>
 
-    <div v-if="!appointments?.length" class="flex items-center gap-2 rounded-xl border border-dashed border-default px-4 py-6 text-center justify-center">
+    <div
+      v-if="!appointments?.length"
+      class="flex items-center gap-2 rounded-xl border border-dashed border-default px-4 py-6 text-center justify-center"
+    >
       <UIcon name="i-lucide-check-circle" class="size-5 text-muted" />
       <p class="text-sm text-muted">{{ t('home.actionAppointments.empty') }}</p>
     </div>

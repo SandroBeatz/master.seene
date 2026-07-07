@@ -2,10 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@entities/session'
-import {
-  useMasterPreferencesQuery,
-  useUpdateMasterBookingSettingsMutation,
-} from '@entities/master'
+import { useMasterPreferencesQuery, useUpdateMasterBookingSettingsMutation } from '@entities/master'
 import { useDirtyForm } from '@shared/lib/forms'
 import { FormSaveBar, Typography } from '@shared/ui'
 import { useBookingSettings } from '../model/use-booking-settings'
@@ -41,7 +38,10 @@ const BUFFER_VALUES = [0, 5, 10, 15, 20, 30, 45, 60]
 const bufferItems = computed(() =>
   BUFFER_VALUES.map((value) => ({
     value,
-    label: value === 0 ? t('settings.booking.bufferNone') : t('settings.booking.minutesShort', { count: value }),
+    label:
+      value === 0
+        ? t('settings.booking.bufferNone')
+        : t('settings.booking.minutesShort', { count: value }),
   })),
 )
 

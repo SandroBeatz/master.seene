@@ -191,7 +191,11 @@ const hostUI = {
                 :class="{ 'opacity-50': !pt.is_active }"
                 :style="{ backgroundColor: `${pt.color}1a` }"
               >
-                <UIcon name="i-lucide-circle-dollar-sign" class="size-5" :style="{ color: pt.color }" />
+                <UIcon
+                  name="i-lucide-circle-dollar-sign"
+                  class="size-5"
+                  :style="{ color: pt.color }"
+                />
               </div>
               <span
                 class="min-w-0 flex-1 truncate text-sm font-bold transition-opacity"
@@ -208,7 +212,10 @@ const hostUI = {
               >
                 <UIcon :name="methodIcon(pt)" class="size-5 text-muted" />
               </div>
-              <div class="min-w-0 flex-1 transition-opacity" :class="{ 'opacity-50': !pt.is_active }">
+              <div
+                class="min-w-0 flex-1 transition-opacity"
+                :class="{ 'opacity-50': !pt.is_active }"
+              >
                 <p class="truncate text-sm font-bold">{{ methodName(pt) }}</p>
                 <p class="truncate text-xs text-muted">{{ methodSubtitle(pt) }}</p>
               </div>

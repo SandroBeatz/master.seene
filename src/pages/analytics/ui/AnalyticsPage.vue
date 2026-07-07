@@ -97,60 +97,65 @@ const COMPARE_KEYS: Record<AnalyticsPeriodKind, string> = {
   year: 'lastYear',
   custom: 'prevPeriod',
 }
-const compareLabel = computed(() =>
-  t(`analytics.compareVs.${COMPARE_KEYS[period.value.kind]}`),
-)
+const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period.value.kind]}`))
 </script>
 
 <template>
-  <UPage :ui="{ root: 'px-12 max-w-7xl mx-auto' }" as="main">
-    <UPageHeader
-      :title="t('analytics.title')"
-      :description="t('analytics.description')"
-      :ui="{ root: 'border-none' }"
-    />
-    <UPageBody>
-      <div class="space-y-6">
-        <AnalyticsToolbar v-model="period" v-model:compare="compare" />
-        <!-- While a new period loads, previous data stays visible but dimmed. -->
-        <div
-          class="space-y-6 transition-opacity duration-200"
-          :class="{ 'pointer-events-none opacity-50': isPlaceholderData }"
-          :aria-busy="isPlaceholderData"
-        >
-          <AnalyticsStatCards
-            :data="data"
-            :loading="isPending"
-            :compare="compare"
-            :compare-label="compareLabel"
-          />
-          <AnalyticsRevenueChart
-            :series="data?.revenue_series ?? []"
-            :earned="data?.current.earned ?? 0"
-            :period-label="periodLabel"
-            :compare="compare"
-            :loading="isPending"
-          />
-        </div>
-
-        <!-- Fixed-window widgets: unaffected by the period filter, so they sit
-             outside the dimming wrapper and never refetch on period switch. -->
-        <div class="grid gap-6 lg:grid-cols-2">
-          <AnalyticsTopServices
-            :services="widgets?.top_services ?? []"
-            :loading="widgetsPending"
-          />
-          <div class="space-y-6">
-            <AnalyticsClientMix :mix="widgets?.client_mix ?? EMPTY_MIX" :loading="widgetsPending" />
-            <AnalyticsBusiestDays
-              :days="widgets?.busiest_days ?? EMPTY_DAYS"
-              :peak-from="widgets?.peak_hour_from ?? null"
-              :peak-to="widgets?.peak_hour_to ?? null"
-              :loading="widgetsPending"
+  <UTheme
+    :ui="{
+      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
+      pageHeader: { root: 'border-none pb-2' },
+    }"
+  >
+    <UPage as="main">
+      <UPageHeader :title="t('analytics.title')" :description="t('analytics.description')" />
+      <UPageBody>
+        <div class="space-y-6">
+          <AnalyticsToolbar v-model="period" v-model:compare="compare" />
+          <!-- While a new period loads, previous data stays visible but dimmed. -->
+          <div
+            class="space-y-6 transition-opacity duration-200"
+            :class="{ 'pointer-events-none opacity-50': isPlaceholderData }"
+            :aria-busy="isPlaceholderData"
+          >
+            <AnalyticsStatCards
+              :data="data"
+              :loading="isPending"
+              :compare="compare"
+              :compare-label="compareLabel"
+            />
+            <AnalyticsRevenueChart
+              :series="data?.revenue_series ?? []"
+              :earned="data?.current.earned ?? 0"
+              :period-label="periodLabel"
+              :period-kind="period.kind"
+              :compare="compare"
+              :loading="isPending"
             />
           </div>
+
+          <!-- Fixed-window widgets: unaffected by the period filter, so they sit
+             outside the dimming wrapper and never refetch on period switch. -->
+          <div class="grid gap-6 lg:grid-cols-2">
+            <AnalyticsTopServices
+              :services="widgets?.top_services ?? []"
+              :loading="widgetsPending"
+            />
+            <div class="space-y-6">
+              <AnalyticsClientMix
+                :mix="widgets?.client_mix ?? EMPTY_MIX"
+                :loading="widgetsPending"
+              />
+              <AnalyticsBusiestDays
+                :days="widgets?.busiest_days ?? EMPTY_DAYS"
+                :peak-from="widgets?.peak_hour_from ?? null"
+                :peak-to="widgets?.peak_hour_to ?? null"
+                :loading="widgetsPending"
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    </UPageBody>
-  </UPage>
+      </UPageBody>
+    </UPage>
+  </UTheme>
 </template>

@@ -67,7 +67,11 @@ const needsDecision = computed(
       .sort(byStartAsc) ?? [],
 )
 const toFinish = computed(
-  () => appointments.value?.filter((a) => a.status !== 'pending').slice().sort(byStartAsc) ?? [],
+  () =>
+    appointments.value
+      ?.filter((a) => a.status !== 'pending')
+      .slice()
+      .sort(byStartAsc) ?? [],
 )
 
 const sections = computed(() =>
@@ -349,116 +353,116 @@ const cardUI = {
             @click="openPreview(appt)"
             @keydown.enter="openPreview(appt)"
           >
-          <div class="flex min-w-20 shrink-0 items-stretch gap-4">
-            <span
-              class="w-1 rounded-full"
-              :class="accentBarClass(appt.status)"
-              :style="accentBarStyle(appt)"
-            />
-            <div class="flex flex-col justify-center">
-              <Typography variant="h6" class="font-bold text-highlighted">
-                {{ formatTime(appt.start_at) }}
-              </Typography>
-              <Typography
-                variant="endnote"
-                class="font-semibold"
-                :class="isToday(appt.start_at) ? accentTextClass(appt.status) : 'text-muted'"
-              >
-                {{ dateLabel(appt.start_at) }}
-              </Typography>
-              <Typography variant="endnote" class="font-semibold text-dimmed mt-1">
-                {{ t('home.nextUp.minutesLabel', { n: appt.duration }) }}
-              </Typography>
-            </div>
-          </div>
-
-          <div class="flex min-w-0 flex-1 items-center gap-4">
-            <UAvatar :alt="getClientName(appt)" size="2xl" class="text-sm shrink-0" />
-
-            <div class="min-w-0 flex-1">
-              <Typography variant="caption" class="font-semibold text-highlighted">
-                {{ getClientName(appt) }}
-              </Typography>
-              <Typography variant="endnote" class="text-muted">
-                {{ getServiceNames(appt) }}
-              </Typography>
-              <div class="flex flex-wrap items-center gap-2 pt-1.5">
-                <UBadge v-if="appt.status === 'pending'" color="warning" variant="soft" size="sm">
-                  {{ t('home.nextUp.statusPending') }}
-                </UBadge>
-                <UBadge v-else color="secondary" variant="soft" size="sm">
-                  {{ t('home.nextUp.statusToFinish') }}
-                </UBadge>
-                <UTooltip v-if="isOnline(appt)" :text="t('home.nextUp.badgeOnlineHint')">
-                  <UBadge color="info" variant="soft" size="sm" leading-icon="i-lucide-globe">
-                    {{ t('home.nextUp.badgeOnline') }}
-                  </UBadge>
-                </UTooltip>
-                <Typography
-                  v-if="appt.status === 'pending' && slotEnded(appt)"
-                  variant="endnote"
-                  class="font-medium text-error"
-                >
-                  {{ t('home.nextUp.slotPassed') }}
+            <div class="flex min-w-20 shrink-0 items-stretch gap-4">
+              <span
+                class="w-1 rounded-full"
+                :class="accentBarClass(appt.status)"
+                :style="accentBarStyle(appt)"
+              />
+              <div class="flex flex-col justify-center">
+                <Typography variant="h6" class="font-bold text-highlighted">
+                  {{ formatTime(appt.start_at) }}
                 </Typography>
                 <Typography
-                  v-else-if="appt.status === 'pending' && isOnline(appt)"
                   variant="endnote"
-                  class="font-medium text-warning"
+                  class="font-semibold"
+                  :class="isToday(appt.start_at) ? accentTextClass(appt.status) : 'text-muted'"
                 >
-                  {{ t('home.nextUp.waitingFor', { time: waitingLabel(appt.created_at) }) }}
+                  {{ dateLabel(appt.start_at) }}
+                </Typography>
+                <Typography variant="endnote" class="font-semibold text-dimmed mt-1">
+                  {{ t('home.nextUp.minutesLabel', { n: appt.duration }) }}
                 </Typography>
               </div>
             </div>
-          </div>
 
-          <Typography class="shrink-0 font-bold text-highlighted">
-            {{ formats.price(appt.price) }}
-          </Typography>
+            <div class="flex min-w-0 flex-1 items-center gap-4">
+              <UAvatar :alt="getClientName(appt)" size="2xl" class="text-sm shrink-0" />
 
-          <div v-if="appt.status === 'pending'" class="flex shrink-0 gap-2" @click.stop>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="outline"
-              leading-icon="i-lucide-x"
-              :loading="decliningId === appt.id"
-              @click="handleDecline(appt)"
-            >
-              {{ t('home.nextUp.decline') }}
-            </UButton>
-            <UButton
-              size="sm"
-              color="primary"
-              :loading="confirmingId === appt.id"
-              @click="handleConfirm(appt)"
-            >
-              {{ t('home.nextUp.confirm') }}
-            </UButton>
-          </div>
+              <div class="min-w-0 flex-1">
+                <Typography variant="caption" class="font-semibold text-highlighted">
+                  {{ getClientName(appt) }}
+                </Typography>
+                <Typography variant="endnote" class="text-muted">
+                  {{ getServiceNames(appt) }}
+                </Typography>
+                <div class="flex flex-wrap items-center gap-2 pt-1.5">
+                  <UBadge v-if="appt.status === 'pending'" color="warning" variant="soft" size="sm">
+                    {{ t('home.nextUp.statusPending') }}
+                  </UBadge>
+                  <UBadge v-else color="secondary" variant="soft" size="sm">
+                    {{ t('home.nextUp.statusToFinish') }}
+                  </UBadge>
+                  <UTooltip v-if="isOnline(appt)" :text="t('home.nextUp.badgeOnlineHint')">
+                    <UBadge color="info" variant="soft" size="sm" leading-icon="i-lucide-globe">
+                      {{ t('home.nextUp.badgeOnline') }}
+                    </UBadge>
+                  </UTooltip>
+                  <Typography
+                    v-if="appt.status === 'pending' && slotEnded(appt)"
+                    variant="endnote"
+                    class="font-medium text-error"
+                  >
+                    {{ t('home.nextUp.slotPassed') }}
+                  </Typography>
+                  <Typography
+                    v-else-if="appt.status === 'pending' && isOnline(appt)"
+                    variant="endnote"
+                    class="font-medium text-warning"
+                  >
+                    {{ t('home.nextUp.waitingFor', { time: waitingLabel(appt.created_at) }) }}
+                  </Typography>
+                </div>
+              </div>
+            </div>
 
-          <div v-else class="flex shrink-0 gap-2" @click.stop>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="ghost"
-              leading-icon="i-lucide-user-x"
-              :loading="markingNoShowId === appt.id"
-              @click="handleNoShow(appt)"
-            >
-              {{ t('home.nextUp.noShow') }}
-            </UButton>
-            <UButton
-              size="sm"
-              color="secondary"
-              variant="soft"
-              leading-icon="i-lucide-badge-check"
-              @click="handleComplete(appt)"
-            >
-              {{ t('home.nextUp.complete') }}
-            </UButton>
+            <Typography class="shrink-0 font-bold text-highlighted">
+              {{ formats.price(appt.price) }}
+            </Typography>
+
+            <div v-if="appt.status === 'pending'" class="flex shrink-0 gap-2" @click.stop>
+              <UButton
+                size="sm"
+                color="neutral"
+                variant="outline"
+                leading-icon="i-lucide-x"
+                :loading="decliningId === appt.id"
+                @click="handleDecline(appt)"
+              >
+                {{ t('home.nextUp.decline') }}
+              </UButton>
+              <UButton
+                size="sm"
+                color="primary"
+                :loading="confirmingId === appt.id"
+                @click="handleConfirm(appt)"
+              >
+                {{ t('home.nextUp.confirm') }}
+              </UButton>
+            </div>
+
+            <div v-else class="flex shrink-0 gap-2" @click.stop>
+              <UButton
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                leading-icon="i-lucide-user-x"
+                :loading="markingNoShowId === appt.id"
+                @click="handleNoShow(appt)"
+              >
+                {{ t('home.nextUp.noShow') }}
+              </UButton>
+              <UButton
+                size="sm"
+                color="secondary"
+                variant="soft"
+                leading-icon="i-lucide-badge-check"
+                @click="handleComplete(appt)"
+              >
+                {{ t('home.nextUp.complete') }}
+              </UButton>
+            </div>
           </div>
-        </div>
         </UCard>
       </section>
     </div>

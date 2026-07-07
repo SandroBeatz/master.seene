@@ -101,7 +101,10 @@ describe('shiftRange / rangeDays', () => {
 
   it('is symmetric: back then forward returns the original range', () => {
     const r = { start: new CalendarDate(2026, 6, 10), end: new CalendarDate(2026, 6, 19) }
-    expect(iso(shiftRange(shiftRange(r, -1), 1))).toEqual({ start: '2026-06-10', end: '2026-06-19' })
+    expect(iso(shiftRange(shiftRange(r, -1), 1))).toEqual({
+      start: '2026-06-10',
+      end: '2026-06-19',
+    })
   })
 })
 

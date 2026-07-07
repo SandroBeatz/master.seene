@@ -42,8 +42,8 @@ function mountWidget(over: { compare?: boolean; loading?: boolean } = {}) {
   })
 }
 
-function chartData(wrapper: ReturnType<typeof mountWidget>): ChartData<'bar'> {
-  return wrapper.getComponent({ name: 'BaseBarChart' }).props('data')
+function chartData(wrapper: ReturnType<typeof mountWidget>): ChartData<'line'> {
+  return wrapper.getComponent({ name: 'BaseLineChart' }).props('data')
 }
 
 describe('AnalyticsRevenueChart', () => {
@@ -52,14 +52,14 @@ describe('AnalyticsRevenueChart', () => {
     expect(data.labels).toEqual(['Mon', 'Tue', 'Wed'])
     expect(data.datasets).toHaveLength(1)
     expect(data.datasets[0]!.data).toEqual([1000, 0, 2500])
-    expect(data.datasets[0]!.backgroundColor).toBe(MOCK_THEME.primary)
+    expect(data.datasets[0]!.borderColor).toBe(MOCK_THEME.primary)
   })
 
   it('compare on → adds the previous-period dataset', () => {
     const data = chartData(mountWidget({ compare: true }))
     expect(data.datasets).toHaveLength(2)
     expect(data.datasets[1]!.data).toEqual([800, 1200, 0])
-    expect(data.datasets[1]!.backgroundColor).toBe(MOCK_THEME.neutralSoft)
+    expect(data.datasets[1]!.borderColor).toBe(MOCK_THEME.neutralSoft)
   })
 
   it('shows the earned total and the period caption', () => {

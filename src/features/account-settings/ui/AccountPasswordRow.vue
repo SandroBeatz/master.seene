@@ -37,10 +37,12 @@ watch(isOpen, (open) => {
 
 const schema = computed(() =>
   Joi.object({
-    currentPassword: Joi.string().required().messages({
-      'string.empty': t('auth.validation.passwordRequired'),
-      'any.required': t('auth.validation.passwordRequired'),
-    }),
+    currentPassword: Joi.string()
+      .required()
+      .messages({
+        'string.empty': t('auth.validation.passwordRequired'),
+        'any.required': t('auth.validation.passwordRequired'),
+      }),
     newPassword: Joi.string()
       .min(8)
       .required()
@@ -79,7 +81,11 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
 
     const { error } = await supabase.auth.updateUser({ password: event.data.newPassword })
     if (error) {
-      toast.add({ title: t('settings.account.password.errorToast'), description: error.message, color: 'error' })
+      toast.add({
+        title: t('settings.account.password.errorToast'),
+        description: error.message,
+        color: 'error',
+      })
       return
     }
 
@@ -119,13 +125,25 @@ function submitForm() {
     >
       <template #body>
         <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-          <UFormField :label="t('settings.account.password.currentPasswordLabel')" name="currentPassword" required>
+          <UFormField
+            :label="t('settings.account.password.currentPasswordLabel')"
+            name="currentPassword"
+            required
+          >
             <UInput v-model="state.currentPassword" type="password" class="w-full" />
           </UFormField>
-          <UFormField :label="t('settings.account.password.newPasswordLabel')" name="newPassword" required>
+          <UFormField
+            :label="t('settings.account.password.newPasswordLabel')"
+            name="newPassword"
+            required
+          >
             <UInput v-model="state.newPassword" type="password" class="w-full" />
           </UFormField>
-          <UFormField :label="t('settings.account.password.confirmPasswordLabel')" name="confirmPassword" required>
+          <UFormField
+            :label="t('settings.account.password.confirmPasswordLabel')"
+            name="confirmPassword"
+            required
+          >
             <UInput v-model="state.confirmPassword" type="password" class="w-full" />
           </UFormField>
         </UForm>

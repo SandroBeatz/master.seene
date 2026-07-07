@@ -29,11 +29,15 @@ function onChoosePro() {
         <!-- Free -->
         <div class="flex flex-col gap-4 rounded-xl p-5 ring-1 ring-default">
           <div class="flex flex-col gap-1">
-            <span class="font-bold text-highlighted">{{ t('settings.account.plans.free.name') }}</span>
+            <span class="font-bold text-highlighted">{{
+              t('settings.account.plans.free.name')
+            }}</span>
             <span class="text-sm text-muted">{{ t('settings.account.plans.free.tagline') }}</span>
           </div>
           <div class="flex items-baseline gap-1.5">
-            <span class="text-2xl font-bold text-highlighted">{{ t('settings.account.plans.free.price') }}</span>
+            <span class="text-2xl font-bold text-highlighted">{{
+              t('settings.account.plans.free.price')
+            }}</span>
             <span class="text-sm text-muted">{{ t('settings.account.plans.free.priceNote') }}</span>
           </div>
           <ul class="flex flex-1 flex-col gap-2">
@@ -49,16 +53,13 @@ function onChoosePro() {
 
         <!-- Pro -->
         <div class="relative flex flex-col gap-4 rounded-xl p-5 ring-2 ring-primary">
-          <UBadge
-            class="absolute -top-2.5 right-4"
-            color="primary"
-            variant="solid"
-            size="sm"
-          >
+          <UBadge class="absolute -top-2.5 right-4" color="primary" variant="solid" size="sm">
             {{ t('settings.account.plans.pro.badge') }}
           </UBadge>
           <div class="flex flex-col gap-1">
-            <span class="font-bold text-highlighted">{{ t('settings.account.plans.pro.name') }}</span>
+            <span class="font-bold text-highlighted">{{
+              t('settings.account.plans.pro.name')
+            }}</span>
             <span class="text-sm text-muted">{{ t('settings.account.plans.pro.tagline') }}</span>
           </div>
           <div class="flex items-baseline gap-1.5">

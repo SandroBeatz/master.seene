@@ -1,10 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
-import {
-  DAY_ORDER,
-  normalizeSchedule,
-  toMinutes,
-  validateSchedule,
-} from '@entities/master'
+import { DAY_ORDER, normalizeSchedule, toMinutes, validateSchedule } from '@entities/master'
 import type {
   MasterSchedule,
   MasterScheduleDayKey,
@@ -41,7 +36,12 @@ export interface UseWorkingHours {
   setEnabled: (key: MasterScheduleDayKey, enabled: boolean) => void
   setStart: (key: MasterScheduleDayKey, value: string) => void
   setEnd: (key: MasterScheduleDayKey, value: string) => void
-  setBreak: (key: MasterScheduleDayKey, index: number, field: 'start' | 'end', value: string) => void
+  setBreak: (
+    key: MasterScheduleDayKey,
+    index: number,
+    field: 'start' | 'end',
+    value: string,
+  ) => void
   /** Append a break to a day, defaulting to 13:00–14:00 clamped into its hours. */
   addBreak: (key: MasterScheduleDayKey) => void
   removeBreak: (key: MasterScheduleDayKey, index: number) => void

@@ -318,11 +318,7 @@ const hostUI = {
 
           <!-- Group: services as a dotted list -->
           <ul v-if="block.isGroup" class="mt-1 space-y-0.5">
-            <li
-              v-for="(s, i) in block.serviceList"
-              :key="i"
-              class="flex items-center gap-1.5"
-            >
+            <li v-for="(s, i) in block.serviceList" :key="i" class="flex items-center gap-1.5">
               <span class="size-2 rounded-full shrink-0" :style="{ backgroundColor: s.color }" />
               <span class="text-[10px] text-muted truncate leading-tight">{{ s.name }}</span>
             </li>

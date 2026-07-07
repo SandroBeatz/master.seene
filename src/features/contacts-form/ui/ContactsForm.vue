@@ -309,10 +309,7 @@ const hostUI = {
         </UFormField>
 
         <div class="grid grid-cols-3 gap-3">
-          <UFormField
-            :label="t('settings.contacts.address.street')"
-            class="col-span-2"
-          >
+          <UFormField :label="t('settings.contacts.address.street')" class="col-span-2">
             <AddressAutocomplete
               v-model="state.address"
               :placeholder="t('settings.contacts.address.streetPlaceholder')"

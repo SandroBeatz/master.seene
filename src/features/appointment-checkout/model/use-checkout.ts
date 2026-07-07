@@ -10,9 +10,7 @@ export function useCheckout(
   paymentTypes: PaymentType[],
 ) {
   const serviceAmounts = ref<number[]>(
-    services.length > 0
-      ? services.map((s) => s.price)
-      : [appointment.price ?? 0],
+    services.length > 0 ? services.map((s) => s.price) : [appointment.price ?? 0],
   )
 
   const total = computed(() => serviceAmounts.value.reduce((sum, a) => sum + a, 0))

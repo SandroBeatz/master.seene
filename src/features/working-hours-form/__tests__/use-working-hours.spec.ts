@@ -50,7 +50,12 @@ describe('useWorkingHours', () => {
   it('copies a day onto enabled days only, leaving the source and days off untouched', () => {
     const schedule: MasterSchedule = {
       days: {
-        monday: { enabled: true, start: '09:00', end: '17:00', breaks: [{ start: '12:00', end: '13:00' }] },
+        monday: {
+          enabled: true,
+          start: '09:00',
+          end: '17:00',
+          breaks: [{ start: '12:00', end: '13:00' }],
+        },
         tuesday: { enabled: true, start: '10:00', end: '19:00', breaks: [] },
         saturday: { enabled: false, start: '11:00', end: '15:00', breaks: [] },
       },
@@ -71,7 +76,11 @@ describe('useWorkingHours', () => {
     wh.state.value.days.monday.breaks[0]!.start = '11:00'
     expect(wh.state.value.days.tuesday.breaks[0]?.start).toBe('12:00')
     // Days off are left alone.
-    expect(wh.state.value.days.saturday).toMatchObject({ enabled: false, start: '11:00', end: '15:00' })
+    expect(wh.state.value.days.saturday).toMatchObject({
+      enabled: false,
+      start: '11:00',
+      end: '15:00',
+    })
   })
 
   it('exposes setters that mutate the bound state', () => {

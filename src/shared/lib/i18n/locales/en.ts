@@ -732,8 +732,7 @@ export default {
         step2Description:
           'This is your last chance to keep your account. There’s no undo after this.',
         finalConfirmButton: 'Delete my account',
-        deactivatedToast:
-          'Your account has been deactivated and will be deleted in 30 days.',
+        deactivatedToast: 'Your account has been deactivated and will be deleted in 30 days.',
         errorToast: 'Could not delete account',
       },
       deactivatedNotice:

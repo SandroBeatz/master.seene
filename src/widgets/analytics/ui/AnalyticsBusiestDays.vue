@@ -18,9 +18,7 @@ const theme = useChartTheme()
 
 const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
-const weekdayLabels = computed(() =>
-  WEEKDAY_KEYS.map((key) => t(`analytics.weekdaysShort.${key}`)),
-)
+const weekdayLabels = computed(() => WEEKDAY_KEYS.map((key) => t(`analytics.weekdaysShort.${key}`)))
 
 const chartData = computed<ChartData<'bar'>>(() => {
   const max = Math.max(...props.days, 0)
