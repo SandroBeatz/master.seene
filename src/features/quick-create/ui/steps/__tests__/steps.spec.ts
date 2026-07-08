@@ -3,9 +3,11 @@ import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import { CalendarDate } from '@internationalized/date'
+import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import { formatsPlugin } from '@shared/lib/formats'
 import en from '@shared/lib/i18n/locales/en'
+import StepClient from '../StepClient.vue'
 import StepServices from '../StepServices.vue'
 import StepDateTime from '../StepDateTime.vue'
 import StepConfirm from '../StepConfirm.vue'
@@ -39,7 +41,81 @@ function makeService(over: Partial<Service> = {}): Service {
   }
 }
 
+function makeClient(over: Partial<Client> = {}): Client {
+  return {
+    id: 'c1',
+    user_id: 'u1',
+    first_name: 'Anna',
+    last_name: 'Petrova',
+    phone: '+1 555 0100',
+    email: null,
+    birthday: null,
+    notes: null,
+    source: 'manual',
+    created_at: '',
+    updated_at: '',
+    ...over,
+  }
+}
+
+describe('StepClient', () => {
+  it('renders clients with name, phone and initials and selects a row', async () => {
+    const wrapper = mount(StepClient, {
+      props: { modelValue: null, clients: [makeClient()] },
+      global: makeGlobal(),
+    })
+
+    expect(wrapper.text()).toContain('Anna Petrova')
+    expect(wrapper.text()).toContain('+1 555 0100')
+    expect(wrapper.text()).toContain('AP')
+
+    await wrapper.find('button[aria-pressed="false"]').trigger('click')
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['c1'])
+  })
+
+  it('filters by phone and emits addClient from the plus button', async () => {
+    const wrapper = mount(StepClient, {
+      props: {
+        modelValue: null,
+        clients: [makeClient(), makeClient({ id: 'c2', first_name: 'Marie', phone: '+33 123' })],
+      },
+      global: makeGlobal(),
+    })
+
+    await wrapper.find('input').setValue('+33')
+    expect(wrapper.text()).toContain('Marie Petrova')
+    expect(wrapper.text()).not.toContain('Anna Petrova')
+
+    await wrapper.find(`button[aria-label="${en.quickCreate.appointment.client.add}"]`).trigger('click')
+    expect(wrapper.emitted('addClient')).toHaveLength(1)
+  })
+})
+
 describe('StepServices', () => {
+  it('renders service details and color and supports multiple selection', async () => {
+    const wrapper = mount(StepServices, {
+      props: {
+        modelValue: ['s1'],
+        services: [
+          makeService({ color: '#ef4444' }),
+          makeService({ id: 's2', name: 'Color', color: '#3b82f6' }),
+        ],
+        totalDuration: 0,
+        totalPrice: null,
+      },
+      global: makeGlobal(),
+    })
+
+    expect(wrapper.text()).toContain('Haircut')
+    expect(wrapper.text()).toContain('1,000')
+    expect(wrapper.findAll('button[aria-pressed]')[0]!.attributes('style')).toContain(
+      'border-left-color',
+    )
+
+    await wrapper.find('button[aria-pressed="false"]').trigger('click')
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([['s1', 's2']])
+  })
+
   it('shows the running duration/price total once services are selected', () => {
     const wrapper = mount(StepServices, {
       props: {
@@ -59,7 +135,7 @@ describe('StepServices', () => {
       props: { modelValue: [], services: [makeService()], totalDuration: 0, totalPrice: null },
       global: makeGlobal(),
     })
-    expect(wrapper.text()).not.toContain('1,000')
+    expect(wrapper.find('[data-testid="services-total"]').exists()).toBe(false)
   })
 })
 

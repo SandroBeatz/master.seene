@@ -139,12 +139,24 @@ export default {
       title: 'Новая запись',
       next: 'Далее',
       create: 'Создать',
+      steps: {
+        client: 'Выберите клиента',
+        services: 'Выберите услуги',
+        dateTime: 'Выберите дату и время',
+        confirm: 'Проверьте запись',
+      },
       client: {
         placeholder: 'Выберите клиента',
+        searchPlaceholder: 'Поиск по имени или телефону',
         add: 'Добавить клиента',
+        empty: 'Клиентов пока нет',
+        noResults: 'Клиенты не найдены',
       },
       services: {
         placeholder: 'Выберите услуги',
+        searchPlaceholder: 'Поиск услуг',
+        empty: 'Услуг пока нет',
+        noResults: 'Услуги не найдены',
       },
       dateTime: {
         pickDate: 'Выберите дату, чтобы увидеть свободное время.',

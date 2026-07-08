@@ -141,12 +141,24 @@ export default {
       title: 'New appointment',
       next: 'Next',
       create: 'Create',
+      steps: {
+        client: 'Choose a client',
+        services: 'Choose services',
+        dateTime: 'Choose a date and time',
+        confirm: 'Review appointment',
+      },
       client: {
         placeholder: 'Select a client',
+        searchPlaceholder: 'Search by name or phone',
         add: 'Add client',
+        empty: 'No clients yet',
+        noResults: 'No clients found',
       },
       services: {
         placeholder: 'Select services',
+        searchPlaceholder: 'Search services',
+        empty: 'No services yet',
+        noResults: 'No services found',
       },
       dateTime: {
         pickDate: 'Pick a date to see free time.',

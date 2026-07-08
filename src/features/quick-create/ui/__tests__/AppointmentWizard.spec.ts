@@ -124,11 +124,10 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     const wrapper = mountWizard('2020-01-06T10:00:00Z')
     const next = en.quickCreate.appointment.next
 
-    // Step 1: Next disabled until a client is chosen.
-    expect(button(wrapper, next)!.attributes('disabled')).toBeDefined()
+    // Step 1 has no footer navigation and advances immediately on selection.
+    expect(button(wrapper, next)).toBeUndefined()
+    expect(button(wrapper, en.quickCreate.actions.back)).toBeUndefined()
     await wrapper.findComponent(StepClient).vm.$emit('update:modelValue', 'c1')
-    expect(button(wrapper, next)!.attributes('disabled')).toBeUndefined()
-    await button(wrapper, next)!.trigger('click')
 
     // Step 2: Next disabled with 0 services.
     expect(wrapper.findComponent(StepServices).exists()).toBe(true)
@@ -161,13 +160,14 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     const next = en.quickCreate.appointment.next
 
     await wrapper.findComponent(StepClient).vm.$emit('update:modelValue', 'c1')
-    await button(wrapper, next)!.trigger('click')
     await wrapper.findComponent(StepServices).vm.$emit('update:modelValue', ['s1'])
     await button(wrapper, next)!.trigger('click')
     expect(wrapper.findComponent(StepConfirm).exists()).toBe(true)
 
     // Back from Confirm skips Step 3 → Step 2 with the service still selected.
-    await button(wrapper, en.quickCreate.actions.back)!.trigger('click')
+    await wrapper
+      .find(`button[aria-label="${en.quickCreate.actions.back}"]`)
+      .trigger('click')
     const services = wrapper.findComponent(StepServices)
     expect(services.exists()).toBe(true)
     expect(services.props('modelValue')).toEqual(['s1'])

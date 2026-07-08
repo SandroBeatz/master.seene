@@ -169,6 +169,12 @@ const timeLabel = computed(() =>
   state.slotMinutes == null ? '' : formats.time(minutesToTimeInput(state.slotMinutes)),
 )
 const serviceNames = computed(() => selectedServices.value.map((service) => service.name))
+const stepTitle = computed(() => {
+  if (state.step === 1) return t('quickCreate.appointment.steps.client')
+  if (state.step === 2) return t('quickCreate.appointment.steps.services')
+  if (state.step === 3) return t('quickCreate.appointment.steps.dateTime')
+  return t('quickCreate.appointment.steps.confirm')
+})
 
 // --- Stepper ---
 const stepperItems = [{ value: 1 }, { value: 2 }, { value: 3 }, { value: 4 }]
@@ -178,8 +184,12 @@ function onStepperNav(value: unknown) {
 }
 
 function onBack() {
-  if (state.step === 1) emit('back')
-  else wizard.back()
+  wizard.back()
+}
+
+function onClientSelect(clientId: string | null | undefined) {
+  state.clientId = clientId ?? null
+  if (clientId) wizard.next()
 }
 
 // --- Add client in-flow (auto-select + advance) ---
@@ -223,6 +233,25 @@ async function create() {
 
 <template>
   <div class="space-y-5">
+    <div class="flex items-start gap-3">
+      <UButton
+        v-if="state.step > 1"
+        icon="i-lucide-arrow-left"
+        color="neutral"
+        variant="ghost"
+        square
+        :aria-label="t('quickCreate.actions.back')"
+        class="mt-0.5 shrink-0"
+        @click="onBack"
+      />
+      <div class="min-w-0">
+        <h2 class="text-lg font-semibold text-highlighted">
+          {{ t('quickCreate.appointment.title') }}
+        </h2>
+        <p class="mt-0.5 text-sm text-muted">{{ stepTitle }}</p>
+      </div>
+    </div>
+
     <UStepper
       :items="stepperItems"
       value-key="value"
@@ -233,8 +262,9 @@ async function create() {
 
     <StepClient
       v-if="state.step === 1"
-      v-model="state.clientId"
+      :model-value="state.clientId"
       :clients="clients ?? []"
+      @update:model-value="onClientSelect"
       @add-client="isClientFormOpen = true"
     />
 
@@ -270,11 +300,7 @@ async function create() {
       @price-input="state.priceOverridden = true"
     />
 
-    <div class="flex items-center justify-between gap-2">
-      <UButton color="neutral" variant="ghost" leading-icon="i-lucide-arrow-left" @click="onBack">
-        {{ t('quickCreate.actions.back') }}
-      </UButton>
-
+    <div v-if="state.step > 1" class="flex items-center justify-end gap-2">
       <UButton
         v-if="state.step < 4"
         color="primary"

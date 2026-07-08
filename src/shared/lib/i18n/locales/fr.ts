@@ -141,12 +141,24 @@ export default {
       title: 'Nouveau rendez-vous',
       next: 'Suivant',
       create: 'Créer',
+      steps: {
+        client: 'Choisir un client',
+        services: 'Choisir des prestations',
+        dateTime: 'Choisir une date et une heure',
+        confirm: 'Vérifier le rendez-vous',
+      },
       client: {
         placeholder: 'Sélectionner un client',
+        searchPlaceholder: 'Rechercher par nom ou téléphone',
         add: 'Ajouter un client',
+        empty: 'Aucun client pour le moment',
+        noResults: 'Aucun client trouvé',
       },
       services: {
         placeholder: 'Sélectionner des prestations',
+        searchPlaceholder: 'Rechercher des prestations',
+        empty: 'Aucune prestation pour le moment',
+        noResults: 'Aucune prestation trouvée',
       },
       dateTime: {
         pickDate: 'Choisissez une date pour voir les créneaux libres.',
