@@ -30,7 +30,9 @@ Each file in `skills/` (except this index) is a **spec**: a versioned, host-neut
 <!-- AUTO: regenerate this table from docs/skills/*.md on every /docs run -->
 | Spec | Version | Status | Built for |
 |---|---|---|---|
-| _No skill specs yet._ | — | — | — |
+| [FSD Architecture Guard](./skills/fsd.md) | 1.0 | built | claude-code |
+| [i18n Text Guard](./skills/i18n.md) | 1.0 | built | claude-code |
+| [Nuxt UI Component Expert](./skills/nuxt-ui.md) | 1.0 | built | claude-code |
 
 ## For AI: materializing a skill from a spec
 
