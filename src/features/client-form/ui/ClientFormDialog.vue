@@ -19,7 +19,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [boolean]
-  saved: []
+  // The created client is passed on create so callers can auto-select it;
+  // existing `@saved` listeners that ignore the argument stay compatible.
+  saved: [client?: Client]
 }>()
 
 const { t } = useI18n()
@@ -136,15 +138,16 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
   }
 
   try {
+    let createdClient: Client | undefined
     if (isEdit.value && props.client) {
       await updateMutation.mutateAsync({ ...dto, id: props.client.id })
       toast.add({ title: t('clients.form.successEdit'), color: 'success' })
     } else {
-      await createMutation.mutateAsync(dto)
+      createdClient = await createMutation.mutateAsync(dto)
       toast.add({ title: t('clients.form.successCreate'), color: 'success' })
     }
     isOpen.value = false
-    emit('saved')
+    emit('saved', createdClient)
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code
     if (code === '23505') {

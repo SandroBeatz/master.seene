@@ -126,6 +126,56 @@ export default {
       minutesLabel: '{n} min',
     },
   },
+  quickCreate: {
+    open: 'New',
+    menu: {
+      title: 'Create',
+      description: 'Choose what to add.',
+      appointment: 'New appointment',
+      timeOff: 'Time off',
+    },
+    actions: {
+      back: 'Back',
+    },
+    appointment: {
+      title: 'New appointment',
+      next: 'Next',
+      create: 'Create',
+      client: {
+        placeholder: 'Select a client',
+        add: 'Add client',
+      },
+      services: {
+        placeholder: 'Select services',
+      },
+      dateTime: {
+        pickDate: 'Pick a date to see free time.',
+        slots: 'Free time',
+        noSlots: 'No free slots on this day.',
+      },
+      confirm: {
+        client: 'Client',
+        services: 'Services',
+        date: 'Date',
+        time: 'Time',
+        duration: 'Duration',
+        price: 'Price',
+        notes: 'Comment',
+        notesPlaceholder: 'Add a comment (optional)',
+      },
+    },
+    timeOff: {
+      title: 'Time off',
+      create: 'Create',
+      pickDate: 'Pick a date.',
+      hasAppointments:
+        'This day already has appointments. Pick a free interval or set a time within one.',
+      freeTitle: 'Free time',
+      noFreeTime: 'No free time for a time off on this date.',
+      overlap: 'The selected time overlaps an appointment.',
+    },
+  },
+
   calendar: {
     title: 'Calendar',
     description:

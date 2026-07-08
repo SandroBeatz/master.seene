@@ -5,7 +5,6 @@ import type { Appointment } from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import type { TimeBlock } from '@entities/time-block'
-import { AppointmentFormDialog } from '@features/appointment-form'
 import { TimeBlockFormDialog } from '@features/time-block-form'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import {
@@ -17,12 +16,14 @@ import {
   type CalendarViewType,
   type CalendarWidgetExpose,
 } from '@widgets/calendar'
+import { useQuickCreate } from '@widgets/quick-create'
 import { Page, Typography } from '@shared/ui'
 
 const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const preview = useAppointmentPreview()
+const quickCreate = useQuickCreate()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const unknownClientLabel = computed(() => t('appointments.unknownClient'))
@@ -72,17 +73,13 @@ function changeCalendarView(viewType: CalendarViewType) {
   calendarRef.value?.changeView(viewType)
 }
 
-// --- Form state ---
-const isCreateMenuOpen = ref(false)
-const isFormOpen = ref(false)
+// --- Time-off edit form (all create paths now go through quick-create) ---
 const isTimeBlockFormOpen = ref(false)
-const selectedStartAt = ref<string | undefined>(undefined)
 const selectedTimeBlock = ref<TimeBlock | undefined>(undefined)
 
+// Slot click → appointment wizard with Step 3 prefilled to the clicked time.
 function onSlotClick(dateStr: string) {
-  selectedTimeBlock.value = undefined
-  selectedStartAt.value = dateStr
-  isFormOpen.value = true
+  quickCreate.openAppointment({ startAt: dateStr })
 }
 
 function onEventClick(appointment: Appointment) {
@@ -90,24 +87,7 @@ function onEventClick(appointment: Appointment) {
 }
 
 function onTimeBlockClick(timeBlock: TimeBlock) {
-  selectedStartAt.value = undefined
   selectedTimeBlock.value = timeBlock
-  isTimeBlockFormOpen.value = true
-}
-
-function openCreateMenu() {
-  isCreateMenuOpen.value = true
-}
-
-function openAppointmentCreate() {
-  isCreateMenuOpen.value = false
-  onSlotClick(new Date().toISOString())
-}
-
-function openTimeBlockCreate() {
-  isCreateMenuOpen.value = false
-  selectedStartAt.value = new Date().toISOString()
-  selectedTimeBlock.value = undefined
   isTimeBlockFormOpen.value = true
 }
 
@@ -135,7 +115,7 @@ const hostUI = {
           variant="solid"
           class="rounded-full"
           :aria-label="$t('calendar.create.open')"
-          @click="openCreateMenu"
+          @click="quickCreate.openMenu()"
         />
       </UTooltip>
     </template>
@@ -193,7 +173,7 @@ const hostUI = {
               leading-icon="i-lucide-plus"
               color="primary"
               class="mt-4"
-              @click="openAppointmentCreate"
+              @click="quickCreate.openAppointment()"
             >
               {{ $t('calendar.create.appointment') }}
             </UButton>
@@ -203,49 +183,11 @@ const hostUI = {
     </UCard>
   </Page>
 
-  <AppointmentFormDialog
-    :open="isFormOpen"
-    :initial-start-at="selectedStartAt"
-    :time-zone="masterPreferencesStore.timeZone"
-    @update:open="isFormOpen = $event"
-    @saved="isFormOpen = false"
-  />
-
   <TimeBlockFormDialog
     :open="isTimeBlockFormOpen"
-    :initial-start-at="selectedStartAt"
     :time-zone="masterPreferencesStore.timeZone"
     :time-block="selectedTimeBlock"
     @update:open="isTimeBlockFormOpen = $event"
     @saved="isTimeBlockFormOpen = false"
   />
-
-  <UModal
-    v-model:open="isCreateMenuOpen"
-    :title="$t('calendar.create.title')"
-    :description="$t('calendar.create.description')"
-  >
-    <template #body>
-      <div class="grid gap-2">
-        <UButton
-          color="primary"
-          variant="solid"
-          leading-icon="i-lucide-calendar-plus"
-          class="justify-start"
-          @click="openAppointmentCreate"
-        >
-          {{ $t('calendar.create.appointment') }}
-        </UButton>
-        <UButton
-          color="neutral"
-          variant="solid"
-          leading-icon="i-lucide-ban"
-          class="justify-start"
-          @click="openTimeBlockCreate"
-        >
-          {{ $t('calendar.create.timeBlock') }}
-        </UButton>
-      </div>
-    </template>
-  </UModal>
 </template>

@@ -126,6 +126,56 @@ export default {
       minutesLabel: '{n} min',
     },
   },
+  quickCreate: {
+    open: 'Nouveau',
+    menu: {
+      title: 'Créer',
+      description: 'Choisissez ce que vous voulez ajouter.',
+      appointment: 'Nouveau rendez-vous',
+      timeOff: 'Indisponibilité',
+    },
+    actions: {
+      back: 'Retour',
+    },
+    appointment: {
+      title: 'Nouveau rendez-vous',
+      next: 'Suivant',
+      create: 'Créer',
+      client: {
+        placeholder: 'Sélectionner un client',
+        add: 'Ajouter un client',
+      },
+      services: {
+        placeholder: 'Sélectionner des prestations',
+      },
+      dateTime: {
+        pickDate: 'Choisissez une date pour voir les créneaux libres.',
+        slots: 'Créneaux libres',
+        noSlots: 'Aucun créneau libre ce jour-là.',
+      },
+      confirm: {
+        client: 'Client',
+        services: 'Prestations',
+        date: 'Date',
+        time: 'Heure',
+        duration: 'Durée',
+        price: 'Prix',
+        notes: 'Commentaire',
+        notesPlaceholder: 'Ajouter un commentaire (facultatif)',
+      },
+    },
+    timeOff: {
+      title: 'Indisponibilité',
+      create: 'Créer',
+      pickDate: 'Choisissez une date.',
+      hasAppointments:
+        'Cette journée comporte déjà des rendez-vous. Choisissez un créneau libre ou définissez une heure dans l’un d’eux.',
+      freeTitle: 'Créneaux libres',
+      noFreeTime: 'Aucun créneau libre pour une indisponibilité ce jour-là.',
+      overlap: 'L’heure choisie chevauche un rendez-vous.',
+    },
+  },
+
   calendar: {
     title: 'Calendrier',
     description:
