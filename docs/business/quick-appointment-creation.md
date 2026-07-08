@@ -1,12 +1,12 @@
 ---
-version: 1.0
+version: 1.1
 date: 2026-07-08
 category: business
 ---
 
 # Quick Appointment & Time Off Creation
 
-> Version 1.0 · 2026-07-08 · [Business](../business/)
+> Version 1.1 · 2026-07-08 · [Business](../business/)
 
 ## Overview
 
@@ -146,7 +146,7 @@ reactive date range and are cached by colada.
 FSD forbids sibling-entity imports, so a function needing **both** appointment and time-off
 data cannot live in either entity. The pure availability math therefore lives in
 **`src/shared/lib/scheduling/`** and operates only on primitives (minute integers, busy
-intervals, a resolved working window). The *widget/feature* layer resolves the schedule (via
+intervals, a resolved working window). The feature layer resolves the schedule (via
 `@entities/master`) and maps appointments + time offs into busy intervals, then calls the
 pure core. This refines the "put it in `entities/appointment/lib`" suggestion in
 online-booking.md, which would require an entity→entity import.
@@ -164,12 +164,12 @@ src/
     day-availability.ts                     # hasAnyFreeSlot / month map
     __tests__/                              # exhaustive edge cases
 
-  widgets/quick-create/                     # NEW — orchestrator, mirrors appointment-preview-panel
+  features/quick-create/                    # NEW — quick-create user action
     index.ts                                # exports useQuickCreate()
     model/
       use-quick-create.ts                   # openMenu / openAppointment(prefill) / openTimeOff(prefill)
       busy-intervals.ts                     # appointment|time_block -> minute intervals (in tz)
-      appointment-wizard.store.ts           # step, client, serviceIds, date, slot, notes, prefill/skip
+      appointment-wizard.ts                 # step, client, serviceIds, date, slot, notes, prefill/skip
     ui/
       QuickCreateOverlay.vue                # mounted once; hosts menu + both wizards; mobile full-screen
       QuickCreateMenu.vue                   # "New appointment" / "Time off"
@@ -204,7 +204,7 @@ quickCreate.openTimeOff({ date, startTime })             // calendar slot click,
 
 ### Wizard state & step gating
 
-`appointment-wizard.store.ts` (plain `reactive`, scoped to the overlay — no global Pinia
+`appointment-wizard.ts` (plain `reactive`, scoped to the overlay — no global Pinia
 needed) holds `step`, `client`, `serviceIds`, `date`, `slotMinutes`, `notes`, and a
 `prefill`/`skipDateTime` flag. Rules:
 
@@ -245,7 +245,7 @@ Wiring an entry point:
 
 ```vue
 <script setup lang="ts">
-import { useQuickCreate } from '@widgets/quick-create'
+import { useQuickCreate } from '@features/quick-create'
 const quickCreate = useQuickCreate()
 </script>
 
@@ -308,7 +308,7 @@ Suggested epics and their dependencies (→ = depends on):
 - **A. Scheduling core** — `shared/lib/scheduling/*` + unit tests. *(no deps; do first)*
 - **B. Data plumbing** — month-range `useAppointmentsQuery`/`useTimeBlocksQuery` wiring +
   `busy-intervals.ts` mapper + tests. → A
-- **C. Quick-create shell** — `widgets/quick-create` overlay, `useQuickCreate`,
+- **C. Quick-create shell** — `features/quick-create` overlay, `useQuickCreate`,
   `QuickCreateMenu`, mobile full-screen; wire entry points (home "+", calendar "+", calendar
   slot click). → (can start UI shell in parallel; wiring → D/F)
 - **D. Appointment wizard** — `AppointmentWizard` + 4 steps, UStepper, back nav,
@@ -367,14 +367,14 @@ Suggested epics and their dependencies (→ = depends on):
 | `src/shared/lib/scheduling/find-free-intervals.ts` | NEW — merged free gaps (Time off) |
 | `src/shared/lib/scheduling/day-availability.ts` | NEW — `hasAnyFreeSlot` / month day map |
 | `src/shared/lib/scheduling/__tests__/` | NEW — unit tests for the above |
-| `src/widgets/quick-create/model/use-quick-create.ts` | NEW — orchestrator composable |
-| `src/widgets/quick-create/model/busy-intervals.ts` | NEW — appointment/time-block → minute intervals |
-| `src/widgets/quick-create/model/appointment-wizard.store.ts` | NEW — wizard state + gating |
-| `src/widgets/quick-create/ui/QuickCreateOverlay.vue` | NEW — mounted host, mobile full-screen |
-| `src/widgets/quick-create/ui/QuickCreateMenu.vue` | NEW — action chooser |
-| `src/widgets/quick-create/ui/AppointmentWizard.vue` | NEW — stepper shell + back nav |
-| `src/widgets/quick-create/ui/steps/Step*.vue` | NEW — Client / Services / DateTime / Confirm |
-| `src/widgets/quick-create/ui/TimeOffWizard.vue` | NEW — availability-aware time-off flow |
+| `src/features/quick-create/model/use-quick-create.ts` | NEW — orchestrator composable |
+| `src/features/quick-create/model/busy-intervals.ts` | NEW — appointment/time-block → minute intervals |
+| `src/features/quick-create/model/appointment-wizard.ts` | NEW — wizard state + gating |
+| `src/features/quick-create/ui/QuickCreateOverlay.vue` | NEW — mounted host, mobile full-screen |
+| `src/features/quick-create/ui/QuickCreateMenu.vue` | NEW — action chooser |
+| `src/features/quick-create/ui/AppointmentWizard.vue` | NEW — stepper shell + back nav |
+| `src/features/quick-create/ui/steps/Step*.vue` | NEW — Client / Services / DateTime / Confirm |
+| `src/features/quick-create/ui/TimeOffWizard.vue` | NEW — availability-aware time-off flow |
 | `src/features/client-form/ui/ClientFormDialog.vue` | CHANGED — emit created client |
 | `src/widgets/home/ui/ScheduleTimeline.vue` | CHANGED — "+" replaces ellipsis, emits `create` |
 | `src/widgets/home/ui/HomeScheduleWidget.vue` | CHANGED — wire "+" to `useQuickCreate` |

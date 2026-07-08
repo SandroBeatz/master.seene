@@ -5,6 +5,7 @@ import type { Appointment } from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import type { TimeBlock } from '@entities/time-block'
+import { useQuickCreate } from '@features/quick-create'
 import { TimeBlockFormDialog } from '@features/time-block-form'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import {
@@ -16,7 +17,6 @@ import {
   type CalendarViewType,
   type CalendarWidgetExpose,
 } from '@widgets/calendar'
-import { useQuickCreate } from '@widgets/quick-create'
 import { Page, Typography } from '@shared/ui'
 
 const { t, locale } = useI18n()

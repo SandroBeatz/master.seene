@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createAppointmentWizard } from '../appointment-wizard.store'
+import { createAppointmentWizard } from '../appointment-wizard'
 
 const TZ = 'Asia/Singapore'
 
