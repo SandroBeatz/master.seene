@@ -15,7 +15,7 @@ const props = withDefaults(
   },
 )
 
-defineOptions({ inheritAttrs: false })
+defineOptions({ name: 'AppTypography', inheritAttrs: false })
 
 const variantClass = computed(() => {
   switch (props.variant) {

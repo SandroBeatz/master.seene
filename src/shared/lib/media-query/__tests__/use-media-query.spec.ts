@@ -17,13 +17,17 @@ describe('useMediaQuery', () => {
   it('reflects the initial match and reacts to change events', () => {
     let handler: ((event: MediaQueryListEvent) => void) | undefined
 
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    window.matchMedia = vi.fn<typeof window.matchMedia>().mockImplementation((query: string) => ({
       matches: true,
       media: query,
+      onchange: null,
       addEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => {
         handler = cb
       },
-      removeEventListener: vi.fn(),
+      removeEventListener: vi.fn<MediaQueryList['removeEventListener']>(),
+      addListener: vi.fn<MediaQueryList['addListener']>(),
+      removeListener: vi.fn<MediaQueryList['removeListener']>(),
+      dispatchEvent: vi.fn<MediaQueryList['dispatchEvent']>(),
     }))
 
     const scope = effectScope()

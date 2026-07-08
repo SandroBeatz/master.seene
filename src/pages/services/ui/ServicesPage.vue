@@ -11,7 +11,7 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: services, isLoading, error, refetch } = useServicesQuery(userId)
+const { data: services, isLoading, error } = useServicesQuery(userId)
 const deleteMutation = useDeleteServiceMutation(userId)
 
 // Form modal

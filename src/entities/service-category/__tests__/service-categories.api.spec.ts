@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { mockOrder, mockEq, mockSelect, mockFrom } = vi.hoisted(() => {
-  const mockOrder = vi.fn()
-  const mockEq = vi.fn()
-  const mockSelect = vi.fn()
-  const mockFrom = vi.fn()
+  const mockOrder = vi.fn<(...args: never[]) => unknown>()
+  const mockEq = vi.fn<(...args: never[]) => unknown>()
+  const mockSelect = vi.fn<(...args: never[]) => unknown>()
+  const mockFrom = vi.fn<(...args: never[]) => unknown>()
 
   const builder = {
     select: mockSelect,

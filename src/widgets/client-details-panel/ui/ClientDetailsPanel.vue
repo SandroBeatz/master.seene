@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import type { Client } from '@entities/client'
 
 const props = defineProps<{
@@ -11,8 +10,6 @@ const emit = defineEmits<{
   edit: []
   delete: []
 }>()
-
-const { t } = useI18n()
 
 const fullName = computed(() =>
   [props.client.first_name, props.client.last_name].filter(Boolean).join(' '),
