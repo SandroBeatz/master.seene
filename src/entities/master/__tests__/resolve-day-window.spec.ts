@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MasterSchedule } from '@entities/master'
-import { resolveDayWindow } from '../resolve-day-window'
+import { resolveDayWindow } from '../model/resolve-day-window'
 
 describe('resolveDayWindow', () => {
   it('uses the default window (10:00–19:00) for a weekday with no saved schedule', () => {

@@ -36,3 +36,5 @@ export {
   getAppointmentStatusIcon,
 } from './lib/appearance'
 export type { ServiceColorRef } from './lib/appearance'
+export { collectDayBusyIntervals } from './model/busy-intervals'
+export type { CollectBusyIntervalsInput } from './model/busy-intervals'

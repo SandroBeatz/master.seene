@@ -2,29 +2,29 @@
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarDate, getLocalTimeZone, today, type DateValue } from '@internationalized/date'
-import { useAppointmentsQuery } from '@entities/appointment'
-import { useMasterPreferencesStore } from '@entities/master'
+import { collectDayBusyIntervals, useAppointmentsQuery } from '@entities/appointment'
+import { resolveDayWindow, useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import {
   useCreateTimeBlockMutation,
   useTimeBlocksQuery,
   type CreateTimeBlockDto,
 } from '@entities/time-block'
-import { findFreeIntervals, intervalsOverlap, type Interval } from '@shared/lib/scheduling'
-import { addDateInputDays, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
-import { useFormats } from '@shared/lib/formats'
-import { collectDayBusyIntervals } from '../model/busy-intervals'
-import { resolveDayWindow } from '../model/resolve-day-window'
 import {
   calendarDateToInput,
+  findFreeIntervals,
   inputToCalendarDate,
+  intervalsOverlap,
   minutesToTimeInput,
   timeInputToMinutes,
-} from '../lib/calendar-date'
+  type Interval,
+} from '@shared/lib/scheduling'
+import { addDateInputDays, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
+import { useFormats } from '@shared/lib/formats'
 import type { TimeOffPrefill } from '../model/types'
 
 const props = defineProps<{ prefill?: TimeOffPrefill }>()
-const emit = defineEmits<{ back: []; close: [] }>()
+const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
 const toast = useToast()
@@ -258,13 +258,8 @@ const calendarValue = computed(() => inputToCalendarDate(state.date) ?? undefine
     </template>
 
     <div class="flex items-center justify-between gap-2">
-      <UButton
-        color="neutral"
-        variant="ghost"
-        leading-icon="i-lucide-arrow-left"
-        @click="emit('back')"
-      >
-        {{ t('quickCreate.actions.back') }}
+      <UButton color="neutral" variant="ghost" @click="emit('close')">
+        {{ t('common.cancel') }}
       </UButton>
       <UButton
         color="primary"

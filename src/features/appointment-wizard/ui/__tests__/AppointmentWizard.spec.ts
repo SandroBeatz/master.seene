@@ -21,13 +21,19 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('@entities/appointment', () => ({
-  useAppointmentsQuery: () => ({ data: mocks.appointments }),
-  useCreateAppointmentMutation: () => ({
-    mutateAsync: mocks.createAppointment,
-    isLoading: { value: false },
-  }),
-}))
+vi.mock('@entities/appointment', async () => {
+  const busyIntervals = await vi.importActual<
+    typeof import('@entities/appointment/model/busy-intervals')
+  >('@entities/appointment/model/busy-intervals')
+  return {
+    useAppointmentsQuery: () => ({ data: mocks.appointments }),
+    useCreateAppointmentMutation: () => ({
+      mutateAsync: mocks.createAppointment,
+      isLoading: { value: false },
+    }),
+    collectDayBusyIntervals: busyIntervals.collectDayBusyIntervals,
+  }
+})
 vi.mock('@entities/client', () => ({
   useClientsQuery: () => ({ data: mocks.clients }),
   useCreateClientMutation: () => ({

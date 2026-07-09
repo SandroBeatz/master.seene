@@ -5,7 +5,7 @@ import type { Appointment } from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import type { TimeBlock } from '@entities/time-block'
-import { useQuickCreate } from '@features/quick-create'
+import { useQuickCreate } from '@widgets/quick-create-action'
 import { TimeBlockFormDialog } from '@features/time-block-form'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import {

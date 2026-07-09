@@ -3,3 +3,9 @@ export { intervalsOverlap, mergeIntervals } from './intervals'
 export { findAvailableSlots } from './find-available-slots'
 export { findFreeIntervals } from './find-free-intervals'
 export { hasAnyFreeSlot } from './day-availability'
+export {
+  calendarDateToInput,
+  inputToCalendarDate,
+  minutesToTimeInput,
+  timeInputToMinutes,
+} from './calendar-date'

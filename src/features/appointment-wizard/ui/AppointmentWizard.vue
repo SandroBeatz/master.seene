@@ -3,23 +3,27 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarDate, getLocalTimeZone, today, type DateValue } from '@internationalized/date'
 import {
+  collectDayBusyIntervals,
   useAppointmentsQuery,
   useCreateAppointmentMutation,
   type CreateAppointmentDto,
 } from '@entities/appointment'
 import { useClientsQuery, type Client } from '@entities/client'
-import { useMasterPreferencesStore } from '@entities/master'
+import { resolveDayWindow, useMasterPreferencesStore } from '@entities/master'
 import { useServicesQuery, type Service } from '@entities/service'
 import { useSessionStore } from '@entities/session'
 import { useTimeBlocksQuery } from '@entities/time-block'
 import { ClientFormDialog } from '@features/client-form'
-import { findAvailableSlots, hasAnyFreeSlot } from '@shared/lib/scheduling'
+import {
+  calendarDateToInput,
+  findAvailableSlots,
+  hasAnyFreeSlot,
+  inputToCalendarDate,
+  minutesToTimeInput,
+} from '@shared/lib/scheduling'
 import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
 import { createAppointmentWizard } from '../model/appointment-wizard'
-import { collectDayBusyIntervals } from '../model/busy-intervals'
-import { resolveDayWindow } from '../model/resolve-day-window'
-import { calendarDateToInput, inputToCalendarDate, minutesToTimeInput } from '../lib/calendar-date'
 import type { AppointmentPrefill } from '../model/types'
 import StepClient from './steps/StepClient.vue'
 import StepServices from './steps/StepServices.vue'
@@ -27,7 +31,7 @@ import StepDateTime from './steps/StepDateTime.vue'
 import StepConfirm from './steps/StepConfirm.vue'
 
 const props = defineProps<{ prefill?: AppointmentPrefill }>()
-const emit = defineEmits<{ back: []; close: [] }>()
+const emit = defineEmits<{ close: [] }>()
 
 const { t, locale } = useI18n()
 const toast = useToast()

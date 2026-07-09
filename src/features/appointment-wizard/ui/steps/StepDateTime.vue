@@ -3,11 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarDate, type DateValue } from '@internationalized/date'
 import { useFormats } from '@shared/lib/formats'
-import {
-  calendarDateToInput,
-  inputToCalendarDate,
-  minutesToTimeInput,
-} from '../../lib/calendar-date'
+import { calendarDateToInput, inputToCalendarDate, minutesToTimeInput } from '@shared/lib/scheduling'
 
 const props = defineProps<{
   /** Selected day, `YYYY-MM-DD`, or '' when none chosen yet. */

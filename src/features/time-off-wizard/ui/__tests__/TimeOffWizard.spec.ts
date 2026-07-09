@@ -13,9 +13,15 @@ const mocks = vi.hoisted(() => ({
     vi.fn<(dto: { start_at: string; end_at: string; all_day: boolean }) => Promise<unknown>>(),
 }))
 
-vi.mock('@entities/appointment', () => ({
-  useAppointmentsQuery: () => ({ data: mocks.appointments }),
-}))
+vi.mock('@entities/appointment', async () => {
+  const busyIntervals = await vi.importActual<
+    typeof import('@entities/appointment/model/busy-intervals')
+  >('@entities/appointment/model/busy-intervals')
+  return {
+    useAppointmentsQuery: () => ({ data: mocks.appointments }),
+    collectDayBusyIntervals: busyIntervals.collectDayBusyIntervals,
+  }
+})
 vi.mock('@entities/time-block', () => ({
   useTimeBlocksQuery: () => ({ data: mocks.timeBlocks }),
   useCreateTimeBlockMutation: () => ({

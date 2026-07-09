@@ -1,6 +1,6 @@
 import { computed, reactive } from 'vue'
 import { getDateTimeInputValue } from '@shared/lib/time-zone'
-import { timeInputToMinutes } from '../lib/calendar-date'
+import { timeInputToMinutes } from '@shared/lib/scheduling'
 import type { AppointmentPrefill } from './types'
 
 export type WizardStep = 1 | 2 | 3 | 4

@@ -1,6 +1,6 @@
-import type { Appointment, AppointmentStatus } from '@entities/appointment'
-import type { TimeBlock } from '@entities/time-block'
+import type { TimeBlock } from '@entities/time-block/@x/appointment'
 import type { Interval } from '@shared/lib/scheduling'
+import type { Appointment, AppointmentStatus } from './types'
 import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 
 const MINUTES_IN_DAY = 24 * 60

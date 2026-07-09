@@ -1,5 +1,6 @@
-import { DAY_ORDER, normalizeSchedule, toMinutes, type MasterSchedule } from '@entities/master'
 import type { Interval } from '@shared/lib/scheduling'
+import { DAY_ORDER, normalizeSchedule, toMinutes } from './master-schedule'
+import type { MasterSchedule } from './types'
 
 /** A day's working window resolved to minutes-since-midnight. */
 export interface DayWindow {
