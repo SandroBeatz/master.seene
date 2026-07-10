@@ -171,9 +171,10 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     expect(wrapper.findComponent(StepConfirm).exists()).toBe(true)
 
     // Back from Confirm skips Step 3 → Step 2 with the service still selected.
-    await wrapper
-      .find(`button[aria-label="${en.quickCreate.actions.back}"]`)
-      .trigger('click')
+    // The back control lives in the modal header now, so drive the wizard's
+    // exposed `back()` to exercise the same skip-aware navigation.
+    ;(wrapper.vm as unknown as { back: () => void }).back()
+    await wrapper.vm.$nextTick()
     const services = wrapper.findComponent(StepServices)
     expect(services.exists()).toBe(true)
     expect(services.props('modelValue')).toEqual(['s1'])

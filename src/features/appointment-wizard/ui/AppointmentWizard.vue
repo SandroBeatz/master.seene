@@ -187,9 +187,13 @@ function onStepperNav(value: unknown) {
   if (typeof value === 'number') wizard.goTo(value as 1 | 2 | 3 | 4)
 }
 
-function onBack() {
-  wizard.back()
-}
+// Exposed to AppointmentWizardModal, which renders the wizard header (title,
+// current step, back navigation) in the dialog's own header slot.
+defineExpose({
+  step: computed(() => state.step),
+  stepTitle,
+  back: () => wizard.back(),
+})
 
 function onClientSelect(clientId: string | null | undefined) {
   state.clientId = clientId ?? null
@@ -237,25 +241,6 @@ async function create() {
 
 <template>
   <div class="space-y-5">
-    <div class="flex items-start gap-3">
-      <UButton
-        v-if="state.step > 1"
-        icon="i-lucide-arrow-left"
-        color="neutral"
-        variant="ghost"
-        square
-        :aria-label="t('quickCreate.actions.back')"
-        class="mt-0.5 shrink-0"
-        @click="onBack"
-      />
-      <div class="min-w-0">
-        <h2 class="text-lg font-semibold text-highlighted">
-          {{ t('quickCreate.appointment.title') }}
-        </h2>
-        <p class="mt-0.5 text-sm text-muted">{{ stepTitle }}</p>
-      </div>
-    </div>
-
     <UStepper
       :items="stepperItems"
       value-key="value"
