@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-06-10
+version: 1.1
+date: 2026-07-13
 category: practices
 ---
 
 # API Service Layer
 
-> Version 1.0 · 2026-06-10 · [Practices](../)
+> Version 1.1 · 2026-07-13 · [Practices](../)
 
 ## Overview
 
@@ -131,6 +131,18 @@ export const useCreateClientMutation = (userId: Ref<string>) => {
 **Cache key convention:** `[entityName, ...identifiers]` — e.g. `['clients', userId]`,
 `['appointment', appointmentId]`. Keep keys consistent across queries and invalidation calls.
 
+**Loading flags — `isPending` vs `isLoading`:** colada exposes both. In this version
+(`@pinia/colada` 1.2):
+
+- `isPending` = `status === 'pending'` → **true only until the first data arrives**.
+- `isLoading` = `asyncStatus === 'loading'` → **true on every fetch**, including background
+  revalidation after mutations, refocus, or invalidation.
+
+Gate first-load skeletons/placeholders on **`isPending`** so an already-populated list is not
+replaced by a preloader every time the query silently revalidates. Reserve `isLoading` for
+unobtrusive "refreshing" indicators. Example: the clients list (`ClientsPage.vue`) uses
+`isPending` for its skeleton cards.
+
 ---
 
 ## Migrating to a Custom API
@@ -234,3 +246,4 @@ Real examples:
 - [Supabase Integration](../integrations/supabase.md) — client setup, env vars, RLS, migration workflow
 - [Data Model](../business/data-model.md) — table schemas that the API functions query against
 - [Master Entity](../code/master-entity.md) — example of a well-structured entity with api/ and queries layers
+- [Clients](../business/clients.md) — client entity queries/mutations and the `isPending` skeleton pattern in practice

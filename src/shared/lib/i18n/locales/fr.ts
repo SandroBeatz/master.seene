@@ -824,6 +824,9 @@ export default {
       },
     },
   },
+  emojiPicker: {
+    title: 'Choisir un emoji',
+  },
   clients: {
     pageTitle: 'Clients',
     addButton: 'Ajouter un client',
@@ -833,6 +836,25 @@ export default {
     emptyDescription: 'Ajoutez votre premier client pour gérer votre base.',
     deleteSuccess: 'Client supprimé',
     deleteError: 'Échec de la suppression du client',
+    source: {
+      manual: 'Manuel',
+      online: 'En ligne',
+    },
+    card: {
+      lastVisit: 'Dernière visite',
+      noVisits: 'Aucune visite',
+      addFavorite: 'Ajouter aux favoris',
+      removeFavorite: 'Retirer des favoris',
+    },
+    favorite: {
+      added: 'Ajouté aux favoris',
+      removed: 'Retiré des favoris',
+      error: 'Échec de la mise à jour du favori',
+    },
+    section: {
+      favorites: 'Favoris',
+      others: 'Autres',
+    },
     table: {
       name: 'Nom',
       phone: 'Téléphone',
@@ -849,6 +871,9 @@ export default {
       emailLabel: 'E-mail',
       birthdayLabel: 'Date de naissance',
       notesLabel: 'Notes',
+      avatarLabel: 'Avatar',
+      chooseEmoji: 'Choisir un emoji',
+      removeEmoji: 'Retirer',
       submitCreate: 'Ajouter',
       submitEdit: 'Enregistrer',
       cancel: 'Annuler',
@@ -868,6 +893,8 @@ export default {
       notes: 'Notes',
       appointments: 'Rendez-vous',
       appointmentsSoon: 'Bientôt disponible',
+      noAppointments: 'Aucun rendez-vous',
+      whatsapp: 'Écrire sur WhatsApp',
       editButton: 'Modifier',
       deleteButton: 'Supprimer',
       source: 'Source',
