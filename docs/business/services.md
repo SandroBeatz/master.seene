@@ -1,18 +1,18 @@
 ---
-version: 1.0
-date: 2026-04-30
+version: 2.0
+date: 2026-07-13
 category: business
 ---
 
 # Services
 
-> Version 1.0 · 2026-04-30 · [Business](../)
+> Version 2.0 · 2026-07-13 · [Business](../)
 
 ## Overview
 
 The **Services** domain represents the treatment and procedure catalog that a salon owner offers to clients. Each service has a name, duration, price, color, and optional category. Services are referenced by appointments — a single appointment can include multiple services, and the appointment's total duration and price are automatically derived from the selected services.
 
-There are two separate entities in this domain: `Service` and `ServiceCategory`. Categories are a flat, optional grouping layer; a service with no category is displayed under a catch-all "All services" label.
+There are two separate entities in this domain: `Service` and `ServiceCategory`. Categories are a flat, optional grouping layer; a service with no category is displayed under a catch-all "All services" label. Categories are **fully user-managed** — they can be created inline from the service form, and created/renamed/deleted from a dedicated settings section (see [Application Settings](./settings.md)). Deleting a category never deletes its services; they simply become uncategorised (`category_id → NULL`).
 
 Services are user-scoped: every record belongs to a specific authenticated user via `user_id`, enforced at the database level by Row-Level Security policies.
 
@@ -27,6 +27,12 @@ interface ServiceCategory {
   id: string       // UUID, primary key
   name: string     // Display name
 }
+
+interface CreateServiceCategoryDto {
+  name: string
+}
+
+type UpdateServiceCategoryDto = CreateServiceCategoryDto & { id: string }
 ```
 
 Database table: `service_category`
@@ -36,8 +42,11 @@ Database table: `service_category`
 | `id` | `UUID` | Primary key, auto-generated |
 | `user_id` | `UUID` | FK → auth.users, set from JWT |
 | `name` | `TEXT` | Category name |
-| `sort_order` | `INT` | Display order |
+| `sort_order` | `INT` | Display order; new categories append to the end |
 | `created_at` | `TIMESTAMPTZ` | Auto-set on insert |
+| `updated_at` | `TIMESTAMPTZ` | Auto-updated by DB trigger `service_category_updated_at` (added in migration `20260713130000_service_category_updated_at.sql`) |
+
+> The client only reads `id, name` — `sort_order`/`updated_at` are managed server-side. The public `ServiceCategory` type therefore carries just `id` and `name`.
 
 ### Service
 
@@ -109,36 +118,51 @@ src/
       __tests__/services.api.spec.ts
       index.ts                          ← public barrel export
     service-category/
-      api/service-categories.api.ts     ← listServiceCategories only (read-only)
-      model/types.ts                    ← ServiceCategory
-      model/service-category.queries.ts ← read-only query
+      api/service-categories.api.ts     ← list + create/update/delete
+      model/types.ts                    ← ServiceCategory, Create/UpdateServiceCategoryDto
+      model/service-category.queries.ts ← query + create/update/delete mutations
       __tests__/service-categories.api.spec.ts
       index.ts
   features/
     service-form/
-      ui/ServiceFormModal.vue           ← create/edit form modal
+      ui/ServiceFormModal.vue           ← create/edit form modal (+ inline category creation)
+      index.ts
+    service-category-form/
+      ui/ServiceCategoryFormModal.vue   ← create/rename category (used by settings page)
       index.ts
   pages/
     services/
-      ui/ServicesPage.vue               ← full management page
+      ui/ServicesPage.vue               ← full management page (list, filters, inline toggle)
       index.ts
+    settings/
+      ui/SettingsServiceCategoriesPage.vue ← category CRUD in settings
 ```
 
-**Intentional asymmetry:** `ServiceCategory` has no mutations in the query layer. Categories are managed separately (directly via DB or future admin flow) and treated as a read-only lookup from the client's perspective.
+`ServiceCategory` now has a **full mutation surface** (create/update/delete) mirroring `Service`. Creation is available from two entry points: inline in `ServiceFormModal`, and the dedicated settings page.
 
 ### Data flow
 
 ```
 ServicesPage
-  ├── useServicesQuery(userId)         → fetches & caches Service[]
-  ├── useDeleteServiceMutation(userId) → deletes, invalidates cache
+  ├── useServicesQuery(userId)          → fetches & caches Service[] (skeleton on isPending only)
+  ├── useServiceCategoriesQuery(userId) → filter chips
+  ├── useUpdateServiceMutation(userId)  → inline is_active toggle
+  ├── useDeleteServiceMutation(userId)  → deletes, invalidates cache
   └── ServiceFormModal
-        ├── useServiceCategoriesQuery(userId) → category dropdown options
-        ├── useCreateServiceMutation(userId)  → on new service submit
-        └── useUpdateServiceMutation(userId)  → on edit submit
+        ├── useServiceCategoriesQuery(userId)       → category dropdown options
+        ├── useCreateServiceCategoryMutation(userId) → inline "＋ category" flow
+        ├── useCreateServiceMutation(userId)        → on new service submit
+        └── useUpdateServiceMutation(userId)        → on edit submit
+
+SettingsServiceCategoriesPage
+  ├── useServiceCategoriesQuery(userId)       → list
+  ├── useDeleteServiceCategoryMutation(userId) → delete (unassigns services)
+  └── ServiceCategoryFormModal
+        ├── useCreateServiceCategoryMutation(userId)
+        └── useUpdateServiceCategoryMutation(userId)
 ```
 
-All mutations call `invalidateQueries(['services', userId])` on settle, causing `useServicesQuery` to refetch automatically.
+Service mutations call `invalidateQueries(['services', userId])` on settle. Category mutations invalidate `['service-categories', userId]`; the **delete** mutation additionally invalidates `['services', userId]` because a removed category unassigns its services (FK `ON DELETE SET NULL`), changing the joined `category` field on affected services.
 
 ---
 
@@ -174,6 +198,16 @@ deleteService(id: string): Promise<void>
 listServiceCategories(userId: string): Promise<ServiceCategory[]>
 // SELECT id, name FROM service_category WHERE user_id = userId
 // Ordered by sort_order
+
+createServiceCategory(userId: string, dto: CreateServiceCategoryDto): Promise<ServiceCategory>
+// Counts existing categories, then INSERT with sort_order = count (append to end)
+
+updateServiceCategory(dto: UpdateServiceCategoryDto): Promise<ServiceCategory>
+// UPDATE service_category SET name = dto.name WHERE id = dto.id
+
+deleteServiceCategory(id: string): Promise<void>
+// DELETE FROM service_category WHERE id = id
+// FK service.category_id has ON DELETE SET NULL → linked services are unassigned, not deleted
 ```
 
 ---
@@ -205,7 +239,18 @@ useDeleteServiceMutation(userId: Ref<string>)
 
 useServiceCategoriesQuery(userId: Ref<string>)
 // Query key: ['service-categories', userId.value]
-// Read-only; no mutations
+
+useCreateServiceCategoryMutation(userId: Ref<string>)
+// mutateAsync(dto: CreateServiceCategoryDto) → returns the created ServiceCategory
+// On settle: invalidates ['service-categories', userId.value]
+
+useUpdateServiceCategoryMutation(userId: Ref<string>)
+// mutateAsync(dto: UpdateServiceCategoryDto)
+// On settle: invalidates ['service-categories', userId.value]
+
+useDeleteServiceCategoryMutation(userId: Ref<string>)
+// mutateAsync(id: string)
+// On settle: invalidates ['service-categories', userId.value] AND ['services', userId.value]
 ```
 
 ---
@@ -214,13 +259,46 @@ useServiceCategoriesQuery(userId: Ref<string>)
 
 ### Display services list (ServicesPage pattern)
 
+The page renders the [`Page`](../ui/nuxt-ui-components.md) shell (title + `#header-right` action) with a full-width **row list** (not a card grid): a coloured accent bar, category label, name, 2-line clamped description, duration pill, price (via `useFormats().price()`), an inline `USwitch` for `is_active`, and edit/delete icon buttons. Category **filter chips** with per-category counts sit above the list.
+
 ```typescript
 // src/pages/services/ui/ServicesPage.vue
-import { useServicesQuery, useDeleteServiceMutation } from '@entities/service'
+import { useServicesQuery, useUpdateServiceMutation, useDeleteServiceMutation } from '@entities/service'
 
 const userId = computed(() => user.value!.id)
-const { data: services, isLoading, error } = useServicesQuery(userId)
-const { mutate: deleteService } = useDeleteServiceMutation(userId)
+// isPending — skeleton shows only on the first load, never on background refetch.
+const { data: services, isPending, error } = useServicesQuery(userId)
+const updateMutation = useUpdateServiceMutation(userId) // inline is_active toggle
+const deleteMutation = useDeleteServiceMutation(userId)
+
+// Display order: inactive services sink to the bottom; within each group, by created_at.
+const sorted = computed(() =>
+  [...list].sort((a, b) =>
+    a.is_active !== b.is_active ? (a.is_active ? -1 : 1) : a.created_at.localeCompare(b.created_at),
+  ),
+)
+```
+
+### Create a category inline from the service form
+
+`ServiceFormModal` renders a `USelect` plus a "＋" button that reveals an inline name input. Confirming creates the category and auto-selects it:
+
+```typescript
+// src/features/service-form/ui/ServiceFormModal.vue
+const createCategoryMutation = useCreateServiceCategoryMutation(userId)
+
+async function confirmCreateCategory() {
+  const created = await createCategoryMutation.mutateAsync({ name: newCategoryName.value.trim() })
+  state.category_id = created.id // select the freshly created category
+}
+```
+
+### Price entry (shared PriceInput)
+
+The price field uses the shared [`PriceInput`](../ui/price-input.md) component (`type="tel"` + currency symbol positioned per the master's active currency). It emits a clean `number | null`, so the Joi `price` rule is unchanged:
+
+```vue
+<PriceInput v-model="state.price" :placeholder="$t('services.form.pricePlaceholder')" />
 ```
 
 ### Build a service lookup map (CalendarPage pattern)
@@ -262,7 +340,10 @@ watch(selectedServiceIds, (ids) => {
 | **Price** | Non-negative number. Appointments may override the auto-calculated total. |
 | **Color** | Hex string from a fixed palette of 10 colors. Default `#a78bfa`. Used for calendar event rendering. |
 | **category_id** | Nullable. Services without a category display under "All services" in the UI. |
-| **is_active** | Soft toggle. Inactive services are still stored and joinable but hidden in appointment selection. |
+| **Category deletion** | Deleting a category never deletes services — FK `ON DELETE SET NULL` unassigns them (`category_id → NULL`). The settings delete-confirm warns the user of this. |
+| **Category creation** | New categories append to the end (`sort_order = current count`). The settings form validates the name at 1–50 chars (Joi); the inline service-form flow requires a non-empty trimmed name. |
+| **is_active** | Soft toggle. Inactive services are still stored and joinable but hidden in appointment selection. Toggleable inline from the list. |
+| **List ordering** | On the services page, inactive services sink to the bottom; within each active/inactive group, order is by `created_at` (oldest first). |
 | **User isolation** | RLS policies on both `service` and `service_category` restrict all reads/writes to `auth.uid() = user_id`. |
 | **Multi-service appointments** | Appointment stores `service_ids: string[]`. Total duration and price are the sum of all selected services; the user can manually override both after auto-population. |
 
@@ -286,5 +367,7 @@ Color, category, and `is_active` are UI-controlled (color picker, dropdown, togg
 ## Cross-references
 
 - [Data Model](./data-model.md) — full ER diagram and schema overview for all entities including `service` and `service_category`
+- [Application Settings](./settings.md) — the Service categories settings section (category CRUD)
+- [PriceInput](../ui/price-input.md) — shared currency-aware price field used by the service form
 - [Auth and Onboarding](./auth-and-onboarding.md) — how `user_id` is established; RLS context
 - [Supabase Integration](../integrations/supabase.md) — Supabase client setup, query patterns, and migration workflow used by the services API layer

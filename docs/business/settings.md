@@ -1,22 +1,23 @@
 ---
-version: 1.1
-date: 2026-06-23
+version: 1.2
+date: 2026-07-13
 category: business
 ---
 
 # Application Settings
 
-> Version 1.1 · 2026-06-23 · [Business](../business/)
+> Version 1.2 · 2026-07-13 · [Business](../business/)
 
 ## Overview
 
-Settings is the area where a master configures everything about their account, public booking presence, schedule, and dashboard preferences. It lives under `/settings` and is split into eight sections grouped into **General** (Profile, Contacts & social, Working hours, Booking, Payment methods) and **System** (Notifications, System & region, Account).
+Settings is the area where a master configures everything about their account, public booking presence, schedule, and dashboard preferences. It lives under `/settings` and is split into nine sections grouped into **General** (Profile, Contacts & social, Working hours, Booking, Payment methods, Service categories) and **System** (Notifications, System & region, Account).
 
-All settings data for a master is stored across three Postgres tables:
+All settings data for a master is stored across four Postgres tables:
 
 - **`master_profile`** — identity, public page (`username`), specializations, bio, contact/social channels, studio address, and the weekly working-hours `schedule` (JSONB). Also holds `deactivated_at` for soft-deleted accounts.
 - **`master_settings`** — one row per user (upsert on `user_id`) holding booking, notification, and system/region preferences.
 - **`payment_type`** — one row per payment method a master accepts.
+- **`service_category`** — one row per service category (managed by the Service categories section). See [Services](../business/services.md).
 
 The **Account** section is the odd one out: it does not touch these tables for most of its actions. It drives Supabase Auth directly (change email, change password, sign out) and performs a soft-delete by stamping `master_profile.deactivated_at`.
 
@@ -34,6 +35,7 @@ The settings routes are children of a single parent route (`src/app/router/index
 /settings/working-hours  → SettingsWorkingHoursPage  → <WorkingHoursForm>        (features/working-hours-form)
 /settings/booking        → SettingsBookingPage       → <BookingSettingsForm>     (features/booking-settings-form)
 /settings/payment-types  → SettingsPaymentTypesPage  → (payment-type entity + payment-type-form)
+/settings/service-categories → SettingsServiceCategoriesPage → (service-category entity + service-category-form)
 /settings/notifications  → SettingsNotificationsPage → <NotificationSettingsForm>(features/notification-settings-form)
 /settings/system-region  → SettingsSystemRegionPage  → <SystemRegionForm>        (features/system-region-form)
 /settings/account        → SettingsAccountPage       → <AccountSettingsForm>     (features/account-settings)
@@ -41,7 +43,7 @@ The settings routes are children of a single parent route (`src/app/router/index
 
 ### Data flow (the common form pattern)
 
-Every section except Payment methods and Account follows the same pattern:
+Every section except Payment methods, Service categories, and Account follows the same pattern:
 
 1. **Read** — a `@pinia/colada` query (`useMasterProfileQuery` or `useMasterPreferencesQuery`, keyed by `userId`) loads the cached data. See `src/entities/master/model/master.queries.ts`.
 2. **Seed** — a `watch` on the query result seeds a local `state` ref via a `seed()` function, but only when the form isn't already dirty (so a background cache refresh never clobbers in-progress edits).
@@ -52,6 +54,7 @@ Two sections deviate from "explicit save":
 
 - **Booking** — the `online_booking_enabled` switch in the card header **saves instantly on toggle** (it persists the flag while reusing the last-saved body values, so it never commits half-edited fields). The body fields below still use the Save bar.
 - **Payment methods** — every action (toggle active, add custom, reorder, delete) **persists immediately**; there is no Save bar.
+- **Service categories** — create / rename / delete each **persist immediately** via the `service-category` entity mutations; there is no Save bar.
 
 ### Persistence map
 
@@ -63,6 +66,7 @@ Two sections deviate from "explicit save":
 | Working hours | `master_profile.schedule` | `updateMasterSchedule` | Save bar |
 | Booking | `master_settings` (upsert) | `updateMasterBookingSettings` | Instant toggle + Save bar |
 | Payment methods | `payment_type` | `payment-type` entity API | Instant |
+| Service categories | `service_category` | `service-category` entity API | Instant |
 | Notifications | `master_settings` (upsert) | `updateMasterNotificationSettings` | Save bar |
 | System & region | `master_settings` (upsert) + `master_profile.schedule` (timezone) | `updateMasterSystemSettings` (+ `updateMasterSchedule`) | Save bar |
 | Account | Supabase Auth + `master_profile.deactivated_at` | direct `supabase.auth.*` / `.from('master_profile').update(...)` | Per-action modals |
@@ -187,6 +191,14 @@ A reorderable list of methods a master accepts. **All changes persist immediatel
 - System methods (`kind` = `cash` / `card`) are seeded automatically and can only be toggled `is_active`, not deleted.
 - Custom methods (`kind` = `custom`) can be created (name + color from a fixed palette), edited, reordered (`sort_order`), and deleted.
 
+#### 5b. Service categories (`features/service-category-form` + `service-category` entity)
+
+A flat list of service categories a master can create, rename, and delete. **All changes persist immediately** (no Save bar). See [Services](../business/services.md).
+
+- Create / rename open `ServiceCategoryFormModal` (Joi: name 1–50 chars).
+- Delete shows a confirm dialog that **warns the services will become uncategorised** — the FK `service.category_id` uses `ON DELETE SET NULL`, so services are unassigned, never deleted.
+- The same categories power the filter chips on the services page and the category dropdown in the service form (where a category can also be created inline).
+
 #### 6. Notifications (`features/notification-settings-form`)
 
 Two groups, all governed by one Save bar.
@@ -244,6 +256,7 @@ To add a field to an existing `master_settings`-backed section:
 - [Data Model](../business/data-model.md) — full database schema for these tables.
 - [Online Booking](../business/online-booking.md) — client-facing flow governed by the Booking section.
 - [Payment Types](../business/payment-types.md) — domain rules for the Payment methods section.
+- [Services](../business/services.md) — the `service-category` entity behind the Service categories section, plus inline category creation from the service form.
 - [Auth & Onboarding](../business/auth-and-onboarding.md) — where the initial profile/schedule is captured before settings.
 - [Auth Guard](../architecture/auth-guard.md) — route guard that enforces account deactivation.
 - [Supabase Integration](../integrations/supabase.md) — auth APIs used by the Account section and RLS policies.
@@ -261,6 +274,7 @@ To add a field to an existing `master_settings`-backed section:
 | `src/features/working-hours-form/` | Weekly schedule editor (`useWorkingHours`) |
 | `src/features/booking-settings-form/` | Online booking config (`useBookingSettings`) |
 | `src/features/payment-type-form/` | Create/edit custom payment methods |
+| `src/features/service-category-form/` | Create/rename service categories (`ServiceCategoryFormModal`) |
 | `src/features/notification-settings-form/` | Client reminders + master alerts (`useNotificationSettings`) |
 | `src/features/system-region-form/` | Language, theme, currency, formats, calendar prefs |
 | `src/features/account-settings/` | Upgrade, email/password, sign-out, delete account |
@@ -270,3 +284,4 @@ To add a field to an existing `master_settings`-backed section:
 | `src/entities/master/api/master.api.ts` | All read/write APIs for `master_profile` / `master_settings` |
 | `src/entities/master/model/master.queries.ts` | Colada queries/mutations + cache invalidation |
 | `src/entities/payment-type/` | Payment method entity (types, API, queries) |
+| `src/entities/service-category/` | Service category entity (types, API, CRUD mutations) |

@@ -19,6 +19,11 @@ const settingsNav = computed<NavigationMenuItem[]>(() => [
     icon: 'i-lucide-credit-card',
     to: '/settings/payment-types',
   },
+  {
+    label: t('settings.nav.serviceCategories'),
+    icon: 'i-lucide-tags',
+    to: '/settings/service-categories',
+  },
   { label: t('settings.nav.groupSystem'), type: 'label' },
   { label: t('settings.nav.notifications'), icon: 'i-lucide-bell', to: '/settings/notifications' },
   { label: t('settings.nav.systemRegion'), icon: 'i-lucide-globe', to: '/settings/system-region' },
