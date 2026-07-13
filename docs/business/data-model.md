@@ -1,12 +1,12 @@
 ---
-version: 2.4
+version: 2.5
 date: 2026-07-13
 category: business
 ---
 
 # Data Model
 
-> Version 2.4 · 2026-07-13 · [Business](../)
+> Version 2.5 · 2026-07-13 · [Business](../)
 
 ## Overview
 
@@ -182,8 +182,9 @@ Named groups used to organise services. A service can belong to at most one cate
 | `id` | `uuid` | NO | `gen_random_uuid()` | Primary key |
 | `user_id` | `uuid` | NO | — | FK → `auth.users.id` |
 | `name` | `text` | NO | — | Display name of the category |
-| `sort_order` | `integer` | NO | `0` | Controls display ordering |
+| `sort_order` | `integer` | NO | `0` | Controls display ordering; new categories append at the end |
 | `created_at` | `timestamptz` | NO | `now()` | — |
+| `updated_at` | `timestamptz` | NO | `now()` | Auto-updated by trigger; added in `20260713130000_service_category_updated_at.sql` |
 
 ### Constraints & indexes
 
@@ -191,6 +192,8 @@ Named groups used to organise services. A service can belong to at most one cate
 |---|---|---|
 | `service_category_pkey` | PRIMARY KEY | `id` |
 | `service_category_user_id_fkey` | FOREIGN KEY | `user_id → auth.users.id` |
+
+The trigger `service_category_updated_at` (`BEFORE UPDATE`) reuses the shared `update_updated_at()` function to keep `updated_at` fresh on rename. Categories are fully user-managed from the client (create / rename / delete) via the `service-category` entity mutations — see [Services](./services.md).
 
 ### Row-Level Security
 
