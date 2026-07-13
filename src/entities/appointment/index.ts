@@ -13,6 +13,7 @@ export {
   useActionableAppointmentsQuery,
   useNextAppointmentQuery,
   useClientAppointmentsCountQuery,
+  useClientAppointmentsQuery,
   useAppointmentDayCountsQuery,
 } from './model/appointment.queries'
 export {
@@ -24,6 +25,7 @@ export {
   listActionableAppointments,
   getNextAppointment,
   countClientAppointments,
+  listClientAppointments,
   listAppointmentDayCounts,
 } from './api/appointments.api'
 export type { AppointmentDayCount } from './api/appointments.api'
@@ -36,3 +38,4 @@ export {
   getAppointmentStatusIcon,
 } from './lib/appearance'
 export type { ServiceColorRef } from './lib/appearance'
+export { lastVisitDate } from './lib/last-visit'

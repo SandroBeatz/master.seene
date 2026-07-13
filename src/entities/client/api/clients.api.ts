@@ -6,6 +6,7 @@ export async function listClients(userId: string): Promise<Client[]> {
     .from('client')
     .select('*')
     .eq('user_id', userId)
+    .order('is_favorite', { ascending: false })
     .order('first_name')
   if (error) throw error
   return data as Client[]

@@ -32,3 +32,12 @@ export const useRemoveClientMutation = (userId: Ref<string>) => {
     onSettled: () => cache.invalidateQueries({ key: ['clients', userId.value] }),
   })
 }
+
+export const useToggleFavoriteClientMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+  return useMutation({
+    mutation: (vars: { id: string; is_favorite: boolean }) =>
+      updateClient({ id: vars.id, is_favorite: vars.is_favorite }),
+    onSettled: () => cache.invalidateQueries({ key: ['clients', userId.value] }),
+  })
+}

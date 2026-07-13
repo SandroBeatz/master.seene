@@ -811,6 +811,9 @@ export default {
       },
     },
   },
+  emojiPicker: {
+    title: 'Выберите эмодзи',
+  },
   clients: {
     pageTitle: 'Клиенты',
     addButton: 'Добавить клиента',
@@ -820,6 +823,25 @@ export default {
     emptyDescription: 'Добавьте первого клиента, чтобы начать вести базу.',
     deleteSuccess: 'Клиент удалён',
     deleteError: 'Не удалось удалить клиента',
+    source: {
+      manual: 'Вручную',
+      online: 'Онлайн',
+    },
+    card: {
+      lastVisit: 'Последний визит',
+      noVisits: 'Визитов пока нет',
+      addFavorite: 'В избранное',
+      removeFavorite: 'Убрать из избранного',
+    },
+    favorite: {
+      added: 'Добавлено в избранное',
+      removed: 'Убрано из избранного',
+      error: 'Не удалось обновить избранное',
+    },
+    section: {
+      favorites: 'Избранные',
+      others: 'Остальные',
+    },
     table: {
       name: 'Имя',
       phone: 'Телефон',
@@ -836,6 +858,9 @@ export default {
       emailLabel: 'Email',
       birthdayLabel: 'День рождения',
       notesLabel: 'Заметки',
+      avatarLabel: 'Аватар',
+      chooseEmoji: 'Выбрать эмодзи',
+      removeEmoji: 'Убрать',
       submitCreate: 'Добавить',
       submitEdit: 'Сохранить',
       cancel: 'Отмена',
@@ -855,6 +880,8 @@ export default {
       notes: 'Заметки',
       appointments: 'Записи',
       appointmentsSoon: 'Скоро',
+      noAppointments: 'Записей пока нет',
+      whatsapp: 'Написать в WhatsApp',
       editButton: 'Редактировать',
       deleteButton: 'Удалить',
       source: 'Источник',

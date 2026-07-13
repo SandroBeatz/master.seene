@@ -1,12 +1,12 @@
 ---
-version: 2.3
-date: 2026-06-23
+version: 2.4
+date: 2026-07-13
 category: business
 ---
 
 # Data Model
 
-> Version 2.3 · 2026-06-23 · [Business](../)
+> Version 2.4 · 2026-07-13 · [Business](../)
 
 ## Overview
 
@@ -261,7 +261,9 @@ The master's address book. Each entry represents a person who has had or may hav
 | `email` | `text` | YES | `null` | Optional |
 | `birthday` | `date` | YES | `null` | Optional |
 | `notes` | `text` | YES | `null` | Free-text master notes |
-| `source` | `text` | NO | `'manual'` | How this client was added (currently only `'manual'`) |
+| `emoji` | `text` | YES | `null` | Optional single emoji used as the avatar; falls back to coloured initials |
+| `is_favorite` | `boolean` | NO | `false` | Favourite flag; favourites are listed first and grouped in a separate section |
+| `source` | `text` | NO | `'manual'` | How this client was added: `'manual'` or an online source (rendered as manual/online) |
 | `created_at` | `timestamptz` | NO | `now()` | — |
 | `updated_at` | `timestamptz` | NO | `now()` | Application-maintained |
 
