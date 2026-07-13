@@ -1,12 +1,12 @@
 ---
-version: 1.1
-date: 2026-06-15
+version: 1.2
+date: 2026-07-13
 category: business
 ---
 
 # Appointments
 
-> Version 1.1 · 2026-06-15 · [Business](../)
+> Version 1.2 · 2026-07-13 · [Business](../)
 
 ## Overview
 
@@ -238,6 +238,9 @@ All functions are in `src/entities/appointment/api/appointments.api.ts` and `src
 | `removeAppointment(id)` | Delete appointment (blocked if sale exists) |
 | `listActionableAppointments(userId)` | Appointments needing attention (dashboard) |
 | `countClientAppointments(clientId)` | Total appointments for a client — backs the "new client" flag |
+| `listClientAppointments(clientId)` | All of a client's appointments, any status, newest first — powers the client preview history and "last visit" |
+
+The `lastVisitDate(appointments, now?)` helper (`lib/last-visit.ts`) derives a client's most recent past **visit** from a list of appointments: the latest appointment that is `completed`/`confirmed` and whose end time has passed, or `null`. It backs the "last visit" line on the clients list and preview. See [Clients](./clients.md).
 
 ### Time Blocks
 
@@ -273,6 +276,10 @@ useActionableAppointmentsQuery(userId)
 // Count a client's appointments — drives the "new client" flag in the preview
 useClientAppointmentsCountQuery(clientId) // enabled only when clientId is set
 // Cache key: ['appointments-client-count', clientId]
+
+// List a client's appointments (newest first) — client preview history + last visit
+useClientAppointmentsQuery(clientId) // enabled only when clientId is set
+// Cache key: ['appointments-client', clientId]
 
 // Mutations — all invalidate ['appointments', userId] on success
 useCreateAppointmentMutation(userId)
@@ -410,6 +417,7 @@ supabase/migrations/
 ## Cross-references
 
 - [Data Model](./data-model.md) — Full schema reference including `client`, `service`, and `master_profile` tables
+- [Clients](./clients.md) — Client address book; consumes `listClientAppointments` and `lastVisitDate` for history and "last visit"
 - [Services](./services.md) — Service and category management; pricing and duration that feed into appointment defaults
 - [Payment Types](./payment-types.md) — Available payment methods selected during checkout
 - [Calendar Architecture](../architecture/calendar.md) — How appointments and time blocks are rendered in FullCalendar

@@ -13,6 +13,7 @@ export {
   useActionableAppointmentsQuery,
   useNextAppointmentQuery,
   useClientAppointmentsCountQuery,
+  useClientAppointmentsQuery,
   useAppointmentDayCountsQuery,
 } from './model/appointment.queries'
 export {
@@ -24,6 +25,7 @@ export {
   listActionableAppointments,
   getNextAppointment,
   countClientAppointments,
+  listClientAppointments,
   listAppointmentDayCounts,
 } from './api/appointments.api'
 export type { AppointmentDayCount } from './api/appointments.api'
@@ -38,3 +40,4 @@ export {
 export type { ServiceColorRef } from './lib/appearance'
 export { collectDayBusyIntervals } from './model/busy-intervals'
 export type { CollectBusyIntervalsInput } from './model/busy-intervals'
+export { lastVisitDate } from './lib/last-visit'

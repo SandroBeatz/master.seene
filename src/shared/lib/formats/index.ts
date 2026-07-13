@@ -1,5 +1,9 @@
 import { inject, type App } from 'vue'
-import { DEFAULT_CURRENCY_CODE, getCurrency } from '@shared/config/currencies'
+import {
+  DEFAULT_CURRENCY_CODE,
+  getCurrency,
+  type CurrencyOption,
+} from '@shared/config/currencies'
 import { DEFAULT_DATE_FORMAT } from '@shared/config/date-formats'
 
 type TimeFormat = 12 | 24
@@ -18,6 +22,8 @@ export interface Formats {
   time(value: string | null | undefined, overrideFormat?: TimeFormat): string
   /** Formats a number as a price. `currencyOverride` is an ISO code (e.g. 'KZT'). */
   price(value: number | null | undefined, currencyOverride?: string): string
+  /** Resolves the active currency (symbol, position, decimals). Falls back to the default. */
+  currency(currencyOverride?: string): CurrencyOption
   /** Formats a number with grouping and a fixed number of fraction digits. */
   decimal(value: number | null | undefined, ownFloat?: number): string
   /** Inverse of grouped input: strips thousands separators, normalizes decimal. */
@@ -90,6 +96,12 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
       .replace(',', '.')
   }
 
+  function currency(currencyOverride?: string): CurrencyOption {
+    const code = currencyOverride ?? options.getCurrency?.() ?? DEFAULT_CURRENCY_CODE
+    // DEFAULT_CURRENCY_CODE is always present in the catalogue.
+    return getCurrency(code) ?? getCurrency(DEFAULT_CURRENCY_CODE)!
+  }
+
   function price(value: number | null | undefined, currencyOverride?: string): string {
     if (value == null) return PLACEHOLDER
     const code = currencyOverride ?? options.getCurrency?.() ?? DEFAULT_CURRENCY_CODE
@@ -126,7 +138,7 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     return `${formatWithTokens(parsed, format)} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`
   }
 
-  return { time, price, decimal, parseDecimal, date, dateTime }
+  return { time, price, currency, decimal, parseDecimal, date, dateTime }
 }
 
 const FORMATS_KEY = Symbol('formats')

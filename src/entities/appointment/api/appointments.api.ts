@@ -118,6 +118,21 @@ export async function countClientAppointments(clientId: string): Promise<number>
   return count ?? 0
 }
 
+/**
+ * All appointments belonging to a client, any status, newest first. Used by the
+ * client preview to render their appointment history and to derive the last
+ * visit date.
+ */
+export async function listClientAppointments(clientId: string): Promise<Appointment[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('start_at', { ascending: false })
+  if (error) throw error
+  return data as Appointment[]
+}
+
 export async function getNextAppointment(userId: string): Promise<Appointment | null> {
   const now = new Date().toISOString()
   const { data, error } = await supabase

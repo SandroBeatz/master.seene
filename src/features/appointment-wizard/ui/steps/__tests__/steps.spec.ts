@@ -51,6 +51,8 @@ function makeClient(over: Partial<Client> = {}): Client {
     email: null,
     birthday: null,
     notes: null,
+    emoji: null,
+    is_favorite: false,
     source: 'manual',
     created_at: '',
     updated_at: '',

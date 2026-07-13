@@ -21,6 +21,13 @@ const mocks = vi.hoisted(() => {
   }
 })
 
+// ClientFormDialog renders the emoji picker, whose underlying `vue3-emoji-picker`
+// library touches `indexedDB` at import time — unavailable under jsdom. Stub it out
+// since this suite only exercises the dialog's `saved` event, not emoji selection.
+vi.mock('@shared/ui/emoji-picker-modal', () => ({
+  EmojiPickerModal: { name: 'EmojiPickerModal', render: () => null },
+}))
+
 vi.mock('@entities/appointment', async () => {
   const busyIntervals = await vi.importActual<
     typeof import('@entities/appointment/model/busy-intervals')
@@ -77,6 +84,8 @@ const CLIENT: Client = {
   email: null,
   birthday: null,
   notes: null,
+  emoji: null,
+  is_favorite: false,
   source: 'manual',
   created_at: '',
   updated_at: '',

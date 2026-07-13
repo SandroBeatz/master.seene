@@ -6,10 +6,12 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import {
   useCreateClientMutation,
   useUpdateClientMutation,
+  ClientAvatar,
   type Client,
   type CreateClientDto,
 } from '@entities/client'
 import { useSessionStore } from '@entities/session'
+import { EmojiPickerModal } from '@shared/ui/emoji-picker-modal'
 
 const props = defineProps<{
   open: boolean
@@ -56,8 +58,15 @@ const state = reactive<FormState>({
 const phone = ref('')
 const phoneValid = ref(false)
 
+const emoji = ref<string | null>(null)
+const emojiPickerOpen = ref(false)
+
 function onPhoneValidate(obj: { valid: boolean }) {
   phoneValid.value = obj.valid
+}
+
+function onEmojiSelect(value: string) {
+  emoji.value = value
 }
 
 function resetForm() {
@@ -69,6 +78,7 @@ function resetForm() {
     state.notes = props.client.notes ?? ''
     phone.value = props.client.phone
     phoneValid.value = true
+    emoji.value = props.client.emoji ?? null
   } else {
     state.firstName = ''
     state.lastName = ''
@@ -77,6 +87,7 @@ function resetForm() {
     state.notes = ''
     phone.value = ''
     phoneValid.value = false
+    emoji.value = null
   }
 }
 
@@ -134,6 +145,7 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
     email: event.data.email || null,
     birthday: event.data.birthday || null,
     notes: event.data.notes || null,
+    emoji: emoji.value,
     source: props.client?.source ?? 'manual',
   }
 
@@ -167,6 +179,34 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
   >
     <template #body>
       <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+        <UFormField :label="$t('clients.form.avatarLabel')" name="avatar">
+          <div class="flex items-center gap-3">
+            <ClientAvatar
+              :first-name="state.firstName"
+              :last-name="state.lastName"
+              :emoji="emoji"
+              size="xl"
+            />
+            <UButton
+              color="neutral"
+              variant="soft"
+              leading-icon="i-lucide-smile"
+              @click="emojiPickerOpen = true"
+            >
+              {{ $t('clients.form.chooseEmoji') }}
+            </UButton>
+            <UButton
+              v-if="emoji"
+              color="neutral"
+              variant="ghost"
+              leading-icon="i-lucide-x"
+              @click="emoji = null"
+            >
+              {{ $t('clients.form.removeEmoji') }}
+            </UButton>
+          </div>
+        </UFormField>
+
         <div class="grid grid-cols-2 gap-3">
           <UFormField :label="$t('clients.form.firstNameLabel')" name="firstName" required>
             <UInput v-model="state.firstName" class="w-full" />
@@ -211,4 +251,6 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
       </UButton>
     </template>
   </UModal>
+
+  <EmojiPickerModal v-model:open="emojiPickerOpen" @select="onEmojiSelect" />
 </template>

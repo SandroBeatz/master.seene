@@ -9,8 +9,12 @@ import {
   type CreateServiceDto,
   type Service,
 } from '@entities/service'
-import { useServiceCategoriesQuery } from '@entities/service-category'
+import {
+  useCreateServiceCategoryMutation,
+  useServiceCategoriesQuery,
+} from '@entities/service-category'
 import { useSessionStore } from '@entities/session'
+import { PriceInput } from '@shared/ui'
 
 const props = defineProps<{
   modelValue: boolean
@@ -187,6 +191,37 @@ const categoryItems = computed(() => [
   { label: t('services.form.allServices'), value: null },
   ...(categories.value ?? []).map((c) => ({ label: c.name, value: c.id })),
 ])
+
+const createCategoryMutation = useCreateServiceCategoryMutation(userId)
+const isCreatingCategory = ref(false)
+const isAddingCategory = ref(false)
+const newCategoryName = ref('')
+
+function startCreateCategory() {
+  newCategoryName.value = ''
+  isAddingCategory.value = true
+}
+
+function cancelCreateCategory() {
+  isAddingCategory.value = false
+  newCategoryName.value = ''
+}
+
+// Inline category creation: persist the typed name, then auto-select it.
+async function confirmCreateCategory() {
+  const trimmed = newCategoryName.value.trim()
+  if (!trimmed) return
+  isCreatingCategory.value = true
+  try {
+    const created = await createCategoryMutation.mutateAsync({ name: trimmed })
+    state.category_id = created.id
+    cancelCreateCategory()
+  } catch {
+    toast.add({ title: t('services.form.categoryCreateError'), color: 'error' })
+  } finally {
+    isCreatingCategory.value = false
+  }
+}
 </script>
 
 <template>
@@ -225,23 +260,56 @@ const categoryItems = computed(() => [
           </UFormField>
 
           <UFormField :label="$t('services.form.price')" name="price" required>
-            <UInput
-              v-model.number="state.price"
-              type="number"
+            <PriceInput
+              v-model="state.price"
               :placeholder="$t('services.form.pricePlaceholder')"
-              :min="0"
               class="w-full"
             />
           </UFormField>
         </div>
 
         <UFormField :label="$t('services.form.category')" name="category_id">
-          <USelect
-            v-model="state.category_id"
-            :items="categoryItems"
-            value-key="value"
-            class="w-full"
-          />
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <USelect
+                v-model="state.category_id"
+                :items="categoryItems"
+                value-key="value"
+                class="w-full flex-1"
+              />
+              <UButton
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="subtle"
+                :aria-label="$t('services.form.categoryAdd')"
+                @click="startCreateCategory"
+              />
+            </div>
+
+            <div v-if="isAddingCategory" class="flex items-center gap-2">
+              <UInput
+                v-model="newCategoryName"
+                :placeholder="$t('services.form.categoryNamePlaceholder')"
+                autofocus
+                class="w-full flex-1"
+                @keydown.enter.prevent="confirmCreateCategory"
+              />
+              <UButton
+                icon="i-lucide-check"
+                color="primary"
+                :loading="isCreatingCategory"
+                :aria-label="$t('services.form.categoryCreateConfirm')"
+                @click="confirmCreateCategory"
+              />
+              <UButton
+                icon="i-lucide-x"
+                color="neutral"
+                variant="ghost"
+                :aria-label="$t('services.form.cancel')"
+                @click="cancelCreateCategory"
+              />
+            </div>
+          </div>
         </UFormField>
 
         <UFormField :label="$t('services.form.color')" name="color">

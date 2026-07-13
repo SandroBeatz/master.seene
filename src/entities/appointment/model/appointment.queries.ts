@@ -7,6 +7,7 @@ import {
   listActionableAppointments,
   listAppointmentDayCounts,
   listAppointments,
+  listClientAppointments,
   removeAppointment,
   updateAppointment,
 } from '../api/appointments.api'
@@ -90,6 +91,17 @@ export const useClientAppointmentsCountQuery = (clientId: Ref<string>) =>
   useQuery({
     key: () => ['appointments-client-count', clientId.value],
     query: () => countClientAppointments(clientId.value),
+    enabled: () => Boolean(clientId.value),
+  })
+
+/**
+ * All appointments for a client (any status, newest first). Disabled until a
+ * client id is available. Used by the client preview and to derive last visit.
+ */
+export const useClientAppointmentsQuery = (clientId: Ref<string>) =>
+  useQuery({
+    key: () => ['appointments-client', clientId.value],
+    query: () => listClientAppointments(clientId.value),
     enabled: () => Boolean(clientId.value),
   })
 

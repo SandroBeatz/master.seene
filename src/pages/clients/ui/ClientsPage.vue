@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { TableColumn, TableRow } from '@nuxt/ui'
-import { useClientsQuery, useRemoveClientMutation, type Client } from '@entities/client'
+import {
+  useClientsQuery,
+  useRemoveClientMutation,
+  useToggleFavoriteClientMutation,
+  type Client,
+} from '@entities/client'
+import { useAppointmentsQuery, lastVisitDate, type Appointment } from '@entities/appointment'
 import { useSessionStore } from '@entities/session'
 import { ClientFormDialog } from '@features/client-form'
 import { ClientDeleteConfirm } from '@features/client-delete'
 import { ClientDetailsPanel } from '@widgets/client-details-panel'
+import { Page } from '@shared/ui'
+import ClientCard from './ClientCard.vue'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -14,8 +21,45 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: clients, isLoading } = useClientsQuery(userId)
+// `isPending` is true only until the first data arrives; background refetches
+// (colada revalidation) keep the existing list visible without a skeleton.
+const { data: clients, isPending } = useClientsQuery(userId)
+const { data: appointments } = useAppointmentsQuery(userId)
 const removeMutation = useRemoveClientMutation(userId)
+const toggleFavoriteMutation = useToggleFavoriteClientMutation(userId)
+
+// Map of client id → their last visit date, derived from all appointments once.
+const lastVisitByClient = computed(() => {
+  const grouped = new Map<string, Appointment[]>()
+  for (const appt of appointments.value ?? []) {
+    const list = grouped.get(appt.client_id)
+    if (list) list.push(appt)
+    else grouped.set(appt.client_id, [appt])
+  }
+  const result = new Map<string, string | null>()
+  for (const [clientId, list] of grouped) result.set(clientId, lastVisitDate(list))
+  return result
+})
+
+async function toggleFavorite(client: Client) {
+  const next = !client.is_favorite
+  // Keep the open preview's star in sync (its client is a snapshot).
+  if (selectedClient.value?.id === client.id) {
+    selectedClient.value = { ...selectedClient.value, is_favorite: next }
+  }
+  try {
+    await toggleFavoriteMutation.mutateAsync({ id: client.id, is_favorite: next })
+    toast.add({
+      title: next ? t('clients.favorite.added') : t('clients.favorite.removed'),
+      color: 'success',
+    })
+  } catch {
+    if (selectedClient.value?.id === client.id) {
+      selectedClient.value = { ...selectedClient.value, is_favorite: !next }
+    }
+    toast.add({ title: t('clients.favorite.error'), color: 'error' })
+  }
+}
 
 // Search with debounce
 const query = ref('')
@@ -37,39 +81,15 @@ const filtered = computed(() => {
   )
 })
 
-// Table columns
-const columns = computed<TableColumn<Client>[]>(() => [
-  {
-    id: 'name',
-    accessorFn: (row) => [row.first_name, row.last_name].filter(Boolean).join(' '),
-    header: t('clients.table.name'),
-  },
-  {
-    accessorKey: 'phone',
-    header: t('clients.table.phone'),
-  },
-  {
-    id: 'lastVisit',
-    header: t('clients.table.lastVisit'),
-    cell: () => '—',
-  },
-  {
-    accessorKey: 'notes',
-    header: t('clients.table.notes'),
-    cell: ({ row }) => {
-      const notes = row.original.notes
-      if (!notes) return '—'
-      return notes.length > 60 ? notes.substring(0, 60) + '…' : notes
-    },
-  },
-])
+const favoriteClients = computed(() => filtered.value.filter((c) => c.is_favorite))
+const otherClients = computed(() => filtered.value.filter((c) => !c.is_favorite))
 
 // Slideover
 const slideoverOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
 
-function onRowSelect(_e: Event, row: TableRow<Client>) {
-  selectedClient.value = row.original
+function openDetails(client: Client) {
+  selectedClient.value = client
   slideoverOpen.value = true
 }
 
@@ -121,68 +141,79 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <UTheme
-    :ui="{
-      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
-      pageHeader: { root: 'border-none pb-2' },
-    }"
-  >
-    <UPage as="main">
-      <UPageHeader :title="$t('clients.pageTitle')">
-        <template #links>
-          <UButton leading-icon="i-lucide-user-plus" color="neutral" @click="openCreate">
-            {{ $t('clients.addButton') }}
-          </UButton>
-        </template>
-      </UPageHeader>
+  <Page :title="$t('clients.pageTitle')">
+    <template #header-right>
+      <UButton leading-icon="i-lucide-user-plus" color="neutral" @click="openCreate">
+        {{ $t('clients.addButton') }}
+      </UButton>
+    </template>
 
-      <UPageBody>
-        <!-- Search -->
-        <div class="mb-4">
-          <UInput
-            v-model="query"
-            leading-icon="i-lucide-search"
-            :placeholder="$t('clients.searchPlaceholder')"
-            class="w-full max-w-sm"
-          />
-        </div>
+    <!-- Search -->
+    <div class="mb-4">
+      <UInput
+        v-model="query"
+        leading-icon="i-lucide-search"
+        :placeholder="$t('clients.searchPlaceholder')"
+        class="w-full max-w-sm"
+      />
+    </div>
 
-        <UPageCard variant="soft">
-          <!-- Loading -->
-          <div v-if="isLoading" class="space-y-3">
-            <USkeleton v-for="i in 5" :key="i" class="h-12 w-full" />
-          </div>
+    <!-- Loading -->
+    <div v-if="isPending" class="flex flex-col gap-3">
+      <USkeleton v-for="i in 6" :key="i" class="h-[92px] w-full rounded-lg" />
+    </div>
 
-          <!-- Empty state -->
-          <UEmpty
-            v-else-if="!filtered.length"
-            icon="i-lucide-users"
-            :title="$t('clients.emptyTitle')"
-            :description="$t('clients.emptyDescription')"
-            class="py-16"
-          >
-            <UButton
-              leading-icon="i-lucide-user-plus"
-              color="primary"
-              class="mt-4"
-              @click="openCreate"
-            >
-              {{ $t('clients.addFirstButton') }}
-            </UButton>
-          </UEmpty>
+    <!-- Empty state -->
+    <UEmpty
+      v-else-if="!filtered.length"
+      icon="i-lucide-users"
+      :title="$t('clients.emptyTitle')"
+      :description="$t('clients.emptyDescription')"
+      class="py-16"
+    >
+      <UButton leading-icon="i-lucide-user-plus" color="primary" class="mt-4" @click="openCreate">
+        {{ $t('clients.addFirstButton') }}
+      </UButton>
+    </UEmpty>
 
-          <!-- Table -->
-          <UTable
-            v-else
-            :data="filtered"
-            :columns="columns"
-            class="cursor-pointer"
-            @select="onRowSelect"
-          />
-        </UPageCard>
-      </UPageBody>
-    </UPage>
-  </UTheme>
+    <!-- Cards -->
+    <div v-else class="flex flex-col gap-6">
+      <!-- Favorites -->
+      <section v-if="favoriteClients.length" class="flex flex-col gap-3">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-muted">
+          {{ $t('clients.section.favorites') }}
+        </h3>
+        <ClientCard
+          v-for="client in favoriteClients"
+          :key="client.id"
+          :client="client"
+          :last-visit="lastVisitByClient.get(client.id) ?? null"
+          @select="openDetails(client)"
+          @edit="openEdit(client)"
+          @toggle-favorite="toggleFavorite(client)"
+        />
+      </section>
+
+      <!-- Others -->
+      <section v-if="otherClients.length" class="flex flex-col gap-3">
+        <h3
+          v-if="favoriteClients.length"
+          class="text-xs font-semibold uppercase tracking-wider text-muted"
+        >
+          {{ $t('clients.section.others') }}
+        </h3>
+        <ClientCard
+          v-for="client in otherClients"
+          :key="client.id"
+          :client="client"
+          :last-visit="lastVisitByClient.get(client.id) ?? null"
+          @select="openDetails(client)"
+          @edit="openEdit(client)"
+          @toggle-favorite="toggleFavorite(client)"
+        />
+      </section>
+    </div>
+  </Page>
 
   <!-- Details slideover -->
   <USlideover v-model:open="slideoverOpen" side="right">
@@ -192,6 +223,8 @@ async function confirmDelete() {
         :client="selectedClient"
         @edit="openEdit()"
         @delete="openDeleteConfirm()"
+        @toggle-favorite="selectedClient && toggleFavorite(selectedClient)"
+        @close="slideoverOpen = false"
       />
     </template>
   </USlideover>

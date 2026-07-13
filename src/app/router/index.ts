@@ -116,6 +116,12 @@ const router = createRouter({
               component: async () => (await import('@pages/settings')).SettingsPaymentTypesPage,
             },
             {
+              path: 'service-categories',
+              name: 'settings-service-categories',
+              component: async () =>
+                (await import('@pages/settings')).SettingsServiceCategoriesPage,
+            },
+            {
               path: 'notifications',
               name: 'settings-notifications',
               component: async () => (await import('@pages/settings')).SettingsNotificationsPage,
