@@ -134,6 +134,7 @@ export default {
     },
     actions: {
       back: 'Назад',
+      close: 'Закрыть',
     },
     appointment: {
       title: 'Новая запись',
@@ -172,6 +173,11 @@ export default {
         price: 'Цена',
         notes: 'Комментарий',
         notesPlaceholder: 'Добавить комментарий (необязательно)',
+      },
+      footer: {
+        services: '{count} услуга | {count} услуги',
+        hoursUnit: 'ч',
+        minutesUnit: 'мин',
       },
     },
     timeOff: {

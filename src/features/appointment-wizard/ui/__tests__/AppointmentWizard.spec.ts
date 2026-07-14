@@ -139,6 +139,14 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     const wrapper = mountWizard('2020-01-06T10:00:00Z')
     const next = en.quickCreate.appointment.next
 
+    // The stepper, footer navigation and gating now live in the modal chrome,
+    // driven by the wizard's exposed API.
+    const vm = wrapper.vm as unknown as {
+      canAdvance: boolean
+      next: () => void
+      submit: () => Promise<void>
+    }
+
     // Step 1 has no footer navigation and advances immediately on selection.
     expect(button(wrapper, next)).toBeUndefined()
     expect(button(wrapper, en.quickCreate.actions.back)).toBeUndefined()
@@ -146,17 +154,18 @@ describe('AppointmentWizard — gating & slot prefill', () => {
 
     // Step 2: Next disabled with 0 services.
     expect(wrapper.findComponent(StepServices).exists()).toBe(true)
-    expect(button(wrapper, next)!.attributes('disabled')).toBeDefined()
+    expect(vm.canAdvance).toBe(false)
     await wrapper.findComponent(StepServices).vm.$emit('update:modelValue', ['s1'])
-    expect(button(wrapper, next)!.attributes('disabled')).toBeUndefined()
-    await button(wrapper, next)!.trigger('click')
+    expect(vm.canAdvance).toBe(true)
+    vm.next()
+    await wrapper.vm.$nextTick()
 
     // Skipped Step 3 → Confirm summary.
     expect(wrapper.findComponent(StepConfirm).exists()).toBe(true)
     expect(wrapper.text()).toContain('Anna Petrova')
     expect(wrapper.text()).toContain('Haircut')
 
-    await button(wrapper, en.quickCreate.appointment.create)!.trigger('click')
+    await vm.submit()
     expect(mocks.createAppointment).toHaveBeenCalledTimes(1)
     expect(mocks.createAppointment.mock.calls[0]![0]).toEqual({
       client_id: 'c1',
@@ -172,11 +181,11 @@ describe('AppointmentWizard — gating & slot prefill', () => {
 
   it('restores the earlier selection when navigating back (skip-aware)', async () => {
     const wrapper = mountWizard('2020-01-06T10:00:00Z')
-    const next = en.quickCreate.appointment.next
 
     await wrapper.findComponent(StepClient).vm.$emit('update:modelValue', 'c1')
     await wrapper.findComponent(StepServices).vm.$emit('update:modelValue', ['s1'])
-    await button(wrapper, next)!.trigger('click')
+    ;(wrapper.vm as unknown as { next: () => void }).next()
+    await wrapper.vm.$nextTick()
     expect(wrapper.findComponent(StepConfirm).exists()).toBe(true)
 
     // Back from Confirm skips Step 3 → Step 2 with the service still selected.

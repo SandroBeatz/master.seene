@@ -136,6 +136,7 @@ export default {
     },
     actions: {
       back: 'Retour',
+      close: 'Fermer',
     },
     appointment: {
       title: 'Nouveau rendez-vous',
@@ -174,6 +175,11 @@ export default {
         price: 'Prix',
         notes: 'Commentaire',
         notesPlaceholder: 'Ajouter un commentaire (facultatif)',
+      },
+      footer: {
+        services: '{count} prestation | {count} prestations',
+        hoursUnit: 'h',
+        minutesUnit: 'min',
       },
     },
     timeOff: {

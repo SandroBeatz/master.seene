@@ -23,7 +23,7 @@ import {
 } from '@shared/lib/scheduling'
 import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
-import { createAppointmentWizard } from '../model/appointment-wizard'
+import { createAppointmentWizard, type WizardStep } from '../model/appointment-wizard'
 import type { AppointmentPrefill } from '../model/types'
 import StepClient from './steps/StepClient.vue'
 import StepServices from './steps/StepServices.vue'
@@ -180,19 +180,51 @@ const stepTitle = computed(() => {
   return t('quickCreate.appointment.steps.confirm')
 })
 
-// --- Stepper ---
-const stepperItems = [{ value: 1 }, { value: 2 }, { value: 3 }, { value: 4 }]
-
-function onStepperNav(value: unknown) {
-  if (typeof value === 'number') wizard.goTo(value as 1 | 2 | 3 | 4)
+// --- Footer summary ---
+// Compact "h/min" duration used by the modal footer (e.g. "2h", "1h 15min").
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  const h = t('quickCreate.appointment.footer.hoursUnit')
+  const m = t('quickCreate.appointment.footer.minutesUnit')
+  if (hours && mins) return `${hours}${h} ${mins}${m}`
+  if (hours) return `${hours}${h}`
+  return `${mins}${m}`
 }
 
-// Exposed to AppointmentWizardModal, which renders the wizard header (title,
-// current step, back navigation) in the dialog's own header slot.
-defineExpose({
-  step: computed(() => state.step),
-  stepTitle,
-  back: () => wizard.back(),
+interface FooterStat {
+  icon?: string
+  label: string
+  strong?: boolean
+}
+
+// Per-step summary chips shown on the left of the modal footer. Step 1 has no
+// footer (client selection auto-advances), so it returns nothing.
+const footerStats = computed<FooterStat[]>(() => {
+  const stats: FooterStat[] = []
+  const count = selectedServices.value.length
+
+  if (state.step === 2) {
+    stats.push({
+      icon: 'i-lucide-layers',
+      label: t('quickCreate.appointment.footer.services', count),
+    })
+    if (totalDuration.value > 0)
+      stats.push({ icon: 'i-lucide-clock', label: formatDuration(totalDuration.value) })
+    if (servicesTotalPrice.value != null)
+      stats.push({ label: formats.price(servicesTotalPrice.value), strong: true })
+  } else if (state.step === 3) {
+    if (totalDuration.value > 0)
+      stats.push({ icon: 'i-lucide-clock', label: formatDuration(totalDuration.value) })
+    if (timeLabel.value) stats.push({ icon: 'i-lucide-calendar-clock', label: timeLabel.value })
+  } else if (state.step === 4) {
+    if (totalDuration.value > 0)
+      stats.push({ icon: 'i-lucide-clock', label: formatDuration(totalDuration.value) })
+    if (effectivePrice.value != null)
+      stats.push({ label: formats.price(effectivePrice.value), strong: true })
+  }
+
+  return stats
 })
 
 function onClientSelect(clientId: string | null | undefined) {
@@ -237,18 +269,26 @@ async function create() {
     toast.add({ title: t('appointments.form.errorTitle'), color: 'error' })
   }
 }
+
+// Exposed to AppointmentWizardModal, which renders the chrome (header title +
+// back navigation, stepper, footer summary + primary action) around the steps.
+defineExpose({
+  step: computed(() => state.step),
+  stepTitle,
+  clientName,
+  footerStats,
+  canAdvance: wizard.canAdvance,
+  isLastStep: computed(() => state.step === 4),
+  isCreating: createMutation.isLoading,
+  next: () => wizard.next(),
+  back: () => wizard.back(),
+  goTo: (target: number) => wizard.goTo(target as WizardStep),
+  submit: () => create(),
+})
 </script>
 
 <template>
-  <div class="space-y-5">
-    <UStepper
-      :items="stepperItems"
-      value-key="value"
-      :model-value="state.step"
-      size="sm"
-      @update:model-value="onStepperNav"
-    />
-
+  <div>
     <StepClient
       v-if="state.step === 1"
       :model-value="state.clientId"
@@ -288,27 +328,6 @@ async function create() {
       :duration-minutes="totalDuration"
       @price-input="state.priceOverridden = true"
     />
-
-    <div v-if="state.step > 1" class="flex items-center justify-end gap-2">
-      <UButton
-        v-if="state.step < 4"
-        color="primary"
-        trailing-icon="i-lucide-arrow-right"
-        :disabled="!wizard.canAdvance.value"
-        @click="wizard.next()"
-      >
-        {{ t('quickCreate.appointment.next') }}
-      </UButton>
-      <UButton
-        v-else
-        color="primary"
-        leading-icon="i-lucide-check"
-        :loading="createMutation.isLoading.value"
-        @click="create"
-      >
-        {{ t('quickCreate.appointment.create') }}
-      </UButton>
-    </div>
 
     <ClientFormDialog
       :open="isClientFormOpen"

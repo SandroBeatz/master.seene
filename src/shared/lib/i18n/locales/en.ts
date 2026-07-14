@@ -136,6 +136,7 @@ export default {
     },
     actions: {
       back: 'Back',
+      close: 'Close',
     },
     appointment: {
       title: 'New appointment',
@@ -174,6 +175,11 @@ export default {
         price: 'Price',
         notes: 'Comment',
         notesPlaceholder: 'Add a comment (optional)',
+      },
+      footer: {
+        services: '{count} service | {count} services',
+        hoursUnit: 'h',
+        minutesUnit: 'min',
       },
     },
     timeOff: {
