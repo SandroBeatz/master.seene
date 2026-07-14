@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-05-15
+version: 1.1
+date: 2026-07-14
 category: business
 ---
 
 # Checkout
 
-> Version 1.0 · 2026-05-15 · [Business](../)
+> Version 1.1 · 2026-07-14 · [Business](../)
 
 ## Overview
 
@@ -63,7 +63,7 @@ One financial record per completed appointment.
 |---|---|---|
 | `id` | `uuid` | Primary key |
 | `user_id` | `uuid` | FK → `auth.users` (CASCADE delete) |
-| `appointment_id` | `uuid` | FK → `appointments` (UNIQUE, RESTRICT delete) |
+| `appointment_id` | `uuid` | FK → `appointments` (UNIQUE, **CASCADE delete**) |
 | `client_id` | `uuid` | FK → `client` (RESTRICT delete) |
 | `payment_type_id` | `uuid` | FK → `payment_type` (SET NULL on delete) |
 | `amount` | `numeric(10,2)` | Total amount paid |
@@ -71,6 +71,13 @@ One financial record per completed appointment.
 | `created_at` | `timestamptz` | Auto-set on insert |
 
 **Key constraint:** `UNIQUE (appointment_id)` — one appointment can have at most one sale.
+
+**Delete behavior:** since a sale is 1:1 with its appointment (`NOT NULL UNIQUE`) it
+cannot be orphaned, so `appointment_id` uses **`ON DELETE CASCADE`** (changed from the
+original `RESTRICT` in `20260714120000_sale_appointment_delete_cascade.sql`). Deleting an
+appointment removes its sale (and `sale_item` rows cascade from `sale`). The appointment
+preview panel warns the master that revenue will be removed before confirming a delete
+(`appointments.delete.messageWithSale`).
 
 **RLS:** `auth.uid() = user_id` — owner-only access on all operations.
 

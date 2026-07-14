@@ -1,12 +1,12 @@
 ---
-version: 2.5
-date: 2026-07-13
+version: 2.6
+date: 2026-07-14
 category: business
 ---
 
 # Data Model
 
-> Version 2.5 · 2026-07-13 · [Business](../)
+> Version 2.6 · 2026-07-14 · [Business](../)
 
 ## Overview
 
@@ -433,6 +433,7 @@ All seven tables follow the same pattern:
 | `20260623120000_add_system_region_settings.sql` | 2026-06-23 | Add `language`, `theme`, `currency`, `date_format` to `master_settings` |
 | `20260623162838_add_master_profile_deactivated_at.sql` | 2026-06-23 | Add `deactivated_at` to `master_profile` (soft-delete) |
 | `20260623172000_add_avatar_to_master_profile.sql` | 2026-06-23 | Add `avatar_url` to `master_profile`; create public `avatars` Storage bucket with owner-scoped RLS |
+| `20260714120000_sale_appointment_delete_cascade.sql` | 2026-07-14 | `sale.appointment_id` FK → `ON DELETE CASCADE` (was RESTRICT); deleting an appointment removes its sale |
 
 Full SQL is in `supabase/migrations/`.
 

@@ -1,12 +1,20 @@
 ---
-version: 1.1
-date: 2026-07-08
+version: 1.2
+date: 2026-07-14
 category: business
 ---
 
 # Quick Appointment & Time Off Creation
 
-> Version 1.1 · 2026-07-08 · [Business](../business/)
+> Version 1.2 · 2026-07-14 · [Business](../business/)
+
+> **Implementation status.** This document began as the implementation plan. The
+> appointment flow shipped under `src/features/appointment-wizard/` (not the
+> planned `features/quick-create/` name), opened via `useAppointmentWizard()`. The
+> **Date & time step (Step 3)** was reworked past the original plan — see
+> [Step 3 date and time UX](#step-3-date-and-time-ux).
+> The pure availability math lives in `src/shared/lib/scheduling/` as planned
+> ([Scheduling Library](../code/scheduling.md)).
 
 ## Overview
 
@@ -101,6 +109,38 @@ times are not offered. `findFreeIntervals` is the complement of `busy` inside
 `[workStart, workEnd]`, used to render "Free time: 09:00–11:00 …" and to bound the manual
 From/To pickers.
 
+### Step 3 date and time UX
+
+The implemented `StepDateTime.vue` goes beyond "disabled days + a flat slot list".
+It treats the calendar as informative and always leaves an escape hatch, so a
+master can book **any day at any time** (force majeure). Backed by three helpers —
+`classifyDayState` (`@entities/master`), `groupSlotsByPartOfDay` and
+`buildDayTimeOptions` (`@shared/lib/scheduling`), see
+[Scheduling Library](../code/scheduling.md).
+
+- **No disabled future days.** `UCalendar` uses `:year-controls="false"` (month
+  navigation only) and no longer disables days. Every day is selectable; each is
+  **marked** by `classifyDayState` → a dot: free (`available`), fully booked
+  (`full`), or day off (hollow marker). Past days are dimmed and un-marked.
+- **Grouped slots.** Free slots render in labeled sections —
+  morning (`< 12:00`) / day (`12:00–16:59`) / evening (`>= 17:00`) — via
+  `groupSlotsByPartOfDay`. Empty groups are hidden.
+- **Empty state.** A day off or a fully-booked day shows an icon + reason
+  (`dayOff` / `noSlots`) in place of the slot list, not just a bare message.
+- **Always-available manual time.** A "set time manually" control is present on
+  every day (not only when slots are missing). It opens a `USelect` of the whole
+  day at `calendarSlotStepMinutes` (`buildDayTimeOptions`). A manual pick that
+  overlaps an existing booking shows a **non-blocking** conflict warning.
+- **Time off on the day.** Time offs (`time_block`) touching the selected day are
+  listed with their period (or "All day") + notes, so the master sees why time is
+  missing and can still book around/over them.
+- **Past days.** Past days are selectable. Selecting one replaces the slot list
+  with a "Past day" alert; the master sets the time manually. Such a booking is
+  written as **`confirmed`** (it happened) — the master then completes it via
+  [checkout](./checkout.md), which records the sale. It is deliberately **not**
+  auto-`completed`: a `completed` appointment without a sale is inconsistent with
+  the checkout model and skews analytics.
+
 ### Time off branching
 
 | Day state | UI |
@@ -116,10 +156,12 @@ prices, editable/optional per current form), and an optional **comment**. Create
 the existing `useCreateAppointmentMutation` with:
 
 ```ts
-{ client_id, service_ids, start_at, duration, price, notes, source: 'manual', status: 'pending' }
+{ client_id, service_ids, start_at, duration, price, notes, source: 'manual', status }
 ```
 
-`source: 'manual'` and default `status: 'pending'` match the current form. The mutation
+`source: 'manual'`. `status` is `'pending'` for a today/future booking (matching the
+current form) and **`'confirmed'`** when the selected day is in the past (see
+[Step 3 date and time UX](#step-3-date-and-time-ux)). The mutation
 already invalidates `appointments`, `appointments-actionable`, and `appointment-day-counts`
 query keys, so the new appointment appears on **home** (`HomeScheduleWidget`) and the
 **calendar** automatically. Time off writes via `useCreateTimeBlockMutation` (invalidates
@@ -342,6 +384,7 @@ Suggested epics and their dependencies (→ = depends on):
 
 ## Cross-references
 
+- [Scheduling Library](../code/scheduling.md) — the pure `shared/lib/scheduling/` helpers (slots, free intervals, day-time options, grouping) and `classifyDayState` this wizard consumes.
 - [Online Booking](./online-booking.md) — the `findAvailableSlots` blueprint this feature
   implements and will share with the public page and server validation.
 - [Appointments](./appointments.md) — appointment lifecycle, status, `source`, and the
