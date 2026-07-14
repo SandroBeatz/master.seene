@@ -39,6 +39,7 @@ vi.mock('@entities/appointment', async () => {
       isLoading: { value: false },
     }),
     collectDayBusyIntervals: busyIntervals.collectDayBusyIntervals,
+    timeBlockToBusyInterval: busyIntervals.timeBlockToBusyInterval,
   }
 })
 vi.mock('@entities/client', () => ({
@@ -135,8 +136,8 @@ beforeEach(() => {
 
 describe('AppointmentWizard — gating & slot prefill', () => {
   it('gates Next per step, skips date/time on prefill, and writes a manual DTO', async () => {
-    // Prefill 10:00 UTC on a Monday → skipDateTime, slot = 600.
-    const wrapper = mountWizard('2020-01-06T10:00:00Z')
+    // Prefill 10:00 UTC on a future day → skipDateTime, slot = 600, status pending.
+    const wrapper = mountWizard('2035-06-11T10:00:00Z')
     const next = en.quickCreate.appointment.next
 
     // The stepper, footer navigation and gating now live in the modal chrome,
@@ -170,12 +171,29 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     expect(mocks.createAppointment.mock.calls[0]![0]).toEqual({
       client_id: 'c1',
       service_ids: ['s1'],
-      start_at: '2020-01-06T10:00:00.000Z',
+      start_at: '2035-06-11T10:00:00.000Z',
       duration: 60,
       price: 1000,
       notes: null,
       source: 'manual',
       status: 'pending',
+    })
+  })
+
+  it('creates a booking on a past day as confirmed (completed later via checkout)', async () => {
+    // Prefill 10:00 UTC on a day that has already passed.
+    const wrapper = mountWizard('2020-01-06T10:00:00Z')
+    const vm = wrapper.vm as unknown as { next: () => void; submit: () => Promise<void> }
+
+    await wrapper.findComponent(StepClient).vm.$emit('update:modelValue', 'c1')
+    await wrapper.findComponent(StepServices).vm.$emit('update:modelValue', ['s1'])
+    vm.next()
+    await wrapper.vm.$nextTick()
+
+    await vm.submit()
+    expect(mocks.createAppointment.mock.calls[0]![0]).toMatchObject({
+      start_at: '2020-01-06T10:00:00.000Z',
+      status: 'confirmed',
     })
   })
 

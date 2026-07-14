@@ -4,22 +4,30 @@ import { useI18n } from 'vue-i18n'
 import { CalendarDate, getLocalTimeZone, today, type DateValue } from '@internationalized/date'
 import {
   collectDayBusyIntervals,
+  timeBlockToBusyInterval,
   useAppointmentsQuery,
   useCreateAppointmentMutation,
   type CreateAppointmentDto,
 } from '@entities/appointment'
 import { useClientsQuery, type Client } from '@entities/client'
-import { resolveDayWindow, useMasterPreferencesStore } from '@entities/master'
+import {
+  classifyDayState,
+  resolveDayWindow,
+  useMasterPreferencesStore,
+  type DayState,
+} from '@entities/master'
 import { useServicesQuery, type Service } from '@entities/service'
 import { useSessionStore } from '@entities/session'
 import { useTimeBlocksQuery } from '@entities/time-block'
 import { ClientFormDialog } from '@features/client-form'
 import {
+  buildDayTimeOptions,
   calendarDateToInput,
   findAvailableSlots,
-  hasAnyFreeSlot,
   inputToCalendarDate,
+  intervalsOverlap,
   minutesToTimeInput,
+  type Interval,
 } from '@shared/lib/scheduling'
 import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
@@ -138,21 +146,53 @@ const slots = computed<number[]>(() => {
   })
 })
 
-function isDateUnavailable(date: DateValue): boolean {
-  if (totalDuration.value <= 0) return true
+// Per-day booking state for the calendar markers. Every day stays selectable —
+// days-off and fully-booked days are shown, not disabled, so the master can
+// still place a force-majeure booking on them via the manual time picker.
+function dayStateFor(date: DateValue): DayState {
   const dateStr = calendarDateToInput(date)
-  const window = resolveDayWindow(schedule.value, dateStr)
-  if (!window.enabled) return true
-  return !hasAnyFreeSlot({
-    workStart: window.workStart,
-    workEnd: window.workEnd,
-    breaks: window.breaks,
+  return classifyDayState({
+    schedule: schedule.value,
+    date: dateStr,
     busy: busyFor(dateStr),
     stepMinutes: stepMinutes.value,
     durationMinutes: totalDuration.value,
-    earliest: earliestFor(dateStr, window.workStart),
+    nowMinutes: dateStr === todayStr ? nowMinutes : undefined,
   })
 }
+
+// Full-day time list for the always-available "set time manually" escape hatch,
+// generated at the master's global slot interval (any time, any day).
+const manualTimeOptions = computed(() =>
+  buildDayTimeOptions({ stepMinutes: stepMinutes.value }).map((value) => ({
+    value,
+    label: formats.time(minutesToTimeInput(value)),
+  })),
+)
+
+// Time offs touching the selected day, shown so the master sees why time is
+// missing and can still book around/over them.
+const selectedTimeOffs = computed(() => {
+  if (!state.date) return []
+  return (timeBlocks.value ?? []).flatMap((block) => {
+    const interval = timeBlockToBusyInterval(block, state.date, timeZone.value)
+    if (!interval) return []
+    const [start, end] = interval
+    const allDay = start === 0 && end === 24 * 60
+    const label = allDay
+      ? t('quickCreate.appointment.dateTime.allDay')
+      : `${formats.time(minutesToTimeInput(start))} – ${formats.time(minutesToTimeInput(end))}`
+    return [{ label, notes: block.notes }]
+  })
+})
+
+// True when the chosen start (typically a manual pick) overlaps an existing
+// booking/block — surfaced as a non-blocking warning, never a hard stop.
+const hasConflict = computed(() => {
+  if (state.slotMinutes == null || totalDuration.value <= 0) return false
+  const candidate: Interval = [state.slotMinutes, state.slotMinutes + totalDuration.value]
+  return busyFor(state.date).some((interval) => intervalsOverlap(candidate, interval))
+})
 
 const minDate = computed(() => today(zone.value))
 
@@ -251,6 +291,9 @@ async function create() {
     minutesToTimeInput(state.slotMinutes),
     timeZone.value,
   )
+  // A booking on a day that has already passed is created as confirmed (it
+  // happened) — the master completes it via checkout, which records the sale.
+  const isPastDay = Boolean(state.date) && state.date < todayStr
   const dto: CreateAppointmentDto = {
     client_id: state.clientId,
     service_ids: [...state.serviceIds],
@@ -259,7 +302,7 @@ async function create() {
     price: effectivePrice.value,
     notes: state.notes || null,
     source: 'manual',
-    status: 'pending',
+    status: isPastDay ? 'confirmed' : 'pending',
   }
   try {
     await createMutation.mutateAsync(dto)
@@ -311,7 +354,10 @@ defineExpose({
       :slot-minutes="state.slotMinutes"
       :slots="slots"
       :min-date="minDate"
-      :is-date-unavailable="isDateUnavailable"
+      :day-state="dayStateFor"
+      :manual-time-options="manualTimeOptions"
+      :time-offs="selectedTimeOffs"
+      :has-conflict="hasConflict"
       @update:date="onDateChange"
       @update:slot-minutes="state.slotMinutes = $event"
       @update:month="visibleMonth = new CalendarDate($event.year, $event.month, 1)"

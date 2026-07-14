@@ -165,6 +165,27 @@ export default {
         pickDate: 'Pick a date to see free time.',
         slots: 'Free time',
         noSlots: 'No free slots on this day.',
+        dayOff: 'This is a day off.',
+        legend: {
+          available: 'Free slots',
+          full: 'Fully booked',
+          dayOff: 'Day off',
+        },
+        groups: {
+          morning: 'Morning',
+          day: 'Afternoon',
+          evening: 'Evening',
+        },
+        manual: 'Set time manually',
+        selectTime: 'Select time',
+        conflict: 'This time overlaps an existing booking.',
+        timeOff: 'Time off',
+        allDay: 'All day',
+        past: {
+          title: 'Past day',
+          description:
+            'This day has already passed. The appointment will be added as confirmed — complete it via checkout to record the sale. Set the time manually below.',
+        },
       },
       confirm: {
         client: 'Client',
@@ -1033,6 +1054,8 @@ export default {
     delete: {
       title: 'Delete appointment',
       message: 'Delete this appointment? This action cannot be undone.',
+      messageWithSale:
+        'This appointment has a recorded sale — deleting it will also remove that revenue. This action cannot be undone.',
       confirm: 'Delete',
       cancel: 'Cancel',
     },

@@ -165,6 +165,27 @@ export default {
         pickDate: 'Choisissez une date pour voir les créneaux libres.',
         slots: 'Créneaux libres',
         noSlots: 'Aucun créneau libre ce jour-là.',
+        dayOff: 'C’est un jour de repos.',
+        legend: {
+          available: 'Créneaux libres',
+          full: 'Complet',
+          dayOff: 'Jour de repos',
+        },
+        groups: {
+          morning: 'Matin',
+          day: 'Après-midi',
+          evening: 'Soir',
+        },
+        manual: 'Définir l’heure manuellement',
+        selectTime: 'Choisir une heure',
+        conflict: 'Cet horaire chevauche une réservation existante.',
+        timeOff: 'Indisponibilité',
+        allDay: 'Toute la journée',
+        past: {
+          title: 'Jour passé',
+          description:
+            'Ce jour est déjà passé. Le rendez-vous sera ajouté comme confirmé — finalisez-le via le paiement pour enregistrer la vente. Définissez l’heure manuellement ci-dessous.',
+        },
       },
       confirm: {
         client: 'Client',
@@ -1042,6 +1063,8 @@ export default {
     delete: {
       title: 'Supprimer le rendez-vous',
       message: 'Supprimer ce rendez-vous ? Cette action est irréversible.',
+      messageWithSale:
+        'Ce rendez-vous a une vente enregistrée — le supprimer supprimera aussi ce revenu. Cette action est irréversible.',
       confirm: 'Supprimer',
       cancel: 'Annuler',
     },

@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import { CalendarDate } from '@internationalized/date'
 import type { Client } from '@entities/client'
+import type { DayState } from '@entities/master'
 import type { Service } from '@entities/service'
 import { formatsPlugin } from '@shared/lib/formats'
 import en from '@shared/lib/i18n/locales/en'
@@ -144,7 +145,13 @@ describe('StepServices', () => {
 describe('StepDateTime', () => {
   const baseProps = {
     minDate: new CalendarDate(2026, 7, 1),
-    isDateUnavailable: () => false,
+    dayState: (): DayState => 'full',
+    manualTimeOptions: [
+      { value: 600, label: '10:00' },
+      { value: 1080, label: '18:00' },
+    ],
+    timeOffs: [] as { label: string; notes: string | null }[],
+    hasConflict: false,
   }
 
   it('renders a button per free slot and emits the picked minute', async () => {
@@ -160,12 +167,93 @@ describe('StepDateTime', () => {
     expect(wrapper.emitted('update:slotMinutes')?.[0]).toEqual([600])
   })
 
+  it('groups slots by part of day with section headers', () => {
+    const wrapper = mount(StepDateTime, {
+      // 09:00 (morning), 14:00 (afternoon), 18:00 (evening)
+      props: { ...baseProps, date: '2026-07-08', slotMinutes: null, slots: [540, 840, 1080] },
+      global: { ...makeGlobal(), stubs: { UCalendar: true } },
+    })
+    const text = wrapper.text()
+    expect(text).toContain(en.quickCreate.appointment.dateTime.groups.morning)
+    expect(text).toContain(en.quickCreate.appointment.dateTime.groups.day)
+    expect(text).toContain(en.quickCreate.appointment.dateTime.groups.evening)
+  })
+
   it('shows the no-slots message when a busy day has none', () => {
     const wrapper = mount(StepDateTime, {
       props: { ...baseProps, date: '2026-07-08', slotMinutes: null, slots: [] },
       global: { ...makeGlobal(), stubs: { UCalendar: true } },
     })
     expect(wrapper.text()).toContain(en.quickCreate.appointment.dateTime.noSlots)
+  })
+
+  it('shows the day-off message on a non-working day', () => {
+    const wrapper = mount(StepDateTime, {
+      props: {
+        ...baseProps,
+        dayState: (): DayState => 'day-off',
+        date: '2026-07-05',
+        slotMinutes: null,
+        slots: [],
+      },
+      global: { ...makeGlobal(), stubs: { UCalendar: true } },
+    })
+    expect(wrapper.text()).toContain(en.quickCreate.appointment.dateTime.dayOff)
+  })
+
+  it('reveals the manual time picker, which is available even with free slots', async () => {
+    const wrapper = mount(StepDateTime, {
+      props: { ...baseProps, date: '2026-07-08', slotMinutes: null, slots: [600] },
+      global: { ...makeGlobal(), stubs: { UCalendar: true } },
+    })
+    const manualButton = wrapper
+      .findAll('button')
+      .find((b) => b.text() === en.quickCreate.appointment.dateTime.manual)
+    expect(manualButton).toBeTruthy()
+
+    await manualButton!.trigger('click')
+    // The manual link is replaced by the time picker (placeholder visible).
+    expect(wrapper.text()).toContain(en.quickCreate.appointment.dateTime.selectTime)
+    expect(
+      wrapper
+        .findAll('button')
+        .some((b) => b.text() === en.quickCreate.appointment.dateTime.manual),
+    ).toBe(false)
+  })
+
+  it('shows the past-day alert instead of slots for a day already passed', () => {
+    const wrapper = mount(StepDateTime, {
+      // Before minDate (2026-07-01) → past day.
+      props: { ...baseProps, date: '2026-06-20', slotMinutes: null, slots: [600, 615] },
+      global: { ...makeGlobal(), stubs: { UCalendar: true } },
+    })
+    expect(wrapper.text()).toContain(en.quickCreate.appointment.dateTime.past.title)
+    // Slot buttons are replaced by the alert.
+    expect(wrapper.findAll('button').some((b) => b.text() === '10:00')).toBe(false)
+  })
+
+  it('lists time offs that touch the selected day', () => {
+    const wrapper = mount(StepDateTime, {
+      props: {
+        ...baseProps,
+        date: '2026-07-08',
+        slotMinutes: null,
+        slots: [],
+        timeOffs: [{ label: '13:00 – 14:00', notes: 'Lunch' }],
+      },
+      global: { ...makeGlobal(), stubs: { UCalendar: true } },
+    })
+    expect(wrapper.text()).toContain(en.quickCreate.appointment.dateTime.timeOff)
+    expect(wrapper.text()).toContain('13:00 – 14:00')
+    expect(wrapper.text()).toContain('Lunch')
+  })
+
+  it('surfaces a non-blocking conflict warning for the chosen time', () => {
+    const wrapper = mount(StepDateTime, {
+      props: { ...baseProps, date: '2026-07-08', slotMinutes: 1080, slots: [], hasConflict: true },
+      global: { ...makeGlobal(), stubs: { UCalendar: true } },
+    })
+    expect(wrapper.text()).toContain(en.quickCreate.appointment.dateTime.conflict)
   })
 
   it('prompts to pick a date when none is chosen', () => {
