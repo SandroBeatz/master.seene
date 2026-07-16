@@ -9,6 +9,7 @@ export default {
     settings: 'Настройки',
     logout: 'Выйти',
     profile: 'Профиль',
+    actions: 'Действия',
   },
   common: {
     dashboardWelcome: 'Вот что происходит с вашими проектами сегодня.',
@@ -571,6 +572,7 @@ export default {
     nav: {
       groupGeneral: 'Основное',
       groupSystem: 'Система',
+      groupWorkspace: 'Рабочее пространство',
       profile: 'Профиль',
       contacts: 'Контакты и соцсети',
       workingHours: 'Рабочие часы',
@@ -580,6 +582,14 @@ export default {
       notifications: 'Уведомления',
       systemRegion: 'Система и регион',
       account: 'Аккаунт',
+      services: 'Услуги',
+      clients: 'Клиенты',
+      about: 'О приложении',
+    },
+    about: {
+      title: 'О приложении',
+      description: 'Информация о приложении и версии.',
+      version: 'Версия',
     },
     profile: {
       title: 'Профиль',

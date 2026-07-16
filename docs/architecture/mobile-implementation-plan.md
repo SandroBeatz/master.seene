@@ -1,12 +1,12 @@
 ---
-version: 1.0
-date: 2026-07-16
+version: 1.1
+date: 2026-07-17
 category: architecture
 ---
 
 # Mobile Implementation Plan
 
-> Version 1.0 · 2026-07-16 · [Architecture](../architecture/)
+> Version 1.1 · 2026-07-17 · [Architecture](../architecture/)
 
 > Companion to [Mobile Version](./mobile-version.md). That doc holds the *what* and *why*;
 > this one holds the *order of work* — where to start and how to move. Beads tasks are
@@ -16,17 +16,25 @@ category: architecture
 
 The goal is a **native-feeling mobile app built on the current Nuxt UI stack, wrapped in
 Capacitor for iOS + Android**. We move in phases that each end in something runnable and
-reviewable. The guiding rule: **prove the native feel early on a thin vertical slice,
-then widen screen by screen.** Never rebuild the whole app before knowing the shell feels
-right.
+reviewable. The guiding rule *(revised 2026-07-17)*: **get the whole mobile version
+functionally correct first — shell, navigation, every screen — with plain, unanimated
+interactions, then layer native-feel animations and gestures on top once nothing about
+the screens is still changing.** The Phase 0 spike already proved the underlying
+Capacitor + Nuxt UI combination *can* feel native when we get there; it doesn't need to
+be proven again screen by screen.
 
-Sequencing principle:
+Sequencing principle *(revised 2026-07-17 — native feel is now last, not second)*:
 
 1. Foundation first (breakpoint switch, mobile shell, Capacitor build) — so every later
-   screen has a place to live and a device to run on.
-2. Native-feel primitives next — because "full native feel from the start" was chosen;
-   we don't want to retrofit transitions onto 10 finished screens.
-3. Screens last, cheapest-first (adapt with Tailwind), hardest-last (calendar).
+   screen has a place to live and a device to run on. The shell ships with **plain,
+   unanimated navigation** at this stage — no transitions, no swipe-back yet.
+2. Sheets + screens next, cheapest-first (adapt with Tailwind), hardest-last (calendar) —
+   this is where the mobile version becomes functionally complete.
+3. **Native-feel primitives last**, once every screen already works. The earlier plan
+   ("bake in native feel from the start") is reversed: animations and gestures are
+   polish layered onto a finished, working mobile version, not a prerequisite for it.
+   Phase 2 (native-feel) now depends on Phases 3, 4, and 5 completing, and blocks
+   only Phase 6.
 
 ## Phases
 
@@ -53,24 +61,15 @@ _Output: a go/no-go decision recorded in [Mobile Version](./mobile-version.md)._
 - `useIsMobile()` composable in `src/shared/lib/viewport/` (via `@vueuse/core`
   `useBreakpoints`), single source of truth for shell choice.
 - Safe-area CSS variables (`env(safe-area-inset-*)`) wired into global styles.
-- `MobileShell` widget (`src/widgets/mobile-shell/`): bottom tab bar + per-screen header +
-  a `<RouterView>` transition outlet. Reuses the same `navItems` as `DashboardLayout`.
+- `MobileShell` widget (`src/widgets/mobile-shell/`): bottom tab bar (Home, Calendar,
+  (+) actions, Analytics, Settings) + per-screen back-header + a **plain, unanimated**
+  `<RouterView>` — no transitions or swipe-back at this stage, that's Phase 2 now.
+- Mobile Settings becomes a hub: existing settings sections + **Services** + **Clients**
+  (both reused from their current desktop pages) + a new **About** section.
 - Runtime shell selection: mobile → `MobileShell`, desktop → `DashboardLayout`, same routes.
-- **Acceptance:** on a narrow viewport the app shows a bottom tab bar and navigates
-  between Home / Calendar / Clients / Services; desktop is byte-for-byte unchanged.
-
-### Phase 2 — Native-feel primitives
-
-**Why:** chosen to bake native feel in from the start.
-
-- `MobileTabBar` + `MobileHeader` as polished shared components (safe-area aware,
-  `aria-current` active state, back button → `router.back()`).
-- Direction-aware page transitions (push vs pop from history depth).
-- Edge swipe-back gesture → `router.back()`.
-- Capacitor plugins: `@capacitor/status-bar`, `@capacitor/splash-screen`,
-  `@capacitor/haptics`, `@capacitor/keyboard` — themed to the design tokens.
-- **Acceptance:** navigating in/out of a nested screen animates correctly, swipe-back
-  works, status bar + splash are themed, tab switches give haptic feedback.
+- **Acceptance:** on a narrow viewport the app shows the 4-tab bar + actions button,
+  navigates between Home / Calendar / Analytics / Settings, and Settings surfaces
+  Services/Clients/About; desktop is byte-for-byte unchanged.
 
 ### Phase 3 — Overlays → mobile sheets
 
@@ -79,6 +78,8 @@ _Output: a go/no-go decision recorded in [Mobile Version](./mobile-version.md)._
 - Adapt appointment wizard, time-off wizard, settings modals, emoji picker, notifications
   to render as **full-screen / bottom sheets** on mobile, centered dialogs on desktop.
 - Keyboard-safe inputs inside sheets.
+- Open/close is **plain** for now (no swipe-to-dismiss, no custom enter/leave animation)
+  — standard `UModal`/`USlideover` behavior is enough; gesture polish is Phase 2, deferred.
 - **Acceptance:** the appointment-creation flow is comfortable and thumb-reachable on a phone.
 
 ### Phase 4 — Screen adaptation (cheap first)
@@ -86,9 +87,12 @@ _Output: a go/no-go decision recorded in [Mobile Version](./mobile-version.md)._
 Adapt with Tailwind responsive prefixes and single-column reflow. One task per screen group:
 
 - **Home** — mobile spacing, quick-create action above the tab bar.
-- **Clients** — list + detail as a push/back flow instead of a side panel.
-- **Services** — single-column cards, category management usable on mobile.
-- **Settings** — stacked rows, section navigation as push screens.
+- **Clients** — reached via Settings → Clients (not a tab); list + detail as a push/back
+  flow instead of a side panel.
+- **Services** — reached via Settings → Services (not a tab); single-column cards,
+  category management usable on mobile.
+- **Settings** — the hub itself: stacked rows, section navigation as push screens,
+  surfaces Services/Clients/About alongside the existing sections.
 - **Analytics** — stat cards + charts reflow to one column with mobile chart sizing.
 - **Auth / onboarding** — verify the existing flows on mobile viewports + safe areas.
 
@@ -100,6 +104,26 @@ Adapt with Tailwind responsive prefixes and single-column reflow. One task per s
 - Tap-to-create + tap-to-open wired to the mobile sheets from Phase 3.
 - **Acceptance:** a master can view and create appointments for a day entirely on a phone.
 
+### Phase 2 — Native-feel primitives *(moved here — now runs after Phases 3, 4, 5)*
+
+**Why:** reversed 2026-07-17. Originally scheduled right after Phase 1 ("bake native feel
+in from the start"); now deliberately last before ship polish, once the mobile version is
+functionally complete on every screen. No point animating navigation that's still being
+reshaped screen by screen.
+
+- `MobileTabBar` + `MobileHeader` get transition/gesture polish (base components already
+  shipped, unanimated, in Phase 1).
+- Direction-aware page transitions (push vs pop from history depth).
+- Edge swipe-back gesture → `router.back()`.
+- Sheet open/close gets swipe-to-dismiss + custom animation (base sheets already shipped,
+  plain, in Phase 3).
+- Capacitor plugins: `@capacitor/status-bar`, `@capacitor/splash-screen`,
+  `@capacitor/haptics`, `@capacitor/keyboard` — themed to the design tokens.
+- **Acceptance:** navigating in/out of a nested screen animates correctly, swipe-back
+  works, status bar + splash are themed, tab switches give haptic feedback — applied
+  across every already-working screen (Settings hub, sheets, Home/Calendar/Analytics/
+  Clients/Services/Auth, calendar) without regressing their functionality.
+
 ### Phase 6 — Ship polish
 
 - App icons, splash assets, launch config for both platforms.
@@ -109,24 +133,39 @@ Adapt with Tailwind responsive prefixes and single-column reflow. One task per s
 
 ## Dependency graph
 
+*(revised 2026-07-17 — Phase 2 moved to the end)*
+
 ```
 Phase 0 (spike / gate)
-   └─> Phase 1 (foundation)
-          └─> Phase 2 (native primitives)
-                 ├─> Phase 3 (sheets)
-                 │      └─> Phase 5 (calendar, uses sheets)
-                 └─> Phase 4 (screens, cheap)  ──> Phase 6 (ship polish)
+   └─> Phase 1 (foundation: shell, tab bar, Settings hub — unanimated)
+          ├─> Phase 3 (sheets, plain — no gesture dismiss)
+          │      └─> Phase 5 (calendar, uses sheets)
+          └─> Phase 4 (screens, cheap: Home/Clients/Services/Settings/Analytics/Auth)
+                 │
+                 ▼
+          Phase 2 (native-feel primitives — transitions, swipe-back, haptics)
+          depends on: Phase 3 + Phase 4 + Phase 5 all complete
+                 │
+                 ▼
+          Phase 6 (ship polish)
 ```
 
-Phase 3 and Phase 4 can largely run in parallel once Phase 2 lands. Phase 5 depends on
-Phase 3 (sheets). Phase 6 depends on everything.
+Phase 3 and Phase 4 run in parallel straight off Phase 1 (no need to wait for native feel
+anymore). Phase 5 depends on Phase 3 (sheets). **Phase 2 now depends on Phases 3, 4, and 5
+all being done** — it's polish applied to a functionally finished mobile version, not a
+foundation the rest builds on. Phase 6 depends on everything, including Phase 2.
 
 ## Where to start
 
-**Start with Phase 0.** Install Capacitor, get the current build running on a device, and
-throw a 2-screen native-feel prototype at it. That single spike answers the only question
-that can still sink this approach — whether we can get native navigation feel without
-Ionic — before we invest in the real shell and screens.
+**Phase 0 is done (GO, 2026-07-17)** — Capacitor is installed, native iOS/Android
+projects exist, and a throwaway prototype proved Nuxt UI + Tailwind render cleanly inside
+Capacitor's WebView with no conflicts. See the [Phase 0 gate decision](./mobile-version.md#phase-0-gate-decision-go-2026-07-17)
+for details.
+
+**Start with Phase 1** (`master.seene-x1ii.2`): the viewport switch, `MobileShell`, the
+tab bar (Home/Calendar/+/Analytics/Settings), and the Settings hub (+Services/+Clients/
++About) — all with plain, unanimated navigation. Native-feel primitives (Phase 2) are
+deliberately deferred until Phases 3–5 are done; don't front-load them.
 
 ## Cross-references
 

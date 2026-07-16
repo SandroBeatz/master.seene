@@ -1,4 +1,4 @@
-export { default as EntryPage } from './ui/_EntryPage.vue'
+export { default as EntryPage } from './ui/_SettingsShell.vue'
 export { default as SettingsProfilePage } from './ui/SettingsProfilePage.vue'
 export { default as SettingsContactsPage } from './ui/SettingsContactsPage.vue'
 export { default as SettingsWorkingHoursPage } from './ui/SettingsWorkingHoursPage.vue'
@@ -8,3 +8,4 @@ export { default as SettingsServiceCategoriesPage } from './ui/SettingsServiceCa
 export { default as SettingsNotificationsPage } from './ui/SettingsNotificationsPage.vue'
 export { default as SettingsSystemRegionPage } from './ui/SettingsSystemRegionPage.vue'
 export { default as SettingsAccountPage } from './ui/SettingsAccountPage.vue'
+export { default as SettingsAboutPage } from './ui/SettingsAboutPage.vue'

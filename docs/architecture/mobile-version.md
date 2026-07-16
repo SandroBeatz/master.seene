@@ -1,12 +1,12 @@
 ---
-version: 1.1
+version: 1.3
 date: 2026-07-17
 category: architecture
 ---
 
 # Mobile Version
 
-> Version 1.1 · 2026-07-17 · [Architecture](../architecture/)
+> Version 1.3 · 2026-07-17 · [Architecture](../architecture/)
 
 > **Living document.** This is the single source of truth for everything about the
 > Seene mobile version. It is updated continuously as the mobile work progresses —
@@ -21,14 +21,14 @@ stack** — the same Nuxt UI v4 components, the same `--ui-*` CSS variables, the
 FSD architecture. The plan is: make the current single app fully mobile-adaptive and
 native-feeling, then wrap that same build in **Capacitor** to ship to iOS and Android.
 
-**Chosen direction (locked 2026-07-16):**
+**Chosen direction (locked 2026-07-16, navigation + sequencing revised 2026-07-17):**
 
 | Decision | Choice | Consequence |
 |---|---|---|
 | Architecture | **Adaptive single app on current Nuxt UI + Capacitor** | No monorepo split, no Ionic. Same components adapt to viewport. |
-| Navigation | **Bottom tab bar + "back" headers** | Native mobile pattern; desktop keeps the vertical sidebar rail. |
+| Navigation | **Bottom tab bar (Home, Calendar, (+) actions, Analytics, Settings) + "back" headers** | 4 fixed tabs + a center actions button; desktop keeps the vertical sidebar rail unchanged. See [Navigation structure](#navigation-structure). |
 | Platforms | **iOS + Android in parallel** | Both configured and tested together from the start. |
-| Native feel | **Full native feel from the start** | Page transitions, swipe-back, haptics, native splash/status bar baked in early, not deferred. |
+| Native feel | **Deferred, not first** *(reversed 2026-07-17)* | Build the whole mobile version functionally first (shell, sheets, all screens, calendar) with plain, unanimated navigation. Page transitions, swipe-back, and haptics are a dedicated late phase, right before ship polish — not baked in from day one. |
 
 This **supersedes** the earlier Ionic-monorepo design
 ([`docs/superpowers/specs/2026-07-14-capacitor-ionic-mobile-design.md`](../superpowers/specs/2026-07-14-capacitor-ionic-mobile-design.md)),
@@ -52,6 +52,33 @@ The trade-off: native navigation primitives (tab stack, page transitions, swipe-
 are **not free out of the box** — we implement them. See
 [Native feel primitives](#native-feel-primitives).
 
+## Navigation structure
+
+The mobile tab bar is **not** a 1:1 copy of the desktop `navItems`. Composition
+(left to right):
+
+1. **Home**
+2. **Calendar**
+3. **(+) actions** — center button, quick-create for appointment/time-off (mirrors
+   desktop's [`quick-create-action`](../../src/widgets/quick-create-action) widget)
+4. **Analytics**
+5. **Settings**
+
+**Services and Clients are not top-level tabs on mobile.** They move into a mobile
+**Settings hub**, which becomes more than the current settings page:
+
+- All existing settings sections unchanged (profile, contacts, working-hours, booking,
+  payment-types, service-categories, notifications, system-region, account — see the
+  `settings-*` routes in [`src/app/router/index.ts`](../../src/app/router/index.ts))
+- **+ Services** ([`src/pages/services`](../../src/pages/services)) — reused as a Settings sub-section
+- **+ Clients** ([`src/pages/clients`](../../src/pages/clients)) — reused as a Settings sub-section
+- **+ About** — new section, doesn't exist on desktop or mobile today; built from scratch
+  (app version, links — minimal content for the first iteration)
+
+**Desktop is unaffected.** `DashboardLayout`'s navigation (Home/Calendar/Clients/
+Services/Analytics/Settings) stays exactly as-is; Services and Clients remain
+independent top-level desktop routes. This regrouping is mobile-only.
+
 ## Architecture
 
 ### One build, viewport-adaptive shell
@@ -70,10 +97,10 @@ library or the routes.
               ┌─────────────────┴─────────────────┐
        desktop (≥ md)                       mobile (< md)
    DashboardLayout                     MobileShell (new widget)
-   • vertical sidebar rail             • bottom tab bar
-   • slideover notifications           • back-header per screen
-   • RouterView panel                  • page transitions + swipe-back
-                                       • safe-area insets, status bar
+   • vertical sidebar rail             • bottom tab bar (Home/Calendar/+/Analytics/Settings)
+   • slideover notifications           • back-header per screen (no animation yet)
+   • RouterView panel                  • safe-area insets
+                                       • [later phase] transitions + swipe-back + status bar
                                 │
                        wrapped by Capacitor
                        ┌────────────┴────────────┐
@@ -106,10 +133,14 @@ overrides. See [Themes and Variables](../design/themes-and-variables.md). Mobile
 additions are **additive** CSS custom properties (e.g. safe-area insets), never
 replacements.
 
-### Native feel primitives
+### Native feel primitives *(deferred — build after the mobile version works, not before)*
 
 These are the pieces that make a Capacitor-wrapped web app feel like a real app. Each is
-built on the current stack — no Ionic:
+built on the current stack — no Ionic. **Sequencing note (2026-07-17):** none of these
+are required for the shell, sheets, or per-screen adaptation work — those ship first with
+plain, unanimated navigation. This table describes what gets layered on afterward, as its
+own late implementation phase (see
+[Mobile Implementation Plan](./mobile-implementation-plan.md)):
 
 | Primitive | Approach |
 |---|---|
@@ -181,7 +212,26 @@ const isMobile = useIsMobile() // ComputedRef<boolean>, source of truth for shel
 | `useIsMobile()` composable | ⬜ Not started |
 | Mobile shell + tab bar | ⬜ Not started |
 | Capacitor integration | ✅ Installed — `@capacitor/core`, `ios`, `android` + `haptics`/`status-bar`/`splash-screen`/`keyboard`, both native projects generated |
-| Per-screen mobile layouts | ⬜ Not started |
+| **Phase 1 — shell, tab bar, Settings hub** | ✅ **Done** (`master.seene-x1ii.2`) — see below |
+| Per-screen mobile layouts (Phase 4) | ⬜ Not started |
+| Native-feel primitives (transitions/swipe-back/haptics) | ⬜ Not started — deferred, scheduled late (after all screens) |
+
+### Phase 1 done (2026-07-17)
+
+Built: `useIsMobile()` (`src/shared/lib/viewport`), `AppShell` widget (`src/widgets/app-shell`)
+that reactively picks `MobileShell` vs `DashboardLayout` for the `/` route, and `MobileShell`
+(`src/widgets/mobile-shell`) with `MobileTabBar` (Home/Calendar/(+)/Analytics/Settings, using
+Nuxt UI's documented `UNavigationMenu` bottom-tab-bar pattern) and `MobileHeader` (back button +
+title, shown instead of the tab bar on any non-root screen). The mobile Settings hub
+(`_MobileEntryPage.vue`) lists all existing settings sections plus new **Services**, **Clients**,
+and **About** entries; tapping one pushes to that screen via the same `<router-view>` outlet
+(desktop's sidebar+content layout is untouched, chosen by a `_SettingsShell.vue` resolver). New
+`settings-services` / `settings-clients` / `settings-about` child routes reuse `ServicesPage` /
+`ClientsPage` directly — no duplication. Verified with Playwright screenshots at a 390×844
+viewport (tab bar, settings hub, push navigation + back header, the (+) quick-create menu) and
+at 1440×900 (desktop pixel-identical, confirmed against `DashboardLayout` and the settings
+sidebar). No animations were added — plain, instant navigation only, per the revised sequencing
+that defers native-feel primitives to Phase 2 (now scheduled after Phases 3–5).
 
 _Update this table as phases from the implementation plan complete._
 
@@ -222,11 +272,26 @@ Capacitor plugin dependencies in `package.json`.
 
 ## File Structure
 
-Planned (nothing built yet):
+Built (Phase 0 + Phase 1):
 
-- `src/shared/lib/viewport/` — `useIsMobile()` breakpoint composable + safe-area helpers
-- `src/widgets/mobile-shell/` — mobile app shell (tab bar + header + transition outlet)
-- `src/shared/ui/mobile-tab-bar/` — bottom tab bar component
-- `src/shared/ui/mobile-header/` — contextual back header
+- `src/shared/lib/viewport/model/use-is-mobile.ts` — `useIsMobile()`, wraps `@vueuse/core`'s
+  `useBreakpoints(breakpointsTailwind)` at the `md` boundary
+- `src/widgets/app-shell/ui/AppShell.vue` — reactive `MobileShell` vs `DashboardLayout` switch,
+  registered as the `/` route's component in `src/app/router/index.ts`
+- `src/widgets/mobile-shell/ui/MobileShell.vue` — mobile app shell: hides/shows
+  `MobileTabBar`/`MobileHeader` based on whether the current route is one of the 4 tab roots
+- `src/widgets/mobile-shell/ui/MobileTabBar.vue` — Home/Calendar/(+)/Analytics/Settings,
+  `UNavigationMenu` bottom-tab-bar pattern; (+) calls `useQuickCreate().openMenu()`
+- `src/widgets/mobile-shell/ui/MobileHeader.vue` — back button + title, no animation
+- `src/pages/settings/ui/_SettingsShell.vue` — picks `_EntryPage.vue` (desktop) vs
+  `_MobileEntryPage.vue` (mobile hub); desktop's redirect-to-profile is a router `beforeEnter`
+  guard now (`src/app/router/index.ts`), not a static route redirect, so it can be conditional
+- `src/pages/settings/ui/_MobileEntryPage.vue` — mobile Settings hub list (General/Workspace/
+  System groups); shows `<router-view>` instead of the list once a child route is active
+- `src/pages/settings/ui/SettingsAboutPage.vue` — new About section (minimal first-iteration
+  content: version string)
+- New routes `settings-services` / `settings-clients` / `settings-about` reuse `ServicesPage` /
+  `ClientsPage` directly (no duplication)
+- Safe-area CSS vars (`--safe-area-top/bottom/left/right`) in `src/app/styles/main.css`
 - `capacitor.config.ts` — Capacitor project config
 - `ios/`, `android/` — native projects

@@ -1,6 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
+import { useIsMobile } from '@shared/lib/viewport'
+
+// Module-level singleton: set up the media-query listener once, reuse the same
+// reactive ref everywhere it's read (route guards included).
+const isMobile = useIsMobile()
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,7 +62,7 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       redirect: '/home',
-      component: async () => (await import('@widgets/dashboard-layout')).DashboardLayout,
+      component: async () => (await import('@widgets/app-shell')).AppShell,
       children: [
         {
           path: 'home',
@@ -87,8 +92,13 @@ const router = createRouter({
         {
           path: 'settings',
           name: 'settings',
-          redirect: '/settings/profile',
           component: async () => (await import('@pages/settings')).EntryPage,
+          // Desktop keeps the old behavior: bare /settings redirects straight
+          // into the profile section. Mobile shows the hub list instead (see
+          // _MobileEntryPage.vue) — no redirect needed there.
+          beforeEnter: (to) => {
+            if (to.name === 'settings' && !isMobile.value) return '/settings/profile'
+          },
           children: [
             {
               path: 'profile',
@@ -135,6 +145,21 @@ const router = createRouter({
               path: 'account',
               name: 'settings-account',
               component: async () => (await import('@pages/settings')).SettingsAccountPage,
+            },
+            {
+              path: 'services',
+              name: 'settings-services',
+              component: async () => (await import('@pages/services')).ServicesPage,
+            },
+            {
+              path: 'clients',
+              name: 'settings-clients',
+              component: async () => (await import('@pages/clients')).ClientsPage,
+            },
+            {
+              path: 'about',
+              name: 'settings-about',
+              component: async () => (await import('@pages/settings')).SettingsAboutPage,
             },
           ],
         },

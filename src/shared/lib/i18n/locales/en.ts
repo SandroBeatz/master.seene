@@ -9,6 +9,7 @@ export default {
     settings: 'Settings',
     logout: 'Logout',
     profile: 'Profile',
+    actions: 'Actions',
   },
   common: {
     dashboardWelcome:
@@ -576,6 +577,7 @@ export default {
     nav: {
       groupGeneral: 'General',
       groupSystem: 'System',
+      groupWorkspace: 'Workspace',
       profile: 'Profile',
       contacts: 'Contacts & social',
       workingHours: 'Working hours',
@@ -585,6 +587,14 @@ export default {
       notifications: 'Notifications',
       systemRegion: 'System & region',
       account: 'Account',
+      services: 'Services',
+      clients: 'Clients',
+      about: 'About',
+    },
+    about: {
+      title: 'About',
+      description: 'App information and version details.',
+      version: 'Version',
     },
     profile: {
       title: 'Profile',
