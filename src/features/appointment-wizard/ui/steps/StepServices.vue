@@ -1,32 +1,54 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Service } from '@entities/service'
+import type { Service, ServiceCategory } from '@entities/service'
 import { useFormats } from '@shared/lib/formats'
 
-const props = defineProps<{
-  services: Service[]
-  totalDuration: number
-  totalPrice: number | null
-}>()
+const props = defineProps<{ services: Service[] }>()
 const model = defineModel<string[]>({ default: () => [] })
 
 const { t } = useI18n()
 const formats = useFormats()
 const search = ref('')
+const selectedCategoryId = ref<string | null>(null)
+
+const categories = computed(() => {
+  const uniqueCategories = new Map<string, ServiceCategory>()
+
+  for (const service of props.services) {
+    if (service.category) uniqueCategories.set(service.category.id, service.category)
+  }
+
+  return [...uniqueCategories.values()]
+})
 
 const filteredServices = computed(() => {
   const query = search.value.trim().toLocaleLowerCase()
-  if (!query) return props.services
-  return props.services.filter((service) => service.name.toLocaleLowerCase().includes(query))
+
+  return props.services.filter((service) => {
+    const matchesCategory =
+      selectedCategoryId.value === null || service.category?.id === selectedCategoryId.value
+    const matchesSearch = !query || service.name.toLocaleLowerCase().includes(query)
+    return matchesCategory && matchesSearch
+  })
 })
 
-const hasSelection = computed(() => model.value.length > 0)
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  const hoursUnit = t('quickCreate.appointment.footer.hoursUnit')
+  const minutesUnit = t('quickCreate.appointment.footer.minutesUnit')
 
-function toggleService(serviceId: string) {
-  model.value = model.value.includes(serviceId)
-    ? model.value.filter((id) => id !== serviceId)
-    : [...model.value, serviceId]
+  if (hours && mins) return `${hours}${hoursUnit} ${mins}${minutesUnit}`
+  if (hours) return `${hours}${hoursUnit}`
+  return `${mins} ${minutesUnit}`
+}
+
+function setServiceSelected(serviceId: string, selected: boolean) {
+  const isSelected = model.value.includes(serviceId)
+
+  if (selected && !isSelected) model.value = [...model.value, serviceId]
+  if (!selected && isSelected) model.value = model.value.filter((id) => id !== serviceId)
 }
 </script>
 
@@ -40,44 +62,84 @@ function toggleService(serviceId: string) {
     />
 
     <div
-      v-if="filteredServices.length"
-      class="max-h-80 space-y-1 overflow-y-auto rounded-xl border border-default bg-muted/20 p-1.5"
+      v-if="services.length"
+      data-testid="service-categories"
+      class="flex gap-2 overflow-x-auto pb-1"
     >
-      <button
+      <UButton
+        type="button"
+        color="neutral"
+        size="sm"
+        :variant="selectedCategoryId === null ? 'solid' : 'soft'"
+        :aria-pressed="selectedCategoryId === null"
+        data-testid="service-category-all"
+        @click="selectedCategoryId = null"
+      >
+        {{ t('quickCreate.appointment.services.all') }}
+      </UButton>
+
+      <UButton
+        v-for="category in categories"
+        :key="category.id"
+        type="button"
+        color="neutral"
+        size="sm"
+        :variant="selectedCategoryId === category.id ? 'solid' : 'soft'"
+        :aria-pressed="selectedCategoryId === category.id"
+        :data-testid="`service-category-${category.id}`"
+        @click="selectedCategoryId = category.id"
+      >
+        {{ category.name }}
+      </UButton>
+    </div>
+
+    <div v-if="filteredServices.length" class="max-h-80 space-y-2 overflow-y-auto pr-1">
+      <UCheckbox
         v-for="service in filteredServices"
         :key="service.id"
-        type="button"
-        class="flex w-full items-center gap-3 rounded-lg border-l-4 px-3 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        :class="
-          model.includes(service.id)
-            ? 'bg-primary/10 text-highlighted'
-            : 'hover:bg-elevated/80 text-default'
-        "
-        :style="{ borderLeftColor: service.color || 'var(--ui-border-accented)' }"
+        :model-value="model.includes(service.id)"
+        color="neutral"
+        variant="card"
+        indicator="end"
+        size="xl"
+        data-testid="service-item"
         :aria-pressed="model.includes(service.id)"
-        @click="toggleService(service.id)"
+        :ui="{
+          root: 'items-center gap-3 rounded-2xl border-2 border-default px-4 py-3.5 has-data-[state=checked]:border-inverted',
+          container: 'h-auto',
+          base: 'size-6 rounded-lg',
+          wrapper: 'me-0 min-w-0 flex-1',
+          label: 'block cursor-pointer',
+        }"
+        @update:model-value="setServiceSelected(service.id, $event === true)"
       >
-        <span class="min-w-0 flex-1">
-          <span class="block truncate font-medium text-highlighted">{{ service.name }}</span>
-          <span class="mt-1 flex items-center gap-2 text-sm text-muted">
-            <span>{{ service.duration }} {{ t('appointments.form.minShort') }}</span>
-            <span aria-hidden="true">·</span>
-            <span>{{ formats.price(service.price) }}</span>
-          </span>
-        </span>
+        <template #label>
+          <span class="flex min-w-0 items-center gap-3">
+            <span
+              data-testid="service-color"
+              class="size-3 shrink-0 rounded-full"
+              :style="{ backgroundColor: service.color || 'var(--ui-border-accented)' }"
+              aria-hidden="true"
+            />
 
-        <span
-          class="flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors"
-          :class="
-            model.includes(service.id)
-              ? 'border-primary bg-primary text-inverted'
-              : 'border-accented bg-default'
-          "
-          aria-hidden="true"
-        >
-          <UIcon v-if="model.includes(service.id)" name="i-lucide-check" class="size-3.5" />
-        </span>
-      </button>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-semibold text-highlighted">{{ service.name }}</span>
+              <span class="mt-1 flex items-center gap-2">
+                <UBadge
+                  color="neutral"
+                  variant="soft"
+                  size="sm"
+                  class="shrink-0 rounded-full"
+                  :label="formatDuration(service.duration)"
+                />
+                <span class="font-semibold text-highlighted">
+                  {{ formats.price(service.price) }}
+                </span>
+              </span>
+            </span>
+          </span>
+        </template>
+      </UCheckbox>
     </div>
 
     <div
@@ -92,15 +154,6 @@ function toggleService(serviceId: string) {
             : t('quickCreate.appointment.services.empty')
         }}
       </p>
-    </div>
-
-    <div
-      v-if="hasSelection"
-      data-testid="services-total"
-      class="flex items-center justify-between rounded-lg bg-elevated px-3 py-2 text-sm"
-    >
-      <span class="text-muted"> {{ totalDuration }} {{ t('appointments.form.minShort') }} </span>
-      <span class="font-medium text-highlighted">{{ formats.price(totalPrice) }}</span>
     </div>
   </div>
 </template>

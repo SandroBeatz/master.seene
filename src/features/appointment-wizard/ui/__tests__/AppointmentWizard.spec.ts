@@ -43,6 +43,7 @@ vi.mock('@entities/appointment', async () => {
   }
 })
 vi.mock('@entities/client', () => ({
+  ClientAvatar: { name: 'ClientAvatar', render: () => null },
   useClientsQuery: () => ({ data: mocks.clients }),
   useCreateClientMutation: () => ({
     mutateAsync: vi.fn<() => Promise<unknown>>(),
@@ -144,6 +145,7 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     // driven by the wizard's exposed API.
     const vm = wrapper.vm as unknown as {
       canAdvance: boolean
+      footerStats: { label: string }[]
       next: () => void
       submit: () => Promise<void>
     }
@@ -158,6 +160,9 @@ describe('AppointmentWizard — gating & slot prefill', () => {
     expect(vm.canAdvance).toBe(false)
     await wrapper.findComponent(StepServices).vm.$emit('update:modelValue', ['s1'])
     expect(vm.canAdvance).toBe(true)
+    expect(vm.footerStats.map((stat) => stat.label)).toEqual(
+      expect.arrayContaining(['1 service', '1h', expect.stringContaining('1,000')]),
+    )
     vm.next()
     await wrapper.vm.$nextTick()
 

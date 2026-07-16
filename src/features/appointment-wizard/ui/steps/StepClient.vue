@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Client } from '@entities/client'
+import { ClientAvatar, type Client } from '@entities/client'
 
 const props = defineProps<{ clients: Client[] }>()
 const model = defineModel<string | null>()
@@ -14,15 +14,6 @@ function clientName(client: Client) {
   return [client.first_name, client.last_name].filter(Boolean).join(' ') || client.phone
 }
 
-function clientInitials(client: Client) {
-  const initials = [client.first_name, client.last_name]
-    .filter(Boolean)
-    .map((part) => part!.trim().charAt(0))
-    .join('')
-
-  return initials.slice(0, 2).toLocaleUpperCase()
-}
-
 const filteredClients = computed(() => {
   const query = search.value.trim().toLocaleLowerCase()
   if (!query) return props.clients
@@ -31,6 +22,21 @@ const filteredClients = computed(() => {
     `${clientName(client)} ${client.phone}`.toLocaleLowerCase().includes(query),
   )
 })
+
+const clientSections = computed(() =>
+  [
+    {
+      key: 'favorites',
+      label: t('clients.section.favorites'),
+      clients: filteredClients.value.filter((client) => client.is_favorite),
+    },
+    {
+      key: 'all',
+      label: t('quickCreate.appointment.client.allClients'),
+      clients: filteredClients.value.filter((client) => !client.is_favorite),
+    },
+  ].filter((section) => section.clients.length > 0),
+)
 </script>
 
 <template>
@@ -52,46 +58,59 @@ const filteredClients = computed(() => {
       />
     </div>
 
-    <div
-      v-if="filteredClients.length"
-      class="max-h-80 space-y-1 overflow-y-auto rounded-xl border border-default bg-muted/20 p-1.5"
-    >
-      <button
-        v-for="client in filteredClients"
-        :key="client.id"
-        type="button"
-        class="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        :class="
-          model === client.id
-            ? 'bg-primary/10 text-highlighted'
-            : 'hover:bg-elevated/80 text-default'
-        "
-        :aria-pressed="model === client.id"
-        @click="model = client.id"
+    <div v-if="filteredClients.length" class="max-h-80 space-y-5 overflow-y-auto pr-1">
+      <section
+        v-for="section in clientSections"
+        :key="section.key"
+        class="space-y-2.5"
+        :data-testid="`client-section-${section.key}`"
       >
-        <UAvatar
-          :text="clientInitials(client)"
-          :alt="clientName(client)"
-          size="lg"
-          :color="model === client.id ? 'primary' : 'neutral'"
-          class="shrink-0"
-        />
+        <h3 class="px-1 text-xs font-semibold uppercase tracking-wider text-dimmed">
+          {{ section.label }}
+        </h3>
 
-        <span class="min-w-0 flex-1">
-          <span class="block truncate font-medium text-highlighted">
-            {{ clientName(client) }}
-          </span>
-          <span class="mt-0.5 block truncate text-sm text-muted">
-            {{ client.phone }}
-          </span>
-        </span>
+        <div class="space-y-2">
+          <UButton
+            v-for="client in section.clients"
+            :key="client.id"
+            type="button"
+            color="neutral"
+            variant="outline"
+            size="xl"
+            block
+            :ui="{ base: 'justify-start gap-3 rounded-2xl px-4 py-3 text-left' }"
+            :class="model === client.id ? 'bg-elevated ring-inverted' : ''"
+            :aria-pressed="model === client.id"
+            @click="model = client.id"
+          >
+            <ClientAvatar
+              :first-name="client.first_name"
+              :last-name="client.last_name"
+              :emoji="client.emoji"
+              :seed="client.id"
+              size="xl"
+              class="shrink-0"
+            />
 
-        <UIcon
-          v-if="model === client.id"
-          name="i-lucide-check"
-          class="size-5 shrink-0 text-primary"
-        />
-      </button>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-semibold text-highlighted">
+                {{ clientName(client) }}
+              </span>
+              <span class="mt-0.5 block truncate text-sm font-normal text-muted">
+                {{ client.phone }}
+              </span>
+            </span>
+
+            <UIcon
+              v-if="client.is_favorite"
+              data-testid="favorite-indicator"
+              name="i-lucide-star"
+              class="size-5 shrink-0 text-warning"
+              aria-hidden="true"
+            />
+          </UButton>
+        </div>
+      </section>
     </div>
 
     <div

@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import { CalendarDate } from '@internationalized/date'
-import type { Client } from '@entities/client'
+import { ClientAvatar, type Client } from '@entities/client'
 import type { DayState } from '@entities/master'
 import type { Service } from '@entities/service'
 import { formatsPlugin } from '@shared/lib/formats'
@@ -62,7 +62,7 @@ function makeClient(over: Partial<Client> = {}): Client {
 }
 
 describe('StepClient', () => {
-  it('renders clients with name, phone and initials and selects a row', async () => {
+  it('renders clients with ClientAvatar and selects a row', async () => {
     const wrapper = mount(StepClient, {
       props: { modelValue: null, clients: [makeClient()] },
       global: makeGlobal(),
@@ -71,9 +71,35 @@ describe('StepClient', () => {
     expect(wrapper.text()).toContain('Anna Petrova')
     expect(wrapper.text()).toContain('+1 555 0100')
     expect(wrapper.text()).toContain('AP')
+    expect(wrapper.findComponent(ClientAvatar).exists()).toBe(true)
 
     await wrapper.find('button[aria-pressed="false"]').trigger('click')
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['c1'])
+  })
+
+  it('separates favorites from all clients without duplicates', () => {
+    const wrapper = mount(StepClient, {
+      props: {
+        modelValue: null,
+        clients: [
+          makeClient({ id: 'favorite', is_favorite: true }),
+          makeClient({ id: 'other', first_name: 'Marie', is_favorite: false }),
+        ],
+      },
+      global: makeGlobal(),
+    })
+
+    const favorites = wrapper.get('[data-testid="client-section-favorites"]')
+    const allClients = wrapper.get('[data-testid="client-section-all"]')
+
+    expect(favorites.text()).toContain(en.clients.section.favorites)
+    expect(favorites.text()).toContain('Anna Petrova')
+    expect(favorites.text()).not.toContain('Marie Petrova')
+    expect(allClients.text()).toContain(en.quickCreate.appointment.client.allClients)
+    expect(allClients.text()).toContain('Marie Petrova')
+    expect(allClients.text()).not.toContain('Anna Petrova')
+    expect(wrapper.findAllComponents(ClientAvatar)).toHaveLength(2)
+    expect(wrapper.findAll('[data-testid="favorite-indicator"]')).toHaveLength(1)
   })
 
   it('filters by phone and emits addClient from the plus button', async () => {
@@ -89,13 +115,15 @@ describe('StepClient', () => {
     expect(wrapper.text()).toContain('Marie Petrova')
     expect(wrapper.text()).not.toContain('Anna Petrova')
 
-    await wrapper.find(`button[aria-label="${en.quickCreate.appointment.client.add}"]`).trigger('click')
+    await wrapper
+      .find(`button[aria-label="${en.quickCreate.appointment.client.add}"]`)
+      .trigger('click')
     expect(wrapper.emitted('addClient')).toHaveLength(1)
   })
 })
 
 describe('StepServices', () => {
-  it('renders service details and color and supports multiple selection', async () => {
+  it('renders bordered service cards and supports multiple selection', async () => {
     const wrapper = mount(StepServices, {
       props: {
         modelValue: ['s1'],
@@ -103,39 +131,73 @@ describe('StepServices', () => {
           makeService({ color: '#ef4444' }),
           makeService({ id: 's2', name: 'Color', color: '#3b82f6' }),
         ],
-        totalDuration: 0,
-        totalPrice: null,
       },
       global: makeGlobal(),
     })
 
     expect(wrapper.text()).toContain('Haircut')
     expect(wrapper.text()).toContain('1,000')
-    expect(wrapper.findAll('button[aria-pressed]')[0]!.attributes('style')).toContain(
-      'border-left-color',
-    )
+    const serviceItems = wrapper.findAll('[data-testid="service-item"]')
+    expect(serviceItems).toHaveLength(2)
+    const selectedCard = serviceItems[0]!.element.parentElement?.parentElement
+    expect(selectedCard?.classList.contains('border-2')).toBe(true)
+    expect(
+      selectedCard?.querySelector('[data-testid="service-color"]')?.getAttribute('style'),
+    ).toContain('background-color')
+    expect(serviceItems[0]!.attributes('data-state')).toBe('checked')
+    expect(serviceItems[1]!.attributes('data-state')).toBe('unchecked')
 
-    await wrapper.find('button[aria-pressed="false"]').trigger('click')
+    await serviceItems[1]!.trigger('click')
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([['s1', 's2']])
   })
 
-  it('shows the running duration/price total once services are selected', () => {
+  it('filters by category and combines it with search', async () => {
     const wrapper = mount(StepServices, {
       props: {
-        modelValue: ['s1'],
-        services: [makeService()],
-        totalDuration: 90,
-        totalPrice: 1500,
+        modelValue: [],
+        services: [
+          makeService({
+            name: 'Classic lashes',
+            category_id: 'lashes',
+            category: { id: 'lashes', name: 'Lashes' },
+          }),
+          makeService({
+            id: 's2',
+            name: 'Lash tint',
+            category_id: 'lashes',
+            category: { id: 'lashes', name: 'Lashes' },
+          }),
+          makeService({
+            id: 's3',
+            name: 'Gel manicure',
+            category_id: 'nails',
+            category: { id: 'nails', name: 'Nails' },
+          }),
+          makeService({ id: 's4', name: 'Uncategorized', category: null }),
+        ],
       },
       global: makeGlobal(),
     })
-    expect(wrapper.text()).toContain('90')
-    expect(wrapper.text()).toContain('1,500')
+
+    expect(wrapper.findAll('[data-testid="service-category-lashes"]')).toHaveLength(1)
+    await wrapper.get('[data-testid="service-category-lashes"]').trigger('click')
+    expect(wrapper.text()).toContain('Classic lashes')
+    expect(wrapper.text()).toContain('Lash tint')
+    expect(wrapper.text()).not.toContain('Gel manicure')
+    expect(wrapper.text()).not.toContain('Uncategorized')
+
+    await wrapper.get('input').setValue('classic')
+    expect(wrapper.findAll('[data-testid="service-item"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Classic lashes')
+
+    await wrapper.get('input').setValue('')
+    await wrapper.get('[data-testid="service-category-all"]').trigger('click')
+    expect(wrapper.findAll('[data-testid="service-item"]')).toHaveLength(4)
   })
 
-  it('hides the total when nothing is selected', () => {
+  it('never renders the duplicate services total', () => {
     const wrapper = mount(StepServices, {
-      props: { modelValue: [], services: [makeService()], totalDuration: 0, totalPrice: null },
+      props: { modelValue: ['s1'], services: [makeService()] },
       global: makeGlobal(),
     })
     expect(wrapper.find('[data-testid="services-total"]').exists()).toBe(false)

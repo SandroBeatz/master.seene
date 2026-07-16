@@ -344,8 +344,6 @@ defineExpose({
       v-else-if="state.step === 2"
       v-model="state.serviceIds"
       :services="services ?? []"
-      :total-duration="totalDuration"
-      :total-price="servicesTotalPrice"
     />
 
     <StepDateTime
