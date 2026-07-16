@@ -86,6 +86,10 @@ export {
   isUsernameAvailable,
 } from './api/master.api'
 export { useMasterPreferencesStore } from './model/master-preferences.store'
+export { resolveDayWindow } from './model/resolve-day-window'
+export type { DayWindow } from './model/resolve-day-window'
+export { classifyDayState } from './model/classify-day-state'
+export type { ClassifyDayStateInput, DayState } from './model/classify-day-state'
 export type {
   AppLanguage,
   BookingDefaultStatus,

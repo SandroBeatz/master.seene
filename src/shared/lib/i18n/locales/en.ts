@@ -126,6 +126,97 @@ export default {
       minutesLabel: '{n} min',
     },
   },
+  quickCreate: {
+    open: 'New',
+    menu: {
+      title: 'Create',
+      description: 'Choose what to add.',
+      appointment: 'New appointment',
+      timeOff: 'Time off',
+    },
+    actions: {
+      back: 'Back',
+      close: 'Close',
+    },
+    appointment: {
+      title: 'New appointment',
+      next: 'Next',
+      create: 'Create',
+      steps: {
+        client: 'Choose a client',
+        services: 'Choose services',
+        dateTime: 'Choose a date and time',
+        confirm: 'Review appointment',
+      },
+      client: {
+        placeholder: 'Select a client',
+        searchPlaceholder: 'Search by name or phone',
+        add: 'Add client',
+        allClients: 'All clients',
+        empty: 'No clients yet',
+        noResults: 'No clients found',
+      },
+      services: {
+        placeholder: 'Select services',
+        searchPlaceholder: 'Search services',
+        all: 'All',
+        empty: 'No services yet',
+        noResults: 'No services found',
+      },
+      dateTime: {
+        pickDate: 'Pick a date to see free time.',
+        slots: 'Free time',
+        noSlots: 'No free slots on this day.',
+        dayOff: 'This is a day off.',
+        legend: {
+          available: 'Free slots',
+          full: 'Fully booked',
+          dayOff: 'Day off',
+        },
+        groups: {
+          morning: 'Morning',
+          day: 'Afternoon',
+          evening: 'Evening',
+        },
+        manual: 'Set time manually',
+        selectTime: 'Select time',
+        conflict: 'This time overlaps an existing booking.',
+        timeOff: 'Time off',
+        allDay: 'All day',
+        past: {
+          title: 'Past day',
+          description:
+            'This day has already passed. The appointment will be added as confirmed — complete it via checkout to record the sale. Set the time manually below.',
+        },
+      },
+      confirm: {
+        client: 'Client',
+        services: 'Services',
+        date: 'Date',
+        time: 'Time',
+        duration: 'Duration',
+        price: 'Price',
+        notes: 'Comment',
+        notesPlaceholder: 'Add a comment (optional)',
+      },
+      footer: {
+        services: '{count} service | {count} services',
+        hoursUnit: 'h',
+        minutesUnit: 'min',
+      },
+    },
+    timeOff: {
+      title: 'Time off',
+      create: 'Create',
+      pickDate: 'Pick a date.',
+      hasAppointments:
+        'This day already has appointments. Pick a free interval or set a time within one.',
+      freeTitle: 'Free time',
+      noFreeTime: 'No free time for a time off on this date.',
+      overlap: 'The selected time overlaps an appointment.',
+    },
+  },
+
   calendar: {
     title: 'Calendar',
     description:
@@ -965,6 +1056,8 @@ export default {
     delete: {
       title: 'Delete appointment',
       message: 'Delete this appointment? This action cannot be undone.',
+      messageWithSale:
+        'This appointment has a recorded sale — deleting it will also remove that revenue. This action cannot be undone.',
       confirm: 'Delete',
       cancel: 'Cancel',
     },

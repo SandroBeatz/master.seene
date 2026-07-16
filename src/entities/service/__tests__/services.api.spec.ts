@@ -10,14 +10,14 @@ const {
   mockDeleteEq,
   mockFrom,
 } = vi.hoisted(() => {
-  const mockSingle = vi.fn()
-  const mockOrder = vi.fn()
-  const mockDeleteEq = vi.fn()
-  const mockEq = vi.fn()
-  const mockSelect = vi.fn()
-  const mockInsert = vi.fn()
-  const mockUpdate = vi.fn()
-  const mockFrom = vi.fn()
+  const mockSingle = vi.fn<(...args: never[]) => unknown>()
+  const mockOrder = vi.fn<(...args: never[]) => unknown>()
+  const mockDeleteEq = vi.fn<(...args: never[]) => unknown>()
+  const mockEq = vi.fn<(...args: never[]) => unknown>()
+  const mockSelect = vi.fn<(...args: never[]) => unknown>()
+  const mockInsert = vi.fn<(...args: never[]) => unknown>()
+  const mockUpdate = vi.fn<(...args: never[]) => unknown>()
+  const mockFrom = vi.fn<(...args: never[]) => unknown>()
 
   const builder = {
     select: mockSelect,
@@ -26,7 +26,7 @@ const {
     insert: mockInsert,
     update: mockUpdate,
     single: mockSingle,
-    delete: vi.fn().mockReturnValue({ eq: mockDeleteEq }),
+    delete: vi.fn<() => unknown>().mockReturnValue({ eq: mockDeleteEq }),
   }
 
   mockSelect.mockReturnValue(builder)
@@ -79,7 +79,7 @@ beforeEach(() => {
     insert: mockInsert,
     update: mockUpdate,
     single: mockSingle,
-    delete: vi.fn().mockReturnValue({ eq: mockDeleteEq }),
+    delete: vi.fn<() => unknown>().mockReturnValue({ eq: mockDeleteEq }),
   }
   mockSelect.mockReturnValue(builder)
   mockEq.mockReturnValue(builder)

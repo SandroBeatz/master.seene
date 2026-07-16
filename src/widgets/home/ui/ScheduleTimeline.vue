@@ -26,6 +26,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [appointment: Appointment]
+  create: []
 }>()
 
 const { t } = useI18n()
@@ -213,8 +214,9 @@ const hostUI = {
           color="neutral"
           variant="soft"
           size="sm"
-          icon="i-lucide-ellipsis"
-          :aria-label="t('home.schedule.options')"
+          icon="i-lucide-plus"
+          :aria-label="t('quickCreate.open')"
+          @click="emit('create')"
         />
       </div>
     </template>

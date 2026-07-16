@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { mockOrder, mockEq, mockSelect, mockInsert, mockUpdate, mockDelete, mockSingle, mockFrom } =
   vi.hoisted(() => {
-    const mockOrder = vi.fn()
-    const mockEq = vi.fn()
-    const mockSelect = vi.fn()
-    const mockInsert = vi.fn()
-    const mockUpdate = vi.fn()
-    const mockDelete = vi.fn()
-    const mockSingle = vi.fn()
-    const mockFrom = vi.fn()
+    const mockOrder = vi.fn<(...args: never[]) => unknown>()
+    const mockEq = vi.fn<(...args: never[]) => unknown>()
+    const mockSelect = vi.fn<(...args: never[]) => unknown>()
+    const mockInsert = vi.fn<(...args: never[]) => unknown>()
+    const mockUpdate = vi.fn<(...args: never[]) => unknown>()
+    const mockDelete = vi.fn<(...args: never[]) => unknown>()
+    const mockSingle = vi.fn<(...args: never[]) => unknown>()
+    const mockFrom = vi.fn<(...args: never[]) => unknown>()
 
     const builder = {
       select: mockSelect,

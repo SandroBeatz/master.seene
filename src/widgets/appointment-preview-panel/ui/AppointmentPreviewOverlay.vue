@@ -120,7 +120,9 @@ async function handleNoShow() {
 async function handleDelete() {
   const confirmed = await confirm({
     title: t('appointments.delete.title'),
-    description: t('appointments.delete.message'),
+    description: sale.value
+      ? t('appointments.delete.messageWithSale')
+      : t('appointments.delete.message'),
     confirmLabel: t('appointments.delete.confirm'),
     cancelLabel: t('appointments.delete.cancel'),
     color: 'error',

@@ -1,12 +1,12 @@
 ---
-version: 1.2
-date: 2026-07-13
+version: 1.3
+date: 2026-07-14
 category: business
 ---
 
 # Appointments
 
-> Version 1.2 · 2026-07-13 · [Business](../)
+> Version 1.3 · 2026-07-14 · [Business](../)
 
 ## Overview
 
@@ -82,6 +82,7 @@ auth.users
     │         │
     │         └── sale ──── sale_item  (CASCADE delete)
     │         │     └── payment_type   (SET NULL on delete)
+    │         │  (appointment delete → CASCADE to sale)
     │         │
     │         └── service_ids[]        (denormalized, no FK)
     │
@@ -90,7 +91,7 @@ auth.users
 
 - A **client** cannot be deleted while they have any appointment.
 - A **sale** has a UNIQUE constraint on `appointment_id` — one appointment can have at most one sale.
-- An appointment cannot be deleted if a sale exists for it (`ON DELETE RESTRICT` on `sale.appointment_id`).
+- Deleting an appointment **cascades** to its sale (and `sale_item` rows), since `sale.appointment_id` uses `ON DELETE CASCADE` (changed from `RESTRICT` in `20260714120000_sale_appointment_delete_cascade.sql`). The UI warns before removing revenue — see [Checkout](./checkout.md).
 - Services are stored as a `uuid[]` array without a junction table or FK constraints — services can be deleted without breaking historical appointments.
 
 ---

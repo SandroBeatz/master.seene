@@ -13,15 +13,15 @@ const i18n = createI18n({
 })
 
 function setViewport(isDesktop: boolean) {
-  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+  window.matchMedia = vi.fn<typeof window.matchMedia>().mockImplementation((query: string) => ({
     matches: isDesktop,
     media: query,
     onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    addEventListener: vi.fn<MediaQueryList['addEventListener']>(),
+    removeEventListener: vi.fn<MediaQueryList['removeEventListener']>(),
+    addListener: vi.fn<MediaQueryList['addListener']>(),
+    removeListener: vi.fn<MediaQueryList['removeListener']>(),
+    dispatchEvent: vi.fn<MediaQueryList['dispatchEvent']>(),
   }))
 }
 

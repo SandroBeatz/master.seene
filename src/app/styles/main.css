@@ -11,6 +11,7 @@
 }
 
 :root {
+  --ui-primary: var(--color-zinc-950);
   --app-canvas: #efede9;
   /*--ui-container: 112rem;*/
   --ui-radius: 0.55rem;

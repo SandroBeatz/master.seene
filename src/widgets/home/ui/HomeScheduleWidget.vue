@@ -5,6 +5,7 @@ import { useAppointmentsQuery, type Appointment } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
 import { useMasterPreferencesStore } from '@entities/master'
+import { useQuickCreate } from '@widgets/quick-create-action'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import ScheduleCalendar from './ScheduleCalendar.vue'
 import ScheduleTimeline from './ScheduleTimeline.vue'
@@ -12,6 +13,7 @@ import ScheduleTimeline from './ScheduleTimeline.vue'
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const preview = useAppointmentPreview()
+const quickCreate = useQuickCreate()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
 const selectedDate = ref(new Date())
@@ -46,6 +48,7 @@ function handleSelect(appointment: Appointment) {
       :loading="isPending"
       :selected-date="selectedDate"
       @select="handleSelect"
+      @create="quickCreate.openMenu()"
     />
   </div>
 </template>

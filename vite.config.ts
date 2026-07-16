@@ -124,7 +124,8 @@ export default defineConfig({
               md: {
                 base: 'w-12',
                 container: 'h-7',
-                thumb: 'size-5 data-[state=checked]:translate-x-5 data-[state=checked]:rtl:-translate-x-5',
+                thumb:
+                  'size-5 data-[state=checked]:translate-x-5 data-[state=checked]:rtl:-translate-x-5',
               },
             },
             color: {
