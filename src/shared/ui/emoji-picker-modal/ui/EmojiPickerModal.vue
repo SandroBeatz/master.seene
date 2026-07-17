@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useColorMode } from '@vueuse/core'
 import EmojiPicker, { type EmojiExt } from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   open: boolean
@@ -18,6 +19,7 @@ const isOpen = computed({
   set: (value) => emit('update:open', value),
 })
 
+const isMobile = useIsMobile()
 const colorMode = useColorMode()
 const theme = computed<'light' | 'dark' | 'auto'>(() =>
   colorMode.value === 'dark' ? 'dark' : colorMode.value === 'light' ? 'light' : 'auto',
@@ -33,7 +35,8 @@ function onSelect(emoji: EmojiExt) {
   <UModal
     v-model:open="isOpen"
     :title="$t('emojiPicker.title')"
-    :ui="{ content: 'w-auto max-w-fit', body: 'p-0 sm:p-0' }"
+    :fullscreen="isMobile"
+    :ui="{ content: isMobile ? '' : 'w-auto max-w-fit', body: 'p-0 sm:p-0' }"
   >
     <template #body>
       <EmojiPicker

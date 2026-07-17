@@ -5,12 +5,14 @@ import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
+import { useIsMobile } from '@shared/lib/viewport'
 
 defineOptions({ name: 'AccountPasswordRow' })
 
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const isOpen = ref(false)
 const isLoading = ref(false)
@@ -121,6 +123,7 @@ function submitForm() {
     <UModal
       v-model:open="isOpen"
       :title="t('settings.account.password.modalTitle')"
+      :fullscreen="isMobile"
       :ui="{ footer: 'justify-end' }"
     >
       <template #body>
