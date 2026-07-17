@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@entities/session'
+import { useIsMobile } from '@shared/lib/viewport'
 import { Typography } from '@shared/ui'
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userName = computed(() => {
   const profile = sessionStore.profile
@@ -30,8 +32,13 @@ const greeting = computed(() => {
 </script>
 
 <template>
-  <div class="flex min-w-0 items-center gap-4">
-    <UAvatar :src="avatarSrc" :alt="userName" size="3xl" class="ring-4 ring-default shadow-sm" />
+  <div class="flex min-w-0 items-center" :class="isMobile ? 'gap-3' : 'gap-4'">
+    <UAvatar
+      :src="avatarSrc"
+      :alt="userName"
+      :size="isMobile ? '2xl' : '3xl'"
+      class="ring-4 ring-default shadow-sm"
+    />
     <div class="flex min-w-0 flex-col gap-0.5">
       <Typography variant="caption" class="text-muted">{{ greeting }}</Typography>
       <Typography variant="h5" class="truncate font-bold text-highlighted">{{

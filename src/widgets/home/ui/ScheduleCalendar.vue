@@ -183,7 +183,7 @@ const buttonUI = {
       :items="items"
       align="start"
       wheel-gestures
-      :ui="{ item: 'basis-[calc(100%/6)] ps-1', container: '-ms-1' }"
+      :ui="{ item: 'basis-[calc(100%/4)] md:basis-[calc(100%/6)] ps-1', container: '-ms-1' }"
       @select="onSelect"
     >
       <UButton
