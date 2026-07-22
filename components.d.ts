@@ -27,6 +27,7 @@ declare module 'vue' {
     UDashboardGroup: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/DashboardGroup.vue')['default']
     UDashboardPanel: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/DashboardPanel.vue')['default']
     UDashboardSidebar: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/DashboardSidebar.vue')['default']
+    UDrawer: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Drawer.vue')['default']
     UDropdownMenu: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/DropdownMenu.vue')['default']
     UEmpty: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Empty.vue')['default']
     UFieldGroup: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/FieldGroup.vue')['default']

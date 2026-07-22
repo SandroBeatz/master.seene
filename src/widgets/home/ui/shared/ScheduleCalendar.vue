@@ -231,7 +231,7 @@ const resolvedHostUI = computed(() =>
       <div
         v-for="(item, index) in items"
         :key="item.kind === 'day' ? dateKey(item.date) : item.kind"
-        class="w-16 flex-none"
+        class="w-14 flex-none"
         :data-day-index="item.kind === 'day' ? index : undefined"
       >
         <ScheduleCalendarItem

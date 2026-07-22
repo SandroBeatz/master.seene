@@ -54,6 +54,14 @@ export default defineConfig({
           slots: {
             base: 'cursor-pointer rounded-full',
           },
+          compoundVariants: [
+            {
+              color: 'primary',
+              variant: 'solid',
+              class:
+                'dark:bg-white! dark:text-zinc-950! dark:hover:bg-white/90! dark:active:bg-white/80! dark:disabled:bg-white! dark:aria-disabled:bg-white!',
+            },
+          ],
           variants: {
             size: {
               md: {
