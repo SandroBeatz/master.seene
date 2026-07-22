@@ -7,6 +7,8 @@ import type { CalendarViewType } from '../model/calendar-controls'
 const props = defineProps<{
   title: string
   viewType: CalendarViewType
+  /** Mobile agenda view has no month/week grid to switch to — hide the toggle. */
+  hideViewToggle?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -86,6 +88,7 @@ const tabsUI = {
       </UButton>
 
       <UTabs
+        v-if="!hideViewToggle"
         :model-value="viewType"
         :items="viewOptions"
         variant="pill"

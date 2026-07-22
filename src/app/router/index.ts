@@ -157,6 +157,11 @@ const router = createRouter({
               component: async () => (await import('@pages/clients')).ClientsPage,
             },
             {
+              path: 'clients/:id',
+              name: 'settings-clients-detail',
+              component: async () => (await import('@pages/clients')).ClientDetailPage,
+            },
+            {
               path: 'about',
               name: 'settings-about',
               component: async () => (await import('@pages/settings')).SettingsAboutPage,

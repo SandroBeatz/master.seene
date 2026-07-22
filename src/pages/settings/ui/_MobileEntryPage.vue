@@ -59,7 +59,12 @@ const groups = computed(() => [
 </script>
 
 <template>
-  <RouterView v-if="hasActiveChild" />
+  <!-- Settings sub-pages render a bare UCard and rely on an ambient page
+  padding they'd normally get from the desktop Page/UContainer wrapper —
+  supply it here since mobile skips that wrapper entirely. -->
+  <div v-if="hasActiveChild" class="p-4">
+    <RouterView />
+  </div>
   <div v-else class="flex flex-col gap-6 px-4 py-4">
     <h1 class="text-xl font-semibold text-highlighted">{{ t('settings.title') }}</h1>
 

@@ -71,17 +71,19 @@ export default {
     schedule: {
       title: 'Planning',
       subtitle: 'pour le {date} · {n} rendez-vous',
+      summary: '{date} · {n} rendez-vous',
       options: 'Options',
     },
     overview: {
       title: "Vue d'ensemble",
-      earnedToday: "Gagné aujourd'hui",
+      earnedToday: 'Gagné',
       appointments: 'Rendez-vous',
       workingHours: 'Heures de travail',
+      periodLabel: "Période de la vue d'ensemble",
       period: {
-        day: 'Jour',
-        week: 'Semaine',
-        month: 'Mois',
+        day: "Aujourd'hui",
+        week: 'Cette semaine',
+        month: 'Ce mois-ci',
       },
       subtext: {
         today: "aujourd'hui",

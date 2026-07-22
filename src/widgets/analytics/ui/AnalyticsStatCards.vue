@@ -80,7 +80,7 @@ const cards = computed<Card[]>(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <UCard v-for="card in cards" :key="card.key" :ui="{ root: 'shadow-panel ring-0' }">
       <div class="space-y-3">
         <div class="flex items-start justify-between gap-2">

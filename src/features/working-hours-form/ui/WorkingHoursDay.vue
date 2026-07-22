@@ -103,7 +103,7 @@ function errorMessage(error: ScheduleDayError): string {
       <div class="flex flex-col gap-2">
         <div v-for="(brk, index) in day.breaks" :key="index" class="flex flex-col gap-1">
           <div class="grid gap-2 sm:grid-cols-[10.23rem_15rem_auto] sm:items-center">
-            <span class="pl-[5rem] text-sm font-medium text-toned">
+            <span class="text-sm font-medium text-toned sm:pl-[5rem]">
               {{ t('settings.workingHours.break') }}
             </span>
             <div class="grid grid-cols-[7rem_auto_7rem] items-center gap-2">

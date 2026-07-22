@@ -1,26 +1,37 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import type { NavigationMenuItem } from '@nuxt/ui'
 
 const emit = defineEmits<{ actions: [] }>()
 
-const { t } = useI18n()
+// No-op on web (Capacitor's web implementation of Haptics is a safe stub).
+function tap() {
+  void Haptics.impact({ style: ImpactStyle.Light })
+}
 
 const items = computed<NavigationMenuItem[]>(() => [
-  { label: t('nav.home'), icon: 'i-lucide-home', to: '/home' },
-  { label: t('nav.calendar'), icon: 'i-lucide-calendar', to: '/calendar' },
-  { label: t('nav.actions'), icon: 'i-lucide-plus', onSelect: () => emit('actions') },
-  { label: t('nav.analytics'), icon: 'i-lucide-chart-area', to: '/analytics' },
-  { label: t('nav.settings'), icon: 'i-lucide-settings', to: '/settings' },
+  { icon: 'i-lucide-home', to: '/home', onSelect: tap },
+  { icon: 'i-lucide-calendar', to: '/calendar', onSelect: tap },
+  {
+    icon: 'i-lucide-plus',
+    class:
+      'before:block before:bg-primary [&_[data-slot=linkLeadingIcon]]:text-inverted!',
+    onSelect: () => {
+      tap()
+      emit('actions')
+    },
+  },
+  { icon: 'i-lucide-chart-area', to: '/analytics', onSelect: tap },
+  { icon: 'i-lucide-settings', to: '/settings', onSelect: tap },
 ])
 
 const tabBarUI = {
-  root: 'justify-around border-t border-default bg-default py-2',
-  item: 'py-0',
-  link: 'flex-col gap-1 px-3 text-dimmed aria-[current=page]:text-highlighted',
-  linkLeadingIcon: 'size-5.5',
-  linkLabel: 'text-[10px]/3 font-medium',
+  root:
+    'fixed inset-x-0 z-40 mx-4 flex-col items-stretch rounded-2xl border border-default bg-default px-4 py-2 shadow-xl shadow-black/10 dark:shadow-black/30',
+  list: 'flex items-center justify-between gap-2',
+  link: 'before:hidden',
+  linkLeadingIcon: 'size-7',
 }
 </script>
 
@@ -28,7 +39,6 @@ const tabBarUI = {
   <UNavigationMenu
     :items="items"
     :ui="tabBarUI"
-    class="w-full shrink-0"
-    style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem)"
+    style="bottom: calc(env(safe-area-inset-bottom) + 0.75rem)"
   />
 </template>

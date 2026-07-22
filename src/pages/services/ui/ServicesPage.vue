@@ -12,11 +12,13 @@ import { useSessionStore } from '@entities/session'
 import { ServiceFormModal } from '@features/service-form'
 import { useFormats } from '@shared/lib/formats'
 import { Page } from '@shared/ui'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
 const f = useFormats()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -202,7 +204,7 @@ function formatDuration(minutes: number): string {
         <div
           v-for="service in filteredServices"
           :key="service.id"
-          class="relative flex items-center gap-4 rounded-xl bg-default py-4 pl-8 pr-4 ring-1 ring-default transition-opacity"
+          class="relative flex flex-col gap-3 rounded-xl bg-default py-4 pl-8 pr-4 ring-1 ring-default transition-opacity md:flex-row md:items-center md:gap-4"
           :class="{ 'opacity-55': !service.is_active }"
         >
           <span
@@ -220,43 +222,50 @@ function formatDuration(minutes: number): string {
             </p>
           </div>
 
-          <UBadge
-            color="neutral"
-            variant="soft"
-            size="lg"
-            class="shrink-0 rounded-full"
-            leading-icon="i-lucide-clock"
-            :label="formatDuration(service.duration)"
-          />
+          <!-- On mobile this is its own wrapped row below the name; on md+ it
+          dissolves (display:contents) back into the parent row so desktop
+          keeps the original single-row layout. -->
+          <div class="flex flex-wrap items-center gap-3 md:contents">
+            <UBadge
+              color="neutral"
+              variant="soft"
+              size="lg"
+              class="shrink-0 rounded-full"
+              leading-icon="i-lucide-clock"
+              :label="formatDuration(service.duration)"
+            />
 
-          <span class="w-20 shrink-0 text-right font-semibold tabular-nums">
-            {{ f.price(service.price) }}
-          </span>
+            <span class="shrink-0 font-semibold tabular-nums md:w-20 md:text-right">
+              {{ f.price(service.price) }}
+            </span>
 
-          <USwitch
-            :model-value="service.is_active"
-            :disabled="updatingId === service.id"
-            :aria-label="$t('services.toggleAvailabilityAria')"
-            class="shrink-0"
-            @update:model-value="(v: boolean) => toggleActive(service, v)"
-          />
+            <USwitch
+              :model-value="service.is_active"
+              :disabled="updatingId === service.id"
+              :aria-label="$t('services.toggleAvailabilityAria')"
+              class="shrink-0"
+              @update:model-value="(v: boolean) => toggleActive(service, v)"
+            />
 
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-pencil"
-            :aria-label="$t('common.edit')"
-            @click="openEdit(service)"
-          />
-          <UButton
-            color="error"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-trash-2"
-            :aria-label="$t('common.delete')"
-            @click="openDelete(service)"
-          />
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-pencil"
+              class="ml-auto shrink-0 md:ml-0"
+              :aria-label="$t('common.edit')"
+              @click="openEdit(service)"
+            />
+            <UButton
+              color="error"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-trash-2"
+              class="shrink-0"
+              :aria-label="$t('common.delete')"
+              @click="openDelete(service)"
+            />
+          </div>
         </div>
       </div>
     </template>
@@ -269,6 +278,7 @@ function formatDuration(minutes: number): string {
   <UModal
     v-model:open="isDeleteOpen"
     :title="$t('services.deleteConfirmTitle')"
+    :fullscreen="isMobile"
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>

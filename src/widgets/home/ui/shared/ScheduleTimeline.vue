@@ -14,15 +14,22 @@ import type { Service } from '@entities/service'
 import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
-import { buildTimelineLayout, type TimelineConstants } from '../model/timeline-layout'
+import { buildTimelineLayout, type TimelineConstants } from '../../model/timeline-layout'
+import { isVisibleScheduleAppointment } from '../../model/schedule-appointments'
 
-const props = defineProps<{
-  appointments: Appointment[]
-  clients: Client[]
-  services: Service[]
-  loading: boolean
-  selectedDate: Date
-}>()
+const props = withDefaults(
+  defineProps<{
+    appointments: Appointment[]
+    clients: Client[]
+    services: Service[]
+    loading: boolean
+    selectedDate: Date
+    embedded?: boolean
+  }>(),
+  {
+    embedded: false,
+  },
+)
 
 const emit = defineEmits<{
   select: [appointment: Appointment]
@@ -85,9 +92,7 @@ const subtitleDate = computed(() =>
   new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long' }).format(props.selectedDate),
 )
 
-const visibleAppointments = computed(() =>
-  props.appointments.filter((a) => ['pending', 'confirmed', 'completed'].includes(a.status)),
-)
+const visibleAppointments = computed(() => props.appointments.filter(isVisibleScheduleAppointment))
 
 // Working hours from master schedule for selectedDate
 const workingHours = computed((): { start: number; end: number } | null => {
@@ -196,11 +201,20 @@ const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
 }
+
+const resolvedHostUI = computed(() =>
+  props.embedded
+    ? {
+        root: 'w-full min-w-0 max-w-full rounded-none bg-transparent! shadow-none ring-0 divide-y-0',
+        body: 'min-w-0 p-0! sm:p-0!',
+      }
+    : hostUI,
+)
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
+  <UCard :ui="resolvedHostUI">
+    <template v-if="!embedded" #header>
       <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
           <Typography variant="h5" class="text-highlighted font-bold">{{
@@ -223,7 +237,11 @@ const hostUI = {
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-2">
-      <div v-for="i in 3" :key="i" class="h-14 w-full animate-pulse rounded-xl bg-elevated" />
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="h-14 w-full animate-pulse rounded-md bg-elevated md:rounded-lg"
+      />
     </div>
 
     <!-- Empty -->
@@ -232,7 +250,7 @@ const hostUI = {
       variant="naked"
       icon="i-lucide-calendar-x"
       :description="t('home.upcoming.empty')"
-      :ui="{ root: 'rounded-lg border border-dashed border-default' }"
+      :ui="{ root: 'rounded-md border border-dashed border-default md:rounded-lg' }"
     />
 
     <!-- Time grid -->
@@ -282,7 +300,7 @@ const hostUI = {
         v-for="block in appointmentBlocks"
         :key="block.appointment.id"
         data-testid="appointment-block"
-        class="absolute overflow-hidden rounded-md px-2.5 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        class="absolute overflow-hidden rounded-md px-2.5 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:rounded-lg"
         :class="block.isGroup ? 'bg-elevated ring-1 ring-default' : 'border-l-4'"
         :style="{
           top: block.top + 'px',

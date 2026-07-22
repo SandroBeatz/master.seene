@@ -71,17 +71,19 @@ export default {
     schedule: {
       title: 'Schedule',
       subtitle: 'for {date} · {n} appointments',
+      summary: '{date} · {n} appointments',
       options: 'Options',
     },
     overview: {
       title: 'Overview',
-      earnedToday: 'Earned today',
+      earnedToday: 'Earned',
       appointments: 'Appointments',
       workingHours: 'Working hours',
+      periodLabel: 'Overview period',
       period: {
-        day: 'Day',
-        week: 'Week',
-        month: 'Month',
+        day: 'Today',
+        week: 'This week',
+        month: 'This month',
       },
       subtext: {
         today: 'today',

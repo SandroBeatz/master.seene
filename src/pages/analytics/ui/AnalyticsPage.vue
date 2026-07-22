@@ -103,7 +103,7 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
 <template>
   <UTheme
     :ui="{
-      page: { root: 'px-12 py-3 w-full max-w-7xl mx-auto' },
+      page: { root: 'px-4 sm:px-6 lg:px-12 py-3 w-full max-w-7xl mx-auto' },
       pageHeader: { root: 'border-none pb-2' },
     }"
   >

@@ -12,6 +12,7 @@ import {
 } from '@entities/client'
 import { useSessionStore } from '@entities/session'
 import { EmojiPickerModal } from '@shared/ui/emoji-picker-modal'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   open: boolean
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -175,6 +177,7 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
   <UModal
     v-model:open="isOpen"
     :title="isEdit ? $t('clients.form.titleEdit') : $t('clients.form.titleCreate')"
+    :fullscreen="isMobile"
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>

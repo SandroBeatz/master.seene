@@ -15,7 +15,13 @@ const stepValues = computed(() => [1, 2, 3, 4, 5].map((n) => (n <= currentStep.v
 </script>
 
 <template>
-  <UPage :ui="{ root: 'min-h-dvh py-12', center: 'flex flex-col flex-1 h-full' }">
+  <UPage
+    :ui="{ root: 'min-h-dvh', center: 'flex flex-col flex-1 h-full' }"
+    :style="{
+      paddingTop: 'calc(env(safe-area-inset-top) + 3rem)',
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 3rem)',
+    }"
+  >
     <div class="flex flex-col items-center justify-center mb-12">
       <AppFullLogo class="w-52 h-10 mb-10" />
 

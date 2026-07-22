@@ -270,17 +270,20 @@ export default defineConfig({
         // utility as conflicting with `bg-black`, so without `!` the default wins.
         modal: {
           slots: {
-            overlay: 'fixed inset-0 bg-black/60!',
+            overlay: 'fixed inset-0 z-50 bg-black/60!',
+            content: 'z-50',
           },
         },
         slideover: {
           slots: {
-            overlay: 'fixed inset-0 bg-black/60!',
+            overlay: 'fixed inset-0 z-50 bg-black/60!',
+            content: 'z-50',
           },
         },
         drawer: {
           slots: {
-            overlay: 'fixed inset-0 bg-black/60!',
+            overlay: 'fixed inset-0 z-50 bg-black/60!',
+            content: 'z-50',
           },
         },
       },

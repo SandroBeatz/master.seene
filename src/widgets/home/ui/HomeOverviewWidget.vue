@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getLocalTimeZone, today } from '@internationalized/date'
-import type { TabsItem } from '@nuxt/ui'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
 import { useAnalyticsQueryV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
@@ -31,10 +30,10 @@ const { data, isPending } = useAnalyticsQueryV2(analyticsPeriod)
 // Home shows three headline metrics from the current-period block.
 const metrics = computed(() => data.value?.current)
 
-const periods = computed<TabsItem[]>(() => [
-  { label: t('home.overview.period.day'), value: 'day' },
-  { label: t('home.overview.period.week'), value: 'week' },
-  { label: t('home.overview.period.month'), value: 'month' },
+const periods = computed(() => [
+  { label: t('home.overview.period.day'), value: 'day' as const },
+  { label: t('home.overview.period.week'), value: 'week' as const },
+  { label: t('home.overview.period.month'), value: 'month' as const },
 ])
 
 const periodSubtext = computed(() => {
@@ -105,11 +104,13 @@ const overviewCards = computed(() => [
 
 // Nuxt UI overrides
 const hostUI = {
-  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
-  header: 'pb-0',
+  root: 'rounded-lg shadow-panel ring-0 divide-y-0 md:rounded-xl',
+  header: 'p-3 pb-0 sm:p-3 sm:pb-0 md:px-6 md:pt-4 md:pb-0',
+  body: 'p-2.5 sm:p-2.5 md:p-6',
 }
 const cardUI = {
-  root: 'h-full rounded-xl shadow-none',
+  root: 'h-full min-w-0 rounded-md shadow-none md:rounded-xl',
+  body: 'p-2 sm:p-2 md:p-6',
 }
 const tabsUI = {
   root: 'w-full sm:w-auto',
@@ -123,10 +124,21 @@ const tabsUI = {
 <template>
   <UCard :ui="hostUI">
     <template #header>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Typography variant="h5" class="text-highlighted font-bold">{{
+      <div class="flex items-center justify-between gap-3">
+        <Typography variant="h5" class="min-w-0 text-highlighted font-bold">{{
           t('home.overview.title')
         }}</Typography>
+        <USelect
+          v-model="activeTab"
+          :items="periods"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :aria-label="t('home.overview.periodLabel')"
+          class="w-auto shrink-0 md:hidden"
+          :content="{ align: 'end' }"
+          :ui="{ base: 'rounded-full font-medium' }"
+        />
         <UTabs
           v-model="activeTab"
           variant="pill"
@@ -135,33 +147,44 @@ const tabsUI = {
           :content="false"
           :items="periods"
           :ui="tabsUI"
+          class="hidden md:block"
         />
       </div>
     </template>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div class="grid grid-cols-3 gap-1.5 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
       <UCard v-for="card in overviewCards" :key="card.key" :ui="cardUI">
-        <div class="flex items-center gap-4">
+        <div
+          class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-0 md:grid-cols-[4rem_minmax(0,1fr)] md:gap-x-4 md:gap-y-0"
+        >
+          <Typography
+            variant="footnote"
+            class="col-start-1 row-start-1 line-clamp-2 font-semibold leading-tight text-muted md:col-start-2 md:text-xs md:uppercase md:tracking-wider"
+          >
+            {{ card.label }}
+          </Typography>
+
           <div
-            class="flex size-16 shrink-0 items-center justify-center rounded-lg"
+            class="col-start-2 row-start-1 flex size-6 shrink-0 items-center justify-center rounded-md md:col-start-1 md:row-span-3 md:size-16 md:rounded-lg"
             :class="card.iconBgClass"
           >
-            <UIcon :name="card.icon" class="size-6" :class="card.iconClass" />
+            <UIcon :name="card.icon" class="size-3.5 md:size-6" :class="card.iconClass" />
           </div>
-          <div class="min-w-0">
-            <Typography variant="endnote" class="font-semibold uppercase tracking-wider text-muted">
-              {{ card.label }}
-            </Typography>
 
-            <USkeleton v-if="isPending" class="h-7" :class="card.skeletonClass" />
-            <Typography v-else variant="h4" class="text-highlighted font-bold">
+          <div class="col-span-2 row-start-2 min-w-0 md:col-span-1 md:col-start-2">
+            <USkeleton v-if="isPending" class="h-7 max-w-full" :class="card.skeletonClass" />
+            <Typography
+              v-else
+              variant="h6"
+              class="truncate text-highlighted font-bold tabular-nums md:text-lg"
+            >
               {{ card.value }}
             </Typography>
-
-            <Typography variant="footnote" class="text-muted">
-              {{ card.subtext }}
-            </Typography>
           </div>
+
+          <Typography variant="footnote" class="col-start-2 row-start-3 hidden text-muted md:block">
+            {{ card.subtext }}
+          </Typography>
         </div>
       </UCard>
     </div>

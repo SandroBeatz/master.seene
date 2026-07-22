@@ -5,7 +5,7 @@ import { useSessionStore } from '@entities/session'
 import { useIsMobile } from '@shared/lib/viewport'
 import { Typography } from '@shared/ui'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
 const isMobile = useIsMobile()
 
@@ -29,6 +29,14 @@ const greeting = computed(() => {
   if (h >= 18 && h < 22) return t('home.greeting.evening')
   return t('home.greeting.night')
 })
+
+const formattedDate = computed(() =>
+  new Intl.DateTimeFormat(locale.value, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date()),
+)
 </script>
 
 <template>
@@ -40,7 +48,9 @@ const greeting = computed(() => {
       class="ring-4 ring-default shadow-sm"
     />
     <div class="flex min-w-0 flex-col gap-0.5">
-      <Typography variant="caption" class="text-muted">{{ greeting }}</Typography>
+      <Typography variant="caption" class="text-muted">
+        {{ isMobile ? formattedDate : greeting }}
+      </Typography>
       <Typography variant="h5" class="truncate font-bold text-highlighted">{{
         userName
       }}</Typography>

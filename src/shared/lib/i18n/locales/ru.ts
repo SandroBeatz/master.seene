@@ -70,6 +70,7 @@ export default {
     schedule: {
       title: 'Расписание',
       subtitle: '{date} · {n} записей',
+      summary: '{date} · {n} записей',
       options: 'Параметры',
     },
     overview: {
@@ -77,10 +78,11 @@ export default {
       earnedToday: 'Заработано',
       appointments: 'Записи',
       workingHours: 'Рабочих часов',
+      periodLabel: 'Период обзора',
       period: {
-        day: 'День',
-        week: 'Неделя',
-        month: 'Месяц',
+        day: 'Сегодня',
+        week: 'Эта неделя',
+        month: 'Этот месяц',
       },
       subtext: {
         today: 'сегодня',

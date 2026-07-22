@@ -6,7 +6,7 @@ import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import { formatsPlugin } from '@shared/lib/formats'
-import ScheduleTimeline from '../ui/ScheduleTimeline.vue'
+import ScheduleTimeline from '../ui/shared/ScheduleTimeline.vue'
 
 const SERVICES: Service[] = [
   makeService('s1', 'Стрижка', '#ff0000'),

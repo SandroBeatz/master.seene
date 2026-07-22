@@ -11,6 +11,7 @@ import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import {
   CalendarToolbar,
   CalendarWidget,
+  MobileCalendarAgenda,
   formatCalendarRangeTitle,
   useCalendarEvents,
   type CalendarDateRange,
@@ -18,12 +19,19 @@ import {
   type CalendarWidgetExpose,
 } from '@widgets/calendar'
 import { Page, Typography } from '@shared/ui'
+import { useIsMobile } from '@shared/lib/viewport'
+import {
+  addDateInputDays,
+  getCalendarDateTimeString,
+  toUtcIsoFromCalendarDateString,
+} from '@shared/lib/time-zone'
 
 const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const preview = useAppointmentPreview()
 const quickCreate = useQuickCreate()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const unknownClientLabel = computed(() => t('appointments.unknownClient'))
@@ -44,6 +52,35 @@ const calendarTitle = computed(() =>
   formatCalendarRangeTitle(calendarRange.value, locale.value, masterPreferencesStore.timeZone),
 )
 
+// --- Mobile: agenda view (FullCalendar's grid doesn't fit a phone) ----------
+// Own day cursor, independent of the desktop FullCalendar instance (which
+// isn't mounted on mobile, so calendarRef stays null there).
+function todayInCalendarTimeZone(): string {
+  return getCalendarDateTimeString(new Date(), masterPreferencesStore.timeZone).slice(0, 10)
+}
+
+const mobileCurrentDate = ref<string>(todayInCalendarTimeZone())
+
+const mobileDayRange = computed<CalendarDateRange>(() => {
+  const from = toUtcIsoFromCalendarDateString(
+    mobileCurrentDate.value,
+    masterPreferencesStore.timeZone,
+  )
+  const to = toUtcIsoFromCalendarDateString(
+    addDateInputDays(mobileCurrentDate.value, 1),
+    masterPreferencesStore.timeZone,
+  )
+  return { from, to, currentFrom: from, currentTo: to, title: '', viewType: 'timeGridDay' }
+})
+
+const mobileCalendarTitle = computed(() =>
+  formatCalendarRangeTitle(mobileDayRange.value, locale.value, masterPreferencesStore.timeZone),
+)
+
+const displayedCalendarTitle = computed(() =>
+  isMobile.value ? mobileCalendarTitle.value : calendarTitle.value,
+)
+
 watch(defaultCalendarView, (nextViewType, previousViewType) => {
   if (calendarViewType.value !== previousViewType) return
 
@@ -57,14 +94,26 @@ function handleDatesSet(range: CalendarDateRange) {
 }
 
 function moveCalendarToPrevious() {
+  if (isMobile.value) {
+    mobileCurrentDate.value = addDateInputDays(mobileCurrentDate.value, -1)
+    return
+  }
   calendarRef.value?.moveToPrevious()
 }
 
 function moveCalendarToNext() {
+  if (isMobile.value) {
+    mobileCurrentDate.value = addDateInputDays(mobileCurrentDate.value, 1)
+    return
+  }
   calendarRef.value?.moveToNext()
 }
 
 function moveCalendarToToday() {
+  if (isMobile.value) {
+    mobileCurrentDate.value = todayInCalendarTimeZone()
+    return
+  }
   calendarRef.value?.moveToToday()
 }
 
@@ -123,8 +172,9 @@ const hostUI = {
     <UCard :ui="hostUI">
       <template #header>
         <CalendarToolbar
-          :title="calendarTitle"
-          :view-type="calendarViewType"
+          :title="displayedCalendarTitle"
+          :view-type="isMobile ? 'timeGridDay' : calendarViewType"
+          :hide-view-toggle="isMobile"
           @previous="moveCalendarToPrevious"
           @next="moveCalendarToNext"
           @today="moveCalendarToToday"
@@ -133,6 +183,7 @@ const hostUI = {
       </template>
       <div class="relative flex flex-1 flex-col min-h-0">
         <CalendarWidget
+          v-if="!isMobile"
           ref="calendarRef"
           :events="calendarEvents"
           :schedule="masterSchedule"
@@ -146,6 +197,14 @@ const hostUI = {
           @time-block-click="onTimeBlockClick"
           @dates-set="handleDatesSet"
         />
+        <MobileCalendarAgenda
+          v-else
+          :date="mobileCurrentDate"
+          :events="calendarEvents"
+          @event-click="onEventClick"
+          @time-block-click="onTimeBlockClick"
+          @create="quickCreate.openAppointment()"
+        />
 
         <!-- Loading overlay -->
         <div
@@ -157,9 +216,10 @@ const hostUI = {
           <USkeleton v-for="i in 8" :key="i" class="h-10 w-full rounded-lg" />
         </div>
 
-        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events -->
+        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events.
+        Mobile's agenda has its own inline empty state (per-day, not per query range). -->
         <div
-          v-else-if="isEmpty"
+          v-else-if="isEmpty && !isMobile"
           class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4"
         >
           <UEmpty
