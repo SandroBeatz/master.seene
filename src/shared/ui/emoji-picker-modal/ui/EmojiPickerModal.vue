@@ -39,12 +39,7 @@ function onSelect(emoji: EmojiExt) {
     :ui="{ content: isMobile ? '' : 'w-auto max-w-fit', body: 'p-0 sm:p-0' }"
   >
     <template #body>
-      <EmojiPicker
-        :native="true"
-        :theme="theme"
-        :display-recent="true"
-        @select="onSelect"
-      />
+      <EmojiPicker :native="true" :theme="theme" :display-recent="true" @select="onSelect" />
     </template>
   </UModal>
 </template>

@@ -116,6 +116,9 @@ const actionsClientName = computed(() =>
 // Header badge: total count across both sections (sections show their own breakdown).
 const actionableCount = computed(() => appointments.value?.length ?? 0)
 
+// On mobile, an empty state just wastes vertical space — hide the whole widget instead.
+const showWidget = computed(() => !isMobile.value || isPending.value || actionableCount.value > 0)
+
 function getClient(appointment: Appointment) {
   return clients.value?.find((c) => c.id === appointment.client_id)
 }
@@ -355,7 +358,7 @@ const cardUI = {
 </script>
 
 <template>
-  <UCard :ui="hostUI">
+  <UCard v-if="showWidget" :ui="hostUI">
     <template #header>
       <div class="flex items-center justify-between">
         <Typography variant="h5" class="text-highlighted font-bold">{{

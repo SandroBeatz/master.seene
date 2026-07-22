@@ -6,6 +6,7 @@ import type { ChartData, ChartOptions } from 'chart.js'
 import type { AnalyticsPeriodKind, RevenuePoint } from '@entities/analytics'
 import { BaseBarChart, BaseLineChart, useChartTheme } from '@shared/ui/chart'
 import { useFormats } from '@shared/lib/formats'
+import { AnimatedNumber } from '@shared/ui'
 
 const props = defineProps<{
   series: RevenuePoint[]
@@ -20,6 +21,7 @@ const props = defineProps<{
 const { t, locale } = useI18n()
 const formats = useFormats()
 const theme = useChartTheme()
+const priceParts = computed(() => formats.priceParts())
 
 // --- Chart type toggle (line / bar), persisted across reloads ---------------
 
@@ -146,7 +148,14 @@ const barOptions = computed<ChartOptions<'bar'>>(() => ({
             <USkeleton class="h-3 w-16" />
           </div>
           <template v-else>
-            <p class="text-2xl font-semibold">{{ formats.price(earned) }}</p>
+            <p class="text-2xl font-semibold">
+              <AnimatedNumber
+                :value="earned"
+                :format="priceParts.format"
+                :prefix="priceParts.prefix"
+                :suffix="priceParts.suffix"
+              />
+            </p>
             <p class="text-xs text-muted">{{ periodLabel }}</p>
           </template>
         </div>

@@ -3,6 +3,7 @@ import type { AnalyticsResultV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
+import { AnimatedNumber } from '@shared/ui'
 import { deltaPct, workingHoursLabel } from '../lib/stat-format'
 
 const props = defineProps<{
@@ -26,7 +27,11 @@ interface Card {
   current: number
   previous: number
   secondary?: string
+  /** 'earned' animates through AnimatedNumber; the rest render `value` as plain text. */
+  money?: boolean
 }
+
+const priceParts = computed(() => formats.priceParts())
 
 const cards = computed<Card[]>(() => {
   const cur = props.data?.current
@@ -38,12 +43,13 @@ const cards = computed<Card[]>(() => {
       icon: 'i-lucide-banknote',
       iconClass: 'text-green-600 dark:text-green-400',
       iconBgClass: 'bg-green-100 dark:bg-green-900/30',
-      value: formats.price(cur?.earned ?? 0),
+      value: cur?.earned ?? 0,
       current: cur?.earned ?? 0,
       previous: prev?.earned ?? 0,
       secondary: `${t('analytics.avgCheckInline')} ${
         cur?.avg_check != null ? formats.price(cur.avg_check) : '—'
       }`,
+      money: true,
     },
     {
       key: 'clients',
@@ -116,7 +122,16 @@ const cards = computed<Card[]>(() => {
           <USkeleton class="h-4 w-20" />
         </div>
         <div v-else class="space-y-0.5">
-          <p class="text-2xl font-semibold">{{ card.value }}</p>
+          <p class="text-2xl font-semibold">
+            <AnimatedNumber
+              v-if="card.money"
+              :value="card.current"
+              :format="priceParts.format"
+              :prefix="priceParts.prefix"
+              :suffix="priceParts.suffix"
+            />
+            <template v-else>{{ card.value }}</template>
+          </p>
           <p class="text-sm font-medium">{{ card.label }}</p>
           <p v-if="compare || card.secondary" class="text-xs text-muted">
             {{ compare ? compareLabel : card.secondary }}

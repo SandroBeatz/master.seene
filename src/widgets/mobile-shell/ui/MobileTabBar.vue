@@ -15,8 +15,7 @@ const items = computed<NavigationMenuItem[]>(() => [
   { icon: 'i-lucide-calendar', to: '/calendar', onSelect: tap },
   {
     icon: 'i-lucide-plus',
-    class:
-      'before:block before:bg-primary [&_[data-slot=linkLeadingIcon]]:text-inverted!',
+    class: 'before:block before:bg-primary [&_[data-slot=linkLeadingIcon]]:text-inverted!',
     onSelect: () => {
       tap()
       emit('actions')
@@ -27,11 +26,10 @@ const items = computed<NavigationMenuItem[]>(() => [
 ])
 
 const tabBarUI = {
-  root:
-    'fixed inset-x-0 z-40 mx-4 flex-col items-stretch rounded-2xl border border-default bg-default px-4 py-2 shadow-xl shadow-black/10 dark:shadow-black/30',
+  root: 'fixed inset-x-0 z-40 mx-4 flex-col items-stretch rounded-2xl bg-default px-4 shadow-xl shadow-black/10 dark:shadow-black/30',
   list: 'flex items-center justify-between gap-2',
   link: 'before:hidden',
-  linkLeadingIcon: 'size-7',
+  linkLeadingIcon: 'size-5.5',
 }
 </script>
 

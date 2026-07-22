@@ -30,12 +30,5 @@ const formattedDate = computed(() => {
       icon="i-lucide-bell"
       :aria-label="t('nav.notifications')"
     />
-    <UButton
-      color="neutral"
-      size="xl"
-      variant="ghost"
-      icon="i-lucide-ellipsis-vertical"
-      :aria-label="t('nav.notifications')"
-    />
   </div>
 </template>

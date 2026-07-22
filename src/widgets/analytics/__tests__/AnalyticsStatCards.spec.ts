@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
+import { createPinia, setActivePinia } from 'pinia'
 import type { AnalyticsResultV2 } from '@entities/analytics'
 import { formatsPlugin } from '@shared/lib/formats'
 import AnalyticsStatCards from '../ui/AnalyticsStatCards.vue'
@@ -47,6 +48,9 @@ function mountCards(
     },
   })
 
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
   return mount(AnalyticsStatCards, {
     props: {
       data: over.data === undefined ? DATA : over.data,
@@ -55,7 +59,7 @@ function mountCards(
       compareLabel: 'vs last month',
     },
     global: {
-      plugins: [i18n, formatsPlugin],
+      plugins: [pinia, i18n, formatsPlugin],
     },
   })
 }

@@ -1,9 +1,5 @@
 import { inject, type App } from 'vue'
-import {
-  DEFAULT_CURRENCY_CODE,
-  getCurrency,
-  type CurrencyOption,
-} from '@shared/config/currencies'
+import { DEFAULT_CURRENCY_CODE, getCurrency, type CurrencyOption } from '@shared/config/currencies'
 import { DEFAULT_DATE_FORMAT } from '@shared/config/date-formats'
 
 type TimeFormat = 12 | 24
@@ -18,12 +14,21 @@ export interface FormatsPluginOptions {
   getLocale?: () => string | undefined
 }
 
+/** Building blocks for animating a price (e.g. via AnimatedNumber) that render identically to `price()`. */
+export interface PriceParts {
+  format: { minimumFractionDigits: number; maximumFractionDigits: number }
+  prefix?: string
+  suffix?: string
+}
+
 export interface Formats {
   time(value: string | null | undefined, overrideFormat?: TimeFormat): string
   /** Formats a number as a price. `currencyOverride` is an ISO code (e.g. 'KZT'). */
   price(value: number | null | undefined, currencyOverride?: string): string
   /** Resolves the active currency (symbol, position, decimals). Falls back to the default. */
   currency(currencyOverride?: string): CurrencyOption
+  /** Same rendering as `price()`, decomposed into raw format/prefix/suffix for AnimatedNumber. */
+  priceParts(currencyOverride?: string): PriceParts
   /** Formats a number with grouping and a fixed number of fraction digits. */
   decimal(value: number | null | undefined, ownFloat?: number): string
   /** Inverse of grouped input: strips thousands separators, normalizes decimal. */
@@ -122,6 +127,15 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
       : `${amount} ${currency.symbol}`
   }
 
+  function priceParts(currencyOverride?: string): PriceParts {
+    const cur = currency(currencyOverride)
+    return {
+      format: { minimumFractionDigits: cur.decimals, maximumFractionDigits: cur.decimals },
+      prefix: cur.position === 'prefix' ? `${cur.symbol} ` : undefined,
+      suffix: cur.position === 'suffix' ? ` ${cur.symbol}` : undefined,
+    }
+  }
+
   function date(value: string | Date | null | undefined, overrideFormat?: string): string {
     if (!value) return PLACEHOLDER
     const parsed = value instanceof Date ? value : new Date(value)
@@ -138,7 +152,7 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     return `${formatWithTokens(parsed, format)} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`
   }
 
-  return { time, price, currency, decimal, parseDecimal, date, dateTime }
+  return { time, price, currency, priceParts, decimal, parseDecimal, date, dateTime }
 }
 
 const FORMATS_KEY = Symbol('formats')
