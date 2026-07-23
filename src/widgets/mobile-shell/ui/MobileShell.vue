@@ -77,7 +77,7 @@ useSwipe(mainRef, {
     <main
       ref="mainRef"
       class="min-h-0 flex-1 overflow-auto"
-      :class="{ 'pb-[calc(env(safe-area-inset-bottom)_+_6rem)]': isRootScreen }"
+      :class="{ 'pb-[calc(env(safe-area-inset-bottom)_+_4rem)]': isRootScreen }"
     >
       <RouterView />
     </main>
