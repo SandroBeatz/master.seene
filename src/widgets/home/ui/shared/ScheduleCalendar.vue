@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useLocaleStore } from '@shared/lib/locale'
 import { useAppointmentDayCountsQuery, type AppointmentDayCountsRange } from '@entities/appointment'
+import { useTimeBlocksQuery, type TimeBlockDateRange } from '@entities/time-block'
 import { Typography } from '@shared/ui'
 import ScheduleCalendarItem from './ScheduleCalendarItem.vue'
 
@@ -68,7 +69,7 @@ const days = computed<ScheduleCalendarDayItem[]>(() => {
 const items = computed<CalendarItem[]>(() => [...days.value, { kind: 'more' }])
 
 // Busy-dots: per-day appointment counts over the same [today, today+30d) window.
-const MAX_DOTS = 3
+const MAX_DOTS = 5
 
 const countsRange = computed<AppointmentDayCountsRange>(() => {
   const to = new Date(today)
@@ -94,6 +95,36 @@ function dateKey(d: Date): string {
 
 function appointmentDots(date: Date): number {
   return Math.min(countsByDay.value.get(dateKey(date)) ?? 0, MAX_DOTS)
+}
+
+// Time-off (time blocks) over the same window — a day is flagged if any block
+// overlaps it, shown as a single grey dot only on days without appointments.
+const timeBlockRange = computed<TimeBlockDateRange>(() => {
+  const to = new Date(today)
+  to.setDate(today.getDate() + DAYS_TOTAL)
+  return { from: today.toISOString(), to: to.toISOString() }
+})
+
+const { data: timeBlocks } = useTimeBlocksQuery(toRef(props, 'userId'), timeBlockRange)
+
+const timeOffDays = computed(() => {
+  const set = new Set<string>()
+  for (const block of timeBlocks.value ?? []) {
+    const end = new Date(block.end_at)
+    const start = new Date(block.start_at)
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+    // Add every local day the block spans. `end` is exclusive: an all-day block
+    // ends at the next local midnight, which must not flag the following day.
+    for (let i = 0; i <= DAYS_TOTAL && cursor < end; i++) {
+      set.add(dateKey(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  }
+  return set
+})
+
+function hasTimeOff(date: Date): boolean {
+  return timeOffDays.value.has(dateKey(date))
 }
 
 // Index of the leading visible slide; drives the month/year header.
@@ -238,6 +269,7 @@ const resolvedHostUI = computed(() =>
           :item="item"
           :selected="item.kind === 'day' && isSameDay(item.date, model)"
           :dots="item.kind === 'day' ? appointmentDots(item.date) : 0"
+          :time-off="item.kind === 'day' ? hasTimeOff(item.date) : false"
           @select="selectDate"
           @open-calendar="openCalendar"
         />
@@ -258,6 +290,7 @@ const resolvedHostUI = computed(() =>
         :item="item"
         :selected="item.kind === 'day' && isSameDay(item.date, model)"
         :dots="item.kind === 'day' ? appointmentDots(item.date) : 0"
+        :time-off="item.kind === 'day' ? hasTimeOff(item.date) : false"
         @select="selectDate"
         @open-calendar="openCalendar"
       />

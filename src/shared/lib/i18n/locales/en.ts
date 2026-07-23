@@ -11,6 +11,12 @@ export default {
     profile: 'Profile',
     actions: 'Actions',
   },
+  formats: {
+    duration: {
+      hoursShort: 'h',
+      minutesShort: 'min',
+    },
+  },
   common: {
     dashboardWelcome:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
@@ -1038,6 +1044,8 @@ export default {
       cancelled: 'Cancelled',
       no_show: 'No-show',
       expired: 'Expired',
+      ongoing: 'In progress',
+      past: 'Time passed',
     },
     form: {
       titleCreate: 'New appointment',

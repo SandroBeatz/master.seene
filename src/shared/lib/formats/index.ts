@@ -1,6 +1,7 @@
 import { inject, type App } from 'vue'
 import { DEFAULT_CURRENCY_CODE, getCurrency, type CurrencyOption } from '@shared/config/currencies'
 import { DEFAULT_DATE_FORMAT } from '@shared/config/date-formats'
+import { i18n } from '@shared/lib/i18n'
 
 type TimeFormat = 12 | 24
 
@@ -29,6 +30,11 @@ export interface Formats {
   currency(currencyOverride?: string): CurrencyOption
   /** Same rendering as `price()`, decomposed into raw format/prefix/suffix for AnimatedNumber. */
   priceParts(currencyOverride?: string): PriceParts
+  /**
+   * Formats a minute count as a localized duration: `1 h 30 min`, `45 min`,
+   * `2 h`. Returns the placeholder for null/undefined/non-positive values.
+   */
+  duration(minutes: number | null | undefined): string
   /** Formats a number with grouping and a fixed number of fraction digits. */
   decimal(value: number | null | undefined, ownFloat?: number): string
   /** Inverse of grouped input: strips thousands separators, normalizes decimal. */
@@ -79,6 +85,17 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
       return `${h12}:${pad2(m)} ${period}`
     }
     return `${pad2(h)}:${pad2(m)}`
+  }
+
+  function duration(minutes: number | null | undefined): string {
+    if (minutes == null || minutes <= 0) return PLACEHOLDER
+    const total = Math.round(minutes)
+    const h = Math.floor(total / 60)
+    const m = total % 60
+    const parts: string[] = []
+    if (h > 0) parts.push(`${h} ${i18n.global.t('formats.duration.hoursShort')}`)
+    if (m > 0) parts.push(`${m} ${i18n.global.t('formats.duration.minutesShort')}`)
+    return parts.join(' ')
   }
 
   function decimal(value: number | null | undefined, ownFloat?: number): string {
@@ -152,7 +169,7 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     return `${formatWithTokens(parsed, format)} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`
   }
 
-  return { time, price, currency, priceParts, decimal, parseDecimal, date, dateTime }
+  return { time, price, currency, priceParts, duration, decimal, parseDecimal, date, dateTime }
 }
 
 const FORMATS_KEY = Symbol('formats')

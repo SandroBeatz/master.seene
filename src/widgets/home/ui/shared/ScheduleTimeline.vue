@@ -2,15 +2,18 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
+  EFFECTIVE_APPOINTMENT_STATUS_VIEW,
   getAppointmentAccentColor,
-  getAppointmentStatusIcon,
+  getEffectiveAppointmentStatus,
   isGroupAppointment,
   type Appointment,
 } from '@entities/appointment'
+import { useNowMinute } from '@shared/lib/now'
 import { useMasterPreferencesStore } from '@entities/master'
 import type { MasterScheduleDayKey } from '@entities/master'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
+import type { TimeBlock } from '@entities/time-block'
 import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
@@ -22,11 +25,13 @@ const props = withDefaults(
     appointments: Appointment[]
     clients: Client[]
     services: Service[]
+    timeBlocks?: TimeBlock[]
     loading: boolean
     selectedDate: Date
     embedded?: boolean
   }>(),
   {
+    timeBlocks: () => [],
     embedded: false,
   },
 )
@@ -39,15 +44,28 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const masterStore = useMasterPreferencesStore()
 const formats = useFormats()
+const now = useNowMinute()
+
+/** Maps a Nuxt UI semantic color to a text utility for the status icon. */
+const STATUS_TEXT_COLOR: Record<string, string> = {
+  primary: 'text-primary',
+  secondary: 'text-secondary',
+  success: 'text-success',
+  info: 'text-info',
+  warning: 'text-warning',
+  error: 'text-error',
+  neutral: 'text-muted',
+}
 
 const serviceById = computed(() => new Map(props.services.map((s) => [s.id, s] as const)))
 
 // Grid constants
-const SLOT_HEIGHT = 52 // px per 1-hour slot
+const SLOT_HEIGHT = 65 // px per 1-hour slot (empty time / long appointments)
 const SLOT_MIN = 60 // minutes per slot
 const GRID_PT = 10 // top padding so first label doesn't clip
 const LABEL_W = 40 // px reserved for time labels on the left
 const BLOCK_GAP = 5 // px gap between adjacent appointment blocks
+const MIN_CARD_H = 65 // px minimum visible height of an appointment card
 const GAP_THRESHOLD_MIN = 60 // empty stretches longer than this collapse into "···"
 const GAP_HEIGHT = 24 // px height of a collapsed gap
 const BOTTOM_PAD = 12 // px padding below the last segment
@@ -59,6 +77,9 @@ const LAYOUT_CONSTANTS: TimelineConstants = {
   gapThresholdMin: GAP_THRESHOLD_MIN,
   gapHeight: GAP_HEIGHT,
   bottomPadding: BOTTOM_PAD,
+  // Reserve room for the card plus the gap below it, so the derived card height
+  // (topForMin(end) − topForMin(start) − BLOCK_GAP) never drops below MIN_CARD_H.
+  minBlockHeight: MIN_CARD_H + BLOCK_GAP,
 }
 
 const timeZone = computed(() => masterStore.timeZone)
@@ -86,13 +107,35 @@ function isSameDay(a: Date, b: Date): boolean {
   )
 }
 
-const isToday = computed(() => isSameDay(props.selectedDate, new Date()))
+const isToday = computed(() => isSameDay(props.selectedDate, now.value))
 
 const subtitleDate = computed(() =>
   new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long' }).format(props.selectedDate),
 )
 
 const visibleAppointments = computed(() => props.appointments.filter(isVisibleScheduleAppointment))
+
+// Time off (time blocks): all-day ones show as a banner, timed ones as grey
+// blocks inside the grid (fed into the layout so they position without overlap).
+const partialTimeBlocks = computed(() => props.timeBlocks.filter((b) => !b.all_day))
+const allDayTimeBlocks = computed(() => props.timeBlocks.filter((b) => b.all_day))
+
+/** A time block as a same-day minute interval, clamped to [0, 1440]. */
+function timeBlockInterval(block: TimeBlock): { from: number; to: number } {
+  const from = Math.min(Math.max(startMinInZone(block.start_at), 0), 1440)
+  let to = Math.min(Math.max(startMinInZone(block.end_at), 0), 1440)
+  if (to <= from) to = 1440 // ends at/after midnight → run to the end of the day
+  return { from, to }
+}
+
+function allDayTimeBlockLabel(block: TimeBlock): string {
+  return block.notes || `${t('timeBlocks.calendarTitle')} · ${t('timeBlocks.form.allDay')}`
+}
+
+const hasTimedContent = computed(
+  () => visibleAppointments.value.length > 0 || partialTimeBlocks.value.length > 0,
+)
+const hasAnyContent = computed(() => hasTimedContent.value || allDayTimeBlocks.value.length > 0)
 
 // Working hours from master schedule for selectedDate
 const workingHours = computed((): { start: number; end: number } | null => {
@@ -114,22 +157,23 @@ const workingHours = computed((): { start: number; end: number } | null => {
   return { start: timeStringToMinutes(day.start), end: timeStringToMinutes(day.end) }
 })
 
-// "Now" in master-timezone minutes — only today and within working hours.
+// "Now" in master-timezone minutes — today only (any time of day; the line is
+// shown even outside working hours). Ticks with `now` so it advances live.
 const nowMinutes = computed<number | null>(() => {
   if (!isToday.value) return null
-  const m = timeStringToMinutes(getCalendarDateTimeString(new Date(), timeZone.value).slice(11, 16))
-  const wh = workingHours.value
-  if (wh && (m < wh.start || m > wh.end)) return null
-  return m
+  return timeStringToMinutes(getCalendarDateTimeString(now.value, timeZone.value).slice(11, 16))
 })
 
 // Segment-based layout: collapses long empty stretches into "···".
 const layout = computed(() =>
   buildTimelineLayout({
-    appointments: visibleAppointments.value.map((a) => {
-      const from = startMinInZone(a.start_at)
-      return { from, to: from + a.duration }
-    }),
+    appointments: [
+      ...visibleAppointments.value.map((a) => {
+        const from = startMinInZone(a.start_at)
+        return { from, to: from + a.duration }
+      }),
+      ...partialTimeBlocks.value.map(timeBlockInterval),
+    ],
     workingHours: workingHours.value,
     nowMin: nowMinutes.value,
     constants: LAYOUT_CONSTANTS,
@@ -165,9 +209,16 @@ const appointmentBlocks = computed(() => {
 
     const startMin = startMinInZone(a.start_at)
     const endMin = startMin + a.duration
-    const top = (layout.value.topForMin(startMin) ?? 0) + BLOCK_GAP / 2
-    const height = Math.max((a.duration / SLOT_MIN) * SLOT_HEIGHT, SLOT_HEIGHT * 0.8) - BLOCK_GAP
+    // Both top and height come from the same monotonic layout mapping, so cards
+    // stay in sync with the grid and never overlap (each slot is ≥ MIN_CARD_H).
+    const topStart = layout.value.topForMin(startMin) ?? 0
+    const topEnd = layout.value.topForMin(endMin) ?? topStart
+    const top = topStart + BLOCK_GAP / 2
+    const height = Math.max(topEnd - topStart - BLOCK_GAP, MIN_CARD_H)
     const isGroup = isGroupAppointment(a)
+    const accentColor = getAppointmentAccentColor(a, byId)
+    const effectiveStatus = getEffectiveAppointmentStatus(a, now.value)
+    const statusView = EFFECTIVE_APPOINTMENT_STATUS_VIEW[effectiveStatus]
 
     return {
       appointment: a,
@@ -175,10 +226,14 @@ const appointmentBlocks = computed(() => {
       serviceList,
       serviceNames,
       isGroup,
-      accentColor: getAppointmentAccentColor(a, byId),
-      statusIcon: getAppointmentStatusIcon(a.status),
+      accentColor,
+      // Left accent rail color: service accent for singles, neutral otherwise.
+      barColor: accentColor ?? 'var(--ui-border)',
+      statusIcon: statusView.icon,
+      statusColorClass: STATUS_TEXT_COLOR[statusView.color as string] ?? 'text-muted',
       startLabel: formats.time(minutesToLabel(startMin)),
       timeRange: `${formats.time(minutesToLabel(startMin))}–${formats.time(minutesToLabel(endMin))}`,
+      durationLabel: formats.duration(a.duration),
       priceLabel: a.price == null ? null : formats.price(a.price),
       compact: !isGroup && a.duration < 45,
       top,
@@ -187,13 +242,34 @@ const appointmentBlocks = computed(() => {
   })
 })
 
-// "Now" line — positioned via the layout (sits just below a collapsed gap).
+// Timed time-off blocks — positioned through the same layout mapping as
+// appointments, styled neutral/grey.
+const timeBlockBlocks = computed(() =>
+  partialTimeBlocks.value.map((b) => {
+    const { from: startMin, to: endMin } = timeBlockInterval(b)
+    const topStart = layout.value.topForMin(startMin) ?? 0
+    const topEnd = layout.value.topForMin(endMin) ?? topStart
+    return {
+      id: b.id,
+      top: topStart + BLOCK_GAP / 2,
+      height: Math.max(topEnd - topStart - BLOCK_GAP, MIN_CARD_H),
+      timeRange: `${formats.time(minutesToLabel(startMin))}–${formats.time(minutesToLabel(endMin))}`,
+      label: b.notes || t('timeBlocks.calendarTitle'),
+    }
+  }),
+)
+
+// "Now" line — positioned via the layout ("now" is an anchor, so it always has
+// a position). Shown only when the day has appointments. If it ever falls
+// outside the positioned domain, pin it to the nearest edge (top / bottom).
 const nowLine = computed((): { top: number; label: string } | null => {
   const m = nowMinutes.value
-  if (m === null) return null
-  const top = layout.value.topForMin(m)
-  if (top === null) return null
-  return { top, label: minutesToLabel(m) }
+  if (m === null || !visibleAppointments.value.length) return null
+  let top = layout.value.topForMin(m)
+  if (top === null) {
+    top = m < layout.value.domain.start ? GRID_PT : totalHeight.value - BOTTOM_PAD
+  }
+  return { top, label: formats.time(minutesToLabel(m)) }
 })
 
 // Nuxt UI overrides
@@ -240,21 +316,38 @@ const resolvedHostUI = computed(() =>
       <div
         v-for="i in 3"
         :key="i"
-        class="h-14 w-full animate-pulse rounded-md bg-elevated md:rounded-lg"
+        class="h-16 w-full animate-pulse rounded-lg bg-elevated md:rounded-xl"
       />
     </div>
 
     <!-- Empty -->
     <UEmpty
-      v-else-if="!visibleAppointments.length"
+      v-else-if="!hasAnyContent"
       variant="naked"
       icon="i-lucide-calendar-x"
       :description="t('home.upcoming.empty')"
       :ui="{ root: 'rounded-md border border-dashed border-default md:rounded-lg' }"
     />
 
-    <!-- Time grid -->
-    <div v-else class="relative overflow-hidden" :style="{ height: totalHeight + 'px' }">
+    <template v-else>
+      <!-- All-day time off banner(s) -->
+      <div
+        v-for="block in allDayTimeBlocks"
+        :key="'ad-' + block.id"
+        class="mb-2 flex items-center gap-2 rounded-md bg-elevated px-3 py-2 ring-1 ring-default"
+      >
+        <UIcon name="i-lucide-ban" class="size-4 shrink-0 text-muted" />
+        <span class="min-w-0 truncate text-xs font-medium text-muted">{{
+          allDayTimeBlockLabel(block)
+        }}</span>
+      </div>
+
+      <!-- Time grid -->
+      <div
+        v-if="hasTimedContent"
+        class="relative isolate overflow-hidden"
+        :style="{ height: totalHeight + 'px' }"
+      >
       <!-- Grid lines + time labels -->
       <template v-for="slot in timeSlots" :key="slot.min">
         <!-- Horizontal line -->
@@ -300,8 +393,8 @@ const resolvedHostUI = computed(() =>
         v-for="block in appointmentBlocks"
         :key="block.appointment.id"
         data-testid="appointment-block"
-        class="absolute overflow-hidden rounded-md px-2.5 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:rounded-lg"
-        :class="block.isGroup ? 'bg-elevated ring-1 ring-default' : 'border-l-4'"
+        class="appt-card absolute overflow-hidden rounded-md pr-2.5 pl-3 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        :class="block.isGroup ? 'bg-elevated ring-1 ring-default' : ''"
         :style="{
           top: block.top + 'px',
           height: block.height + 'px',
@@ -309,11 +402,10 @@ const resolvedHostUI = computed(() =>
           right: '0px',
           paddingTop: '5px',
           paddingBottom: '5px',
-          ...(block.isGroup
+          '--accent-bar': block.barColor,
+          ...(block.isGroup || !block.accentColor
             ? {}
-            : block.accentColor
-              ? { borderLeftColor: block.accentColor, backgroundColor: block.accentColor + '14' }
-              : { borderLeftColor: 'var(--ui-border)' }),
+            : { backgroundColor: block.accentColor + '14' }),
         }"
         @click="emit('select', block.appointment)"
       >
@@ -323,16 +415,21 @@ const resolvedHostUI = computed(() =>
             block.startLabel
           }}</span>
           <span class="text-[11px] truncate leading-tight">{{ block.clientName }}</span>
-          <UIcon :name="block.statusIcon" class="size-3 text-muted shrink-0 ml-auto" />
+          <UIcon :name="block.statusIcon" class="size-3 shrink-0 ml-auto" :class="block.statusColorClass" />
         </div>
 
         <!-- Full card -->
         <template v-else>
           <div class="flex items-center justify-between gap-1">
-            <span class="text-[11px] font-semibold tabular-nums leading-tight">{{
-              block.timeRange
-            }}</span>
-            <UIcon :name="block.statusIcon" class="size-3.5 text-muted shrink-0" />
+            <span class="flex min-w-0 items-center gap-1">
+              <span class="text-[11px] font-semibold tabular-nums leading-tight">{{
+                block.timeRange
+              }}</span>
+              <span class="text-[10px] tabular-nums leading-tight text-muted shrink-0"
+                >· {{ block.durationLabel }}</span
+              >
+            </span>
+            <UIcon :name="block.statusIcon" class="size-3.5 shrink-0" :class="block.statusColorClass" />
           </div>
           <p class="text-xs font-medium truncate leading-tight mt-0.5">{{ block.clientName }}</p>
 
@@ -358,20 +455,59 @@ const resolvedHostUI = computed(() =>
         </template>
       </div>
 
-      <!-- Now line -->
+      <!-- Time-off blocks (grey, neutral) -->
+      <div
+        v-for="block in timeBlockBlocks"
+        :key="'tb-' + block.id"
+        data-testid="time-off-block"
+        class="appt-card absolute overflow-hidden rounded-md bg-elevated pr-2.5 pl-3 text-left ring-1 ring-default"
+        :style="{
+          top: block.top + 'px',
+          height: block.height + 'px',
+          left: LABEL_W + 10 + 'px',
+          right: '0px',
+          paddingTop: '5px',
+          paddingBottom: '5px',
+          '--accent-bar': 'var(--ui-border)',
+        }"
+      >
+        <div class="flex items-center gap-1">
+          <UIcon name="i-lucide-ban" class="size-3 shrink-0 text-muted" />
+          <span class="text-[11px] font-semibold tabular-nums leading-tight text-muted">{{
+            block.timeRange
+          }}</span>
+        </div>
+        <p class="mt-0.5 truncate text-xs font-medium leading-tight text-muted">{{ block.label }}</p>
+      </div>
+
+      <!-- Now line — green, with the live time rendered as a chip on the line. -->
       <div
         v-if="nowLine"
-        class="absolute z-20 flex items-center pointer-events-none"
+        data-testid="now-line"
+        class="absolute z-10 flex -translate-y-1/2 items-center gap-1 pointer-events-none"
         :style="{ top: nowLine.top + 'px', left: 0, right: 0 }"
       >
         <span
-          class="text-[10px] font-semibold tabular-nums text-primary leading-none shrink-0"
-          :style="{ width: LABEL_W + 'px' }"
+          class="shrink-0 rounded-full bg-success px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-white"
           >{{ nowLine.label }}</span
         >
-        <div class="h-0.5 flex-1 bg-primary/70 rounded-full" />
-        <div class="size-1.5 rounded-full bg-primary ml-1 shrink-0" />
+        <div class="h-0.5 flex-1 rounded-full bg-success" />
       </div>
-    </div>
+      </div>
+    </template>
   </UCard>
 </template>
+
+<style scoped>
+/* Left accent rail — a straight (non-rounded) bar, while the card keeps the
+   design-system radius on its right corners. Color is passed via --accent-bar. */
+.appt-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--accent-bar, var(--ui-border));
+}
+</style>

@@ -4,6 +4,7 @@ import { useSessionStore } from '@entities/session'
 import { useAppointmentsQuery, type Appointment } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
+import { useTimeBlocksQuery } from '@entities/time-block'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useQuickCreate } from '@widgets/quick-create-action'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
@@ -29,6 +30,7 @@ const dateRange = computed(() => {
 })
 
 const { data: appointments, isPending } = useAppointmentsQuery(userId, dateRange)
+const { data: timeBlocks } = useTimeBlocksQuery(userId, dateRange)
 const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
 
@@ -45,6 +47,7 @@ function handleSelect(appointment: Appointment) {
       :user-id="userId"
       :time-zone="masterPreferencesStore.timeZone"
       :appointments="appointments ?? []"
+      :time-blocks="timeBlocks ?? []"
       :clients="clients ?? []"
       :services="services ?? []"
       :loading="isPending"
@@ -59,6 +62,7 @@ function handleSelect(appointment: Appointment) {
       />
       <ScheduleTimeline
         :appointments="appointments ?? []"
+        :time-blocks="timeBlocks ?? []"
         :clients="clients ?? []"
         :services="services ?? []"
         :loading="isPending"

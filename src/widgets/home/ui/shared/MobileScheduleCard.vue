@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
+import type { TimeBlock } from '@entities/time-block'
 import { useLocaleStore } from '@shared/lib/locale'
 import { Typography } from '@shared/ui'
 import { isVisibleScheduleAppointment } from '../../model/schedule-appointments'
@@ -15,6 +16,7 @@ const props = defineProps<{
   userId: string
   timeZone: string
   appointments: Appointment[]
+  timeBlocks: TimeBlock[]
   clients: Client[]
   services: Service[]
   loading: boolean
@@ -101,6 +103,7 @@ const hostUI = {
       <ScheduleTimeline
         embedded
         :appointments="appointments"
+        :time-blocks="timeBlocks"
         :clients="clients"
         :services="services"
         :loading="loading"

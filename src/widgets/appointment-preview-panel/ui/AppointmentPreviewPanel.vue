@@ -2,12 +2,13 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { BadgeProps } from '@nuxt/ui'
-import { APPOINTMENT_STATUS_VIEW, type Appointment } from '@entities/appointment'
+import { getEffectiveAppointmentStatusView, type Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import type { TimeFormat } from '@entities/master'
 import { getDateTimeInputValue } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
+import { useNowMinute } from '@shared/lib/now'
 import type { Sale, SaleItem } from '@entities/sale'
 import {
   APPOINTMENT_ACTION_CONFIG,
@@ -41,8 +42,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const formats = useFormats()
+const now = useNowMinute()
 
-const statusView = computed(() => APPOINTMENT_STATUS_VIEW[props.appointment.status])
+// Display status reflects the effective (time-derived) state; the action set
+// stays keyed by the stored status (actions depend on the real state).
+const statusView = computed(() => getEffectiveAppointmentStatusView(props.appointment, now.value))
 const actions = computed(() => APPOINTMENT_ACTION_CONFIG[props.appointment.status])
 
 const clientName = computed(() => {

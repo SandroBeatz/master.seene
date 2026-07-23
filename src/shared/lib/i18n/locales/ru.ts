@@ -11,6 +11,12 @@ export default {
     profile: 'Профиль',
     actions: 'Действия',
   },
+  formats: {
+    duration: {
+      hoursShort: 'ч',
+      minutesShort: 'мин',
+    },
+  },
   common: {
     dashboardWelcome: 'Вот что происходит с вашими проектами сегодня.',
     userAvatarAlt: 'Аватар пользователя',
@@ -1034,6 +1040,8 @@ export default {
       cancelled: 'Отменена',
       no_show: 'Не явился',
       expired: 'Истекла',
+      ongoing: 'Идёт сейчас',
+      past: 'Время прошло',
     },
     form: {
       titleCreate: 'Новая запись',

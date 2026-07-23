@@ -75,17 +75,18 @@ function mountTimeline(appointments: Appointment[]) {
 }
 
 describe('ScheduleTimeline card', () => {
-  it('renders a single-service appointment with the service-colored left border', () => {
+  it('renders a single-service appointment with the service-colored left rail', () => {
     const wrapper = mountTimeline([makeAppointment({ service_ids: ['s1'] })])
     const block = wrapper.get('[data-testid="appointment-block"]')
 
-    // Single → colored left stripe, not the neutral group background.
-    expect(block.classes()).toContain('border-l-4')
+    // Single → colored left rail (via --accent-bar), not the neutral group background.
+    expect(block.classes()).toContain('appt-card')
     expect(block.classes()).not.toContain('bg-elevated')
     const style = block.attributes('style') ?? ''
-    expect(style).toContain('border-left-color')
-    // jsdom normalises #ff0000 → rgb(255, 0, 0)
-    expect(style).toContain('rgb(255, 0, 0)')
+    // The accent drives both the rail custom property (#ff0000) and the
+    // translucent card background (jsdom → rgba(255, 0, 0, 0.08)).
+    expect(style).toContain('--accent-bar: #ff0000')
+    expect(style).toContain('rgba(255, 0, 0')
     // No service dots on a single card.
     expect(block.findAll('li')).toHaveLength(0)
   })
@@ -94,9 +95,9 @@ describe('ScheduleTimeline card', () => {
     const wrapper = mountTimeline([makeAppointment({ service_ids: ['s1', 's2'] })])
     const block = wrapper.get('[data-testid="appointment-block"]')
 
-    // Group → neutral background, no service-colored stripe.
+    // Group → neutral background, no service-colored card background.
     expect(block.classes()).toContain('bg-elevated')
-    expect(block.classes()).not.toContain('border-l-4')
+    expect(block.attributes('style') ?? '').not.toContain('rgb(255, 0, 0)')
 
     const dots = block.findAll('li')
     expect(dots).toHaveLength(2)
@@ -111,6 +112,8 @@ describe('ScheduleTimeline card', () => {
     // getAppointmentStatusIcon unit test.
     expect(block.findAll('svg').length).toBeGreaterThanOrEqual(1)
     expect(block.text()).toContain('1,500')
+    // Duration label (60 min → "1 h" in the en locale) is rendered in the time row.
+    expect(block.text()).toContain('1 h')
 
     const noPrice = mountTimeline([makeAppointment({ price: null })])
     expect(noPrice.get('[data-testid="appointment-block"]').text()).not.toContain('1,500')

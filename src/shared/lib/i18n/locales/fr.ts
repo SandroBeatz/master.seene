@@ -11,6 +11,12 @@ export default {
     profile: 'Profil',
     actions: 'Actions',
   },
+  formats: {
+    duration: {
+      hoursShort: 'h',
+      minutesShort: 'min',
+    },
+  },
   common: {
     dashboardWelcome: "Voici ce qui se passe avec vos projets aujourd'hui.",
     userAvatarAlt: "Avatar de l'utilisateur",
@@ -1047,6 +1053,8 @@ export default {
       cancelled: 'Annulé',
       no_show: 'Absent',
       expired: 'Expirée',
+      ongoing: 'En cours',
+      past: 'Heure dépassée',
     },
     form: {
       titleCreate: 'Nouveau rendez-vous',

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { APPOINTMENT_STATUS_VIEW, type Appointment } from '@entities/appointment'
+import { getEffectiveAppointmentStatusView, type Appointment } from '@entities/appointment'
 import { ClientAvatar, type Client } from '@entities/client'
 import { Typography } from '@shared/ui'
+import { useNowMinute } from '@shared/lib/now'
 
 const props = defineProps<{
   appointment: Appointment
@@ -26,8 +27,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const now = useNowMinute()
 
-const statusView = computed(() => APPOINTMENT_STATUS_VIEW[props.appointment.status])
+const statusView = computed(() => getEffectiveAppointmentStatusView(props.appointment, now.value))
 const isPending = computed(() => props.appointment.status === 'pending')
 const isOnline = computed(() => props.appointment.source === 'online_booking')
 
