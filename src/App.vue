@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useColorMode } from '@vueuse/core'
 import { PiniaColadaDevtools } from '@pinia/colada-devtools'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import { useLocaleStore } from '@shared/lib/locale'
+import { initNativeShell } from '@shared/lib/native'
 
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const localeStore = useLocaleStore()
 const { store: themePreference } = useColorMode()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
+
+onMounted(() => {
+  initNativeShell()
+})
 
 watch(
   userId,

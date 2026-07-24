@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useMediaQuery } from '@shared/lib/media-query'
+import { useIsMobile } from '@shared/lib/viewport'
 import TimeOffWizard from './TimeOffWizard.vue'
 import type { TimeOffPrefill } from '../model/types'
 
@@ -10,7 +10,7 @@ defineProps<{ prefill?: TimeOffPrefill }>()
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{ close: []; 'after:leave': [] }>()
 
-const isMobile = useMediaQuery('(max-width: 640px)')
+const isMobile = useIsMobile()
 </script>
 
 <template>

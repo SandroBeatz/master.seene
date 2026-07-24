@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
+import { createPinia, setActivePinia } from 'pinia'
 import type { TopServiceV2 } from '@entities/analytics'
 import { formatsPlugin } from '@shared/lib/formats'
 import AnalyticsTopServices from '../ui/AnalyticsTopServices.vue'
@@ -26,9 +27,12 @@ function mountWidget(services: TopServiceV2[], loading = false) {
     },
   })
 
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
   return mount(AnalyticsTopServices, {
     props: { services, loading },
-    global: { plugins: [i18n, formatsPlugin] },
+    global: { plugins: [pinia, i18n, formatsPlugin] },
   })
 }
 

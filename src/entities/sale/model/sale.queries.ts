@@ -15,10 +15,19 @@ export const useCompleteSaleMutation = (userId: Ref<string>) => {
   return useMutation({
     mutation: (dto: CompleteSaleDto) => completeSale(dto),
     onSettled: (_data, _error, dto) => {
-      cache.invalidateQueries({ key: ['appointments', userId.value] })
+      const invalidations = [
+        cache.invalidateQueries({ key: ['appointments', userId.value] }),
+        cache.invalidateQueries({ key: ['appointments-actionable', userId.value] }),
+        cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] }),
+      ]
+
       if (dto) {
-        cache.invalidateQueries({ key: ['sale-by-appointment', dto.appointment_id] })
+        invalidations.push(
+          cache.invalidateQueries({ key: ['sale-by-appointment', dto.appointment_id] }),
+        )
       }
+
+      return Promise.all(invalidations)
     },
   })
 }

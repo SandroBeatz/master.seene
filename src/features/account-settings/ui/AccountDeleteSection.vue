@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
+import { useIsMobile } from '@shared/lib/viewport'
 
 defineOptions({ name: 'AccountDeleteSection' })
 
@@ -11,6 +12,7 @@ const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const username = computed(() => sessionStore.profile?.username ?? '')
 
@@ -92,6 +94,7 @@ async function onConfirmDelete() {
           ? t('settings.account.delete.step1Title')
           : t('settings.account.delete.step2Title')
       "
+      :fullscreen="isMobile"
       :ui="{ footer: 'justify-end' }"
     >
       <template #body>

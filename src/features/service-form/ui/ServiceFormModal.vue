@@ -15,6 +15,7 @@ import {
 } from '@entities/service-category'
 import { useSessionStore } from '@entities/session'
 import { PriceInput } from '@shared/ui'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   modelValue: boolean
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -228,6 +230,7 @@ async function confirmCreateCategory() {
   <UModal
     v-model:open="isOpen"
     :title="isEdit ? $t('services.form.editTitle') : $t('services.form.createTitle')"
+    :fullscreen="isMobile"
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>

@@ -1,12 +1,12 @@
 ---
-version: 1.2
-date: 2026-07-14
+version: 1.3
+date: 2026-07-22
 category: business
 ---
 
 # Quick Appointment & Time Off Creation
 
-> Version 1.2 · 2026-07-14 · [Business](../business/)
+> Version 1.3 · 2026-07-22 · [Business](../business/)
 
 > **Implementation status.** This document began as the implementation plan. The
 > appointment flow shipped under `src/features/appointment-wizard/` (not the
@@ -419,7 +419,7 @@ Suggested epics and their dependencies (→ = depends on):
 | `src/features/quick-create/ui/steps/Step*.vue` | NEW — Client / Services / DateTime / Confirm |
 | `src/features/quick-create/ui/TimeOffWizard.vue` | NEW — availability-aware time-off flow |
 | `src/features/client-form/ui/ClientFormDialog.vue` | CHANGED — emit created client |
-| `src/widgets/home/ui/ScheduleTimeline.vue` | CHANGED — "+" replaces ellipsis, emits `create` |
+| `src/widgets/home/ui/shared/ScheduleTimeline.vue` | CHANGED — "+" replaces ellipsis, emits `create` |
 | `src/widgets/home/ui/HomeScheduleWidget.vue` | CHANGED — wire "+" to `useQuickCreate` |
 | `src/pages/calendar/ui/CalendarPage.vue` | CHANGED — route "+" and slot click to `useQuickCreate` |
 | `src/shared/lib/i18n/locales/{en,fr,ru}.ts` | CHANGED — `quickCreate.*` keys |

@@ -9,6 +9,18 @@ export default {
     settings: 'Настройки',
     logout: 'Выйти',
     profile: 'Профиль',
+    actions: 'Действия',
+  },
+  formats: {
+    duration: {
+      hoursShort: 'ч',
+      minutesShort: 'мин',
+    },
+    dateDay: {
+      yesterday: 'Вчера',
+      today: 'Сегодня',
+      tomorrow: 'Завтра',
+    },
   },
   common: {
     dashboardWelcome: 'Вот что происходит с вашими проектами сегодня.',
@@ -69,6 +81,7 @@ export default {
     schedule: {
       title: 'Расписание',
       subtitle: '{date} · {n} записей',
+      summary: '{date} · {n} записей',
       options: 'Параметры',
     },
     overview: {
@@ -76,10 +89,11 @@ export default {
       earnedToday: 'Заработано',
       appointments: 'Записи',
       workingHours: 'Рабочих часов',
+      periodLabel: 'Период обзора',
       period: {
-        day: 'День',
-        week: 'Неделя',
-        month: 'Месяц',
+        day: 'Сегодня',
+        week: 'Эта неделя',
+        month: 'Этот месяц',
       },
       subtext: {
         today: 'сегодня',
@@ -571,6 +585,7 @@ export default {
     nav: {
       groupGeneral: 'Основное',
       groupSystem: 'Система',
+      groupWorkspace: 'Рабочее пространство',
       profile: 'Профиль',
       contacts: 'Контакты и соцсети',
       workingHours: 'Рабочие часы',
@@ -580,6 +595,14 @@ export default {
       notifications: 'Уведомления',
       systemRegion: 'Система и регион',
       account: 'Аккаунт',
+      services: 'Услуги',
+      clients: 'Клиенты',
+      about: 'О приложении',
+    },
+    about: {
+      title: 'О приложении',
+      description: 'Информация о приложении и версии.',
+      version: 'Версия',
     },
     profile: {
       title: 'Профиль',
@@ -1022,6 +1045,8 @@ export default {
       cancelled: 'Отменена',
       no_show: 'Не явился',
       expired: 'Истекла',
+      ongoing: 'Идёт сейчас',
+      past: 'Время прошло',
     },
     form: {
       titleCreate: 'Новая запись',
@@ -1110,6 +1135,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Заблокированное время',
+    allDayLabel: 'Перерыв: Весь день',
     form: {
       titleCreate: 'Заблокировать время',
       titleEdit: 'Редактировать блокировку',

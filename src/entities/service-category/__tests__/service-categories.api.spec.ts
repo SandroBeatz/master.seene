@@ -29,7 +29,16 @@ const { mockOrder, mockEq, mockSelect, mockInsert, mockUpdate, mockDelete, mockS
     mockDelete.mockReturnValue(builder)
     mockFrom.mockReturnValue(builder)
 
-    return { mockOrder, mockEq, mockSelect, mockInsert, mockUpdate, mockDelete, mockSingle, mockFrom }
+    return {
+      mockOrder,
+      mockEq,
+      mockSelect,
+      mockInsert,
+      mockUpdate,
+      mockDelete,
+      mockSingle,
+      mockFrom,
+    }
   })
 
 vi.mock('@shared/lib/supabase', () => ({

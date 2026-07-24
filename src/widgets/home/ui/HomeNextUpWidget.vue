@@ -8,14 +8,18 @@ import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
 import { usePaymentTypesQuery } from '@entities/payment-type'
 import { useCompleteSaleMutation } from '@entities/sale'
+import { useMasterPreferencesStore } from '@entities/master'
 import { useFormats } from '@shared/lib/formats'
-import { useLocaleStore } from '@shared/lib/locale'
+import { useIsMobile } from '@shared/lib/viewport'
 import type { Appointment } from '@entities/appointment'
 import type { Service } from '@entities/service'
 import type { CompleteSaleDto } from '@entities/sale'
 import { AppointmentCheckoutModal } from '@features/appointment-checkout'
+import { AppointmentFormDialog } from '@features/appointment-form'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import { Typography, useConfirm } from '@shared/ui'
+import MobileNextUpActionsDrawer from './shared/MobileNextUpActionsDrawer.vue'
+import MobileNextUpCard from './shared/MobileNextUpCard.vue'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -23,11 +27,12 @@ const confirm = useConfirm()
 const preview = useAppointmentPreview()
 const cache = useQueryCache()
 const sessionStore = useSessionStore()
+const masterPreferencesStore = useMasterPreferencesStore()
 const formats = useFormats()
-const localeStore = useLocaleStore()
+const isMobile = useIsMobile()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: appointments, isPending, refresh } = useActionableAppointmentsQuery(userId)
+const { data: appointments, isPending } = useActionableAppointmentsQuery(userId)
 const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
 const { data: paymentTypes } = usePaymentTypesQuery(userId)
@@ -40,6 +45,10 @@ const checkoutAppointment = ref<Appointment | null>(null)
 const decliningId = ref<string | null>(null)
 const confirmingId = ref<string | null>(null)
 const markingNoShowId = ref<string | null>(null)
+const actionsAppointment = ref<Appointment | null>(null)
+const isActionsOpen = ref(false)
+const editingAppointment = ref<Appointment | null>(null)
+const isEditOpen = ref(false)
 
 // Three distinct jobs sharing one feed: pending requests the client is still
 // waiting on, pending requests whose slot has already passed (the master never
@@ -97,8 +106,16 @@ const sections = computed(() =>
   ].filter((s) => s.items.length > 0),
 )
 
+const mobileAppointments = computed(() => sections.value.flatMap((section) => section.items))
+const actionsClientName = computed(() =>
+  actionsAppointment.value ? getClientName(actionsAppointment.value) : '',
+)
+
 // Header badge: total count across both sections (sections show their own breakdown).
 const actionableCount = computed(() => appointments.value?.length ?? 0)
+
+// On mobile, an empty state just wastes vertical space — hide the whole widget instead.
+const showWidget = computed(() => !isMobile.value || isPending.value || actionableCount.value > 0)
 
 function getClient(appointment: Appointment) {
   return clients.value?.find((c) => c.id === appointment.client_id)
@@ -131,13 +148,25 @@ function formatTime(isoString: string): string {
   return formats.time(hhmm)
 }
 
+function minutesSince(isoString: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 60_000))
+}
+
 // Compact "how long the client has been waiting" label since they booked online.
 function waitingLabel(isoString: string): string {
-  const minutes = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 60_000))
+  const minutes = minutesSince(isoString)
   if (minutes < 60) return t('home.nextUp.unitMinShort', { n: minutes })
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return t('home.nextUp.unitHourShort', { n: hours })
   return t('home.nextUp.unitDayShort', { n: Math.floor(hours / 24) })
+}
+
+// Don't nag the master about an online booking right away — only once it's
+// been sitting unconfirmed for a while.
+const WAITING_ATTENTION_THRESHOLD_MINUTES = 15
+
+function needsWaitingAttention(appointment: Appointment): boolean {
+  return minutesSince(appointment.created_at) >= WAITING_ATTENTION_THRESHOLD_MINUTES
 }
 
 function isOnline(appointment: Appointment): boolean {
@@ -156,18 +185,20 @@ function isToday(isoString: string): boolean {
   return isSameCalendarDay(new Date(isoString), new Date())
 }
 
-function isTomorrow(isoString: string): boolean {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  return isSameCalendarDay(new Date(isoString), tomorrow)
+function attentionLabel(appointment: Appointment): string | undefined {
+  if (appointment.status !== 'pending') return undefined
+  if (slotEnded(appointment)) return t('home.nextUp.slotPassed')
+  if (isOnline(appointment) && needsWaitingAttention(appointment)) {
+    return t('home.nextUp.waitingFor', { time: waitingLabel(appointment.created_at) })
+  }
+  return undefined
 }
 
-function dateLabel(isoString: string): string {
-  if (isToday(isoString)) return t('home.nextUp.today')
-  if (isTomorrow(isoString)) return t('home.nextUp.tomorrow')
-  return new Intl.DateTimeFormat(localeStore.current, { day: 'numeric', month: 'short' }).format(
-    new Date(isoString),
-  )
+function attentionTone(appointment: Appointment): 'warning' | 'error' | undefined {
+  if (appointment.status !== 'pending') return undefined
+  if (slotEnded(appointment)) return 'error'
+  if (isOnline(appointment) && needsWaitingAttention(appointment)) return 'warning'
+  return undefined
 }
 
 // Accent color by status: pending → amber (primary), confirmed → violet.
@@ -194,12 +225,19 @@ function accentTextClass(status: Appointment['status']): string {
   return status === 'pending' ? 'text-primary' : 'text-secondary'
 }
 
+async function refreshHomeData() {
+  await Promise.all([
+    cache.invalidateQueries({ key: ['appointments', userId.value] }),
+    cache.invalidateQueries({ key: ['appointments-actionable', userId.value] }),
+    cache.invalidateQueries({ key: ['analytics-v2'] }),
+  ])
+}
+
 async function handleConfirm(appointment: Appointment) {
   confirmingId.value = appointment.id
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status: 'confirmed' })
-    cache.invalidateQueries({ key: ['analytics'] })
-    await refresh()
+    await refreshHomeData()
   } catch {
     toast.add({ title: t('appointments.preview.statusUpdateError'), color: 'error' })
   } finally {
@@ -220,7 +258,7 @@ async function handleDecline(appointment: Appointment) {
   decliningId.value = appointment.id
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status: 'cancelled' })
-    await refresh()
+    await refreshHomeData()
   } catch {
     toast.add({ title: t('appointments.preview.statusUpdateError'), color: 'error' })
   } finally {
@@ -241,8 +279,7 @@ async function handleNoShow(appointment: Appointment) {
   markingNoShowId.value = appointment.id
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status: 'no_show' })
-    cache.invalidateQueries({ key: ['analytics'] })
-    await refresh()
+    await refreshHomeData()
   } catch {
     toast.add({ title: t('appointments.preview.statusUpdateError'), color: 'error' })
   } finally {
@@ -255,6 +292,35 @@ function handleComplete(appointment: Appointment) {
   isCheckoutOpen.value = true
 }
 
+function handlePrimary(appointment: Appointment) {
+  if (appointment.status === 'pending') {
+    void handleConfirm(appointment)
+    return
+  }
+  handleComplete(appointment)
+}
+
+function openActions(appointment: Appointment) {
+  actionsAppointment.value = appointment
+  isActionsOpen.value = true
+}
+
+function handleEdit(appointment: Appointment) {
+  editingAppointment.value = appointment
+  isEditOpen.value = true
+}
+
+function handleEditOpenChange(open: boolean) {
+  isEditOpen.value = open
+  if (!open) editingAppointment.value = null
+}
+
+async function handleEditSaved() {
+  isEditOpen.value = false
+  editingAppointment.value = null
+  await refreshHomeData()
+}
+
 function openPreview(appointment: Appointment) {
   preview.open({ appointment })
 }
@@ -264,8 +330,7 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
     await completeSaleMutation.mutateAsync(payload)
     isCheckoutOpen.value = false
     checkoutAppointment.value = null
-    await refresh()
-    cache.invalidateQueries({ key: ['analytics'] })
+    await refreshHomeData()
     toast.add({ title: t('checkout.successTitle'), color: 'success' })
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
@@ -280,16 +345,16 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
 
 // Nuxt UI overrides
 const hostUI = {
-  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
+  root: 'rounded-lg shadow-panel ring-0 divide-y-0 md:rounded-xl',
   header: 'pb-0',
 }
 const cardUI = {
-  root: 'h-full rounded-xl shadow-none',
+  root: 'h-full rounded-md shadow-none md:rounded-lg',
 }
 </script>
 
 <template>
-  <UCard :ui="hostUI">
+  <UCard v-if="showWidget" :ui="hostUI">
     <template #header>
       <div class="flex items-center justify-between">
         <Typography variant="h5" class="text-highlighted font-bold">{{
@@ -308,11 +373,21 @@ const cardUI = {
     </template>
 
     <template v-if="isPending">
-      <div class="space-y-2">
+      <div v-if="isMobile" class="overflow-hidden">
+        <div class="flex gap-2">
+          <USkeleton
+            v-for="i in 2"
+            :key="i"
+            class="h-72 w-[92%] shrink-0 rounded-md md:rounded-lg"
+          />
+        </div>
+      </div>
+
+      <div v-else class="space-y-2">
         <div
           v-for="i in 3"
           :key="i"
-          class="flex items-center gap-4 rounded-2xl border border-default bg-default p-4"
+          class="flex items-center gap-4 rounded-md border border-default bg-default p-4 md:rounded-lg"
         >
           <USkeleton class="h-16 w-20 shrink-0 rounded-xl" />
           <USkeleton class="size-10 shrink-0 rounded-full" />
@@ -331,8 +406,42 @@ const cardUI = {
       variant="naked"
       icon="i-lucide-check-circle"
       :title="t('home.nextUp.noAppointments')"
-      :ui="{ root: 'rounded-lg border border-dashed border-default' }"
+      :ui="{ root: 'rounded-md border border-dashed border-default md:rounded-lg' }"
     />
+
+    <UCarousel
+      v-else-if="isMobile"
+      v-slot="{ item: appt }"
+      :items="mobileAppointments"
+      align="start"
+      auto-height
+      wheel-gestures
+      class="-mx-4 w-[calc(100%+2rem)] min-w-0 sm:-mx-6 sm:w-[calc(100%+3rem)]"
+      :ui="{
+        container: 'ms-0 items-start transition-[height] duration-200',
+        item:
+          mobileAppointments.length > 1
+            ? 'flex basis-[92%] px-2 py-1'
+            : 'flex basis-full px-2 py-1',
+      }"
+    >
+      <MobileNextUpCard
+        :appointment="appt"
+        :client="getClient(appt) ?? null"
+        :client-name="getClientName(appt)"
+        :service-names="getServiceNames(appt)"
+        :time-label="formatTime(appt.start_at)"
+        :date-label="formats.dateDay(appt.start_at)"
+        :duration-label="t('home.nextUp.minutesLabel', { n: appt.duration })"
+        :price-label="formats.price(appt.price)"
+        :attention-label="attentionLabel(appt)"
+        :attention-tone="attentionTone(appt)"
+        :primary-loading="appt.status === 'pending' && confirmingId === appt.id"
+        @open="openPreview(appt)"
+        @primary="handlePrimary(appt)"
+        @more="openActions(appt)"
+      />
+    </UCarousel>
 
     <div v-else class="space-y-6">
       <section v-for="section in sections" :key="section.id" class="space-y-2">
@@ -368,7 +477,7 @@ const cardUI = {
                   class="font-semibold"
                   :class="isToday(appt.start_at) ? accentTextClass(appt.status) : 'text-muted'"
                 >
-                  {{ dateLabel(appt.start_at) }}
+                  {{ formats.dateDay(appt.start_at) }}
                 </Typography>
                 <Typography variant="endnote" class="font-semibold text-dimmed mt-1">
                   {{ t('home.nextUp.minutesLabel', { n: appt.duration }) }}
@@ -454,8 +563,7 @@ const cardUI = {
               </UButton>
               <UButton
                 size="sm"
-                color="secondary"
-                variant="soft"
+                color="success"
                 leading-icon="i-lucide-badge-check"
                 @click="handleComplete(appt)"
               >
@@ -477,5 +585,28 @@ const cardUI = {
     :loading="completeSaleMutation.isLoading.value"
     @update:open="isCheckoutOpen = $event"
     @confirm="handleCheckoutConfirm"
+  />
+
+  <MobileNextUpActionsDrawer
+    v-if="isMobile"
+    v-model:open="isActionsOpen"
+    :appointment="actionsAppointment"
+    :client-name="actionsClientName"
+    :time-label="actionsAppointment ? formatTime(actionsAppointment.start_at) : ''"
+    :date-label="actionsAppointment ? formats.dateDay(actionsAppointment.start_at) : ''"
+    :declining="decliningId === actionsAppointment?.id"
+    :marking-no-show="markingNoShowId === actionsAppointment?.id"
+    @edit="handleEdit"
+    @decline="handleDecline"
+    @no-show="handleNoShow"
+  />
+
+  <AppointmentFormDialog
+    v-if="editingAppointment"
+    :open="isEditOpen"
+    :appointment="editingAppointment"
+    :time-zone="masterPreferencesStore.timeZone"
+    @update:open="handleEditOpenChange"
+    @saved="handleEditSaved"
   />
 </template>

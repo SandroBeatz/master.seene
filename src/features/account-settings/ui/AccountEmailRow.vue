@@ -5,12 +5,14 @@ import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
+import { useIsMobile } from '@shared/lib/viewport'
 
 defineOptions({ name: 'AccountEmailRow' })
 
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const currentEmail = computed(() => sessionStore.session?.user.email ?? '')
 
@@ -90,6 +92,7 @@ function submitForm() {
       v-model:open="isOpen"
       :title="t('settings.account.email.modalTitle')"
       :description="t('settings.account.email.modalDescription')"
+      :fullscreen="isMobile"
       :ui="{ footer: 'justify-end' }"
     >
       <template #body>

@@ -3,7 +3,13 @@ import { AppFullLogo } from '@shared/ui'
 import authBackground from '@shared/assets/auth-background.jpg'
 </script>
 <template>
-  <UPage :ui="{ root: 'min-h-dvh py-12', center: 'flex flex-col flex-1 h-full' }">
+  <UPage
+    :ui="{ root: 'min-h-dvh', center: 'flex flex-col flex-1 h-full' }"
+    :style="{
+      paddingTop: 'calc(env(safe-area-inset-top) + 3rem)',
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 3rem)',
+    }"
+  >
     <div class="flex justify-center mb-12">
       <AppFullLogo class="w-52 h-10" />
     </div>
@@ -21,8 +27,9 @@ import authBackground from '@shared/assets/auth-background.jpg'
             <slot></slot>
           </UPageCard>
 
-          <!-- Right: Photo -->
-          <div class="overflow-hidden relative">
+          <!-- Right: Photo — decorative, hidden below lg so it doesn't stack
+          full-width under the form on mobile. -->
+          <div class="hidden overflow-hidden relative lg:block">
             <img
               :src="authBackground"
               alt=""

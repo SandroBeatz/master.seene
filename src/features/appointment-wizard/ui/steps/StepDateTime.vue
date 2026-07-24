@@ -72,7 +72,10 @@ function markerClass(day: DateValue): string {
 
 // --- Slot groups (morning / afternoon / evening) ---
 const GROUP_META: Record<PartOfDay, { labelKey: string; icon: string }> = {
-  morning: { labelKey: 'quickCreate.appointment.dateTime.groups.morning', icon: 'i-lucide-sunrise' },
+  morning: {
+    labelKey: 'quickCreate.appointment.dateTime.groups.morning',
+    icon: 'i-lucide-sunrise',
+  },
   day: { labelKey: 'quickCreate.appointment.dateTime.groups.day', icon: 'i-lucide-sun' },
   evening: { labelKey: 'quickCreate.appointment.dateTime.groups.evening', icon: 'i-lucide-sunset' },
 }

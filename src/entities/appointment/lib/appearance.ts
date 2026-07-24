@@ -1,5 +1,13 @@
-import { APPOINTMENT_STATUS_VIEW } from '../config/status'
-import type { Appointment, AppointmentStatus } from '../model/types'
+import {
+  APPOINTMENT_STATUS_VIEW,
+  EFFECTIVE_APPOINTMENT_STATUS_VIEW,
+  type AppointmentStatusViewConfig,
+} from '../config/status'
+import type {
+  Appointment,
+  AppointmentStatus,
+  EffectiveAppointmentStatus,
+} from '../model/types'
 
 /**
  * Minimal service shape this module needs to resolve colors.
@@ -48,7 +56,58 @@ export function getAppointmentAccentColor(
   return color ?? null
 }
 
-/** Lucide icon name representing the appointment status. */
+/** Lucide icon name representing the (stored) appointment status. */
 export function getAppointmentStatusIcon(status: AppointmentStatus): string {
   return APPOINTMENT_STATUS_VIEW[status].icon
+}
+
+/** Minimal appointment shape needed to derive the time-based effective status. */
+export type EffectiveStatusInput = Pick<Appointment, 'status' | 'start_at' | 'duration'>
+
+/**
+ * Effective status shown to the user, derived from the stored status and the
+ * current time. Never persisted — computed on the frontend so the database is
+ * not polluted with transient states.
+ *
+ * - Terminal statuses (`completed`/`cancelled`/`no_show`/`expired`) pass through.
+ * - `pending`/`confirmed` while `now` is inside the appointment window → `ongoing`.
+ * - `confirmed` whose end time has passed (still not completed) → `past`.
+ * - A `pending` appointment whose time has passed stays `pending`.
+ *
+ * Comparison is done on absolute instants (`start_at` is an ISO timestamp),
+ * so no timezone conversion is required.
+ */
+export function getEffectiveAppointmentStatus(
+  appointment: EffectiveStatusInput,
+  now: Date = new Date(),
+): EffectiveAppointmentStatus {
+  const { status } = appointment
+  if (status !== 'pending' && status !== 'confirmed') return status
+
+  const start = new Date(appointment.start_at).getTime()
+  const end = start + appointment.duration * 60_000
+  const t = now.getTime()
+
+  if (t >= start && t < end) return 'ongoing'
+  if (t >= end && status === 'confirmed') return 'past'
+  return status
+}
+
+/** Lucide icon name representing the effective (time-derived) status. */
+export function getEffectiveAppointmentStatusIcon(
+  appointment: EffectiveStatusInput,
+  now: Date = new Date(),
+): string {
+  return EFFECTIVE_APPOINTMENT_STATUS_VIEW[getEffectiveAppointmentStatus(appointment, now)].icon
+}
+
+/**
+ * Full view config (icon, color, label key) for the effective status — the
+ * single source of truth for status pills/badges/icons across the app.
+ */
+export function getEffectiveAppointmentStatusView(
+  appointment: EffectiveStatusInput,
+  now: Date = new Date(),
+): AppointmentStatusViewConfig {
+  return EFFECTIVE_APPOINTMENT_STATUS_VIEW[getEffectiveAppointmentStatus(appointment, now)]
 }

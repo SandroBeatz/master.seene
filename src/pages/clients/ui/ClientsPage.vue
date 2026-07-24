@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import {
   useClientsQuery,
   useRemoveClientMutation,
@@ -13,11 +14,14 @@ import { ClientFormDialog } from '@features/client-form'
 import { ClientDeleteConfirm } from '@features/client-delete'
 import { ClientDetailsPanel } from '@widgets/client-details-panel'
 import { Page } from '@shared/ui'
+import { useIsMobile } from '@shared/lib/viewport'
 import ClientCard from './ClientCard.vue'
 
 const { t } = useI18n()
 const toast = useToast()
+const router = useRouter()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -89,6 +93,12 @@ const slideoverOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
 
 function openDetails(client: Client) {
+  // Mobile: push to a full-screen detail route (back-header flow) instead of
+  // the desktop slideover — see settings-clients-detail in the router.
+  if (isMobile.value) {
+    router.push({ name: 'settings-clients-detail', params: { id: client.id } })
+    return
+  }
   selectedClient.value = client
   slideoverOpen.value = true
 }

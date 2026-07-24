@@ -9,6 +9,18 @@ export default {
     settings: 'Paramètres',
     logout: 'Déconnexion',
     profile: 'Profil',
+    actions: 'Actions',
+  },
+  formats: {
+    duration: {
+      hoursShort: 'h',
+      minutesShort: 'min',
+    },
+    dateDay: {
+      yesterday: 'Hier',
+      today: "Aujourd'hui",
+      tomorrow: 'Demain',
+    },
   },
   common: {
     dashboardWelcome: "Voici ce qui se passe avec vos projets aujourd'hui.",
@@ -70,17 +82,19 @@ export default {
     schedule: {
       title: 'Planning',
       subtitle: 'pour le {date} · {n} rendez-vous',
+      summary: '{date} · {n} rendez-vous',
       options: 'Options',
     },
     overview: {
       title: "Vue d'ensemble",
-      earnedToday: "Gagné aujourd'hui",
+      earnedToday: 'Gagné',
       appointments: 'Rendez-vous',
       workingHours: 'Heures de travail',
+      periodLabel: "Période de la vue d'ensemble",
       period: {
-        day: 'Jour',
-        week: 'Semaine',
-        month: 'Mois',
+        day: "Aujourd'hui",
+        week: 'Cette semaine',
+        month: 'Ce mois-ci',
       },
       subtext: {
         today: "aujourd'hui",
@@ -580,6 +594,7 @@ export default {
     nav: {
       groupGeneral: 'Général',
       groupSystem: 'Système',
+      groupWorkspace: 'Espace de travail',
       profile: 'Profil',
       contacts: 'Contacts et réseaux',
       workingHours: 'Heures de travail',
@@ -589,6 +604,14 @@ export default {
       notifications: 'Notifications',
       systemRegion: 'Système et région',
       account: 'Compte',
+      services: 'Services',
+      clients: 'Clients',
+      about: 'À propos',
+    },
+    about: {
+      title: 'À propos',
+      description: "Informations sur l'application et détails de version.",
+      version: 'Version',
     },
     profile: {
       title: 'Profil',
@@ -1035,6 +1058,8 @@ export default {
       cancelled: 'Annulé',
       no_show: 'Absent',
       expired: 'Expirée',
+      ongoing: 'En cours',
+      past: 'Heure dépassée',
     },
     form: {
       titleCreate: 'Nouveau rendez-vous',
@@ -1123,6 +1148,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Temps bloqué',
+    allDayLabel: 'Indisponibilité : Toute la journée',
     form: {
       titleCreate: 'Bloquer du temps',
       titleEdit: 'Modifier le temps bloqué',

@@ -4,15 +4,29 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useLocaleStore } from '@shared/lib/locale'
 import { useAppointmentDayCountsQuery, type AppointmentDayCountsRange } from '@entities/appointment'
+import { useTimeBlocksQuery, type TimeBlockDateRange } from '@entities/time-block'
 import { Typography } from '@shared/ui'
+import ScheduleCalendarItem from './ScheduleCalendarItem.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const localeStore = useLocaleStore()
 const model = defineModel<Date>({ required: true })
-const props = defineProps<{ userId: string; timeZone: string }>()
+const emit = defineEmits<{
+  visibleDateChange: [date: Date]
+}>()
+const props = withDefaults(
+  defineProps<{
+    userId: string
+    timeZone: string
+    embedded?: boolean
+  }>(),
+  {
+    embedded: false,
+  },
+)
 
-interface DayItem {
+interface ScheduleCalendarDayItem {
   kind: 'day'
   date: Date
   label: string
@@ -20,12 +34,11 @@ interface DayItem {
   isToday: boolean
 }
 
-// Trailing slide that links to the full calendar page once the month window ends.
-interface MoreItem {
+interface ScheduleCalendarMoreItem {
   kind: 'more'
 }
 
-type CarouselItem = DayItem | MoreItem
+type CalendarItem = ScheduleCalendarDayItem | ScheduleCalendarMoreItem
 
 // One month window, fully materialised so the user can swipe to the last day in one go.
 const DAYS_TOTAL = 30
@@ -38,7 +51,7 @@ function startOfToday(): Date {
 
 const today = startOfToday()
 
-const days = computed<DayItem[]>(() => {
+const days = computed<ScheduleCalendarDayItem[]>(() => {
   const weekdayFmt = new Intl.DateTimeFormat(localeStore.current, { weekday: 'short' })
   return Array.from({ length: DAYS_TOTAL }, (_, i) => {
     const date = new Date(today)
@@ -53,10 +66,10 @@ const days = computed<DayItem[]>(() => {
   })
 })
 
-const items = computed<CarouselItem[]>(() => [...days.value, { kind: 'more' }])
+const items = computed<CalendarItem[]>(() => [...days.value, { kind: 'more' }])
 
 // Busy-dots: per-day appointment counts over the same [today, today+30d) window.
-const MAX_DOTS = 3
+const MAX_DOTS = 5
 
 const countsRange = computed<AppointmentDayCountsRange>(() => {
   const to = new Date(today)
@@ -84,6 +97,36 @@ function appointmentDots(date: Date): number {
   return Math.min(countsByDay.value.get(dateKey(date)) ?? 0, MAX_DOTS)
 }
 
+// Time-off (time blocks) over the same window — a day is flagged if any block
+// overlaps it, shown as a single grey dot only on days without appointments.
+const timeBlockRange = computed<TimeBlockDateRange>(() => {
+  const to = new Date(today)
+  to.setDate(today.getDate() + DAYS_TOTAL)
+  return { from: today.toISOString(), to: to.toISOString() }
+})
+
+const { data: timeBlocks } = useTimeBlocksQuery(toRef(props, 'userId'), timeBlockRange)
+
+const timeOffDays = computed(() => {
+  const set = new Set<string>()
+  for (const block of timeBlocks.value ?? []) {
+    const end = new Date(block.end_at)
+    const start = new Date(block.start_at)
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+    // Add every local day the block spans. `end` is exclusive: an all-day block
+    // ends at the next local midnight, which must not flag the following day.
+    for (let i = 0; i <= DAYS_TOTAL && cursor < end; i++) {
+      set.add(dateKey(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  }
+  return set
+})
+
+function hasTimeOff(date: Date): boolean {
+  return timeOffDays.value.has(dateKey(date))
+}
+
 // Index of the leading visible slide; drives the month/year header.
 const leadingIndex = ref(0)
 
@@ -99,12 +142,36 @@ const carousel = useTemplateRef('carousel')
 // Index of the currently selected day within the window (-1 if outside it).
 const selectedIndex = computed(() => days.value.findIndex((d) => isSameDay(d.date, model.value)))
 
+function setLeadingIndex(index: number) {
+  if (index === leadingIndex.value) return
+
+  const day = days.value[index]
+  if (!day) return
+
+  leadingIndex.value = index
+  emit('visibleDateChange', day.date)
+}
+
 function onSelect() {
   const api = carousel.value?.emblaApi
   if (!api) return
   // Track the first slide actually in view so the month header follows the swipe.
   const first = api.slidesInView()[0]
-  if (first !== undefined) leadingIndex.value = first
+  if (first !== undefined) setLeadingIndex(first)
+}
+
+function onMobileScroll(event: Event) {
+  const container = event.currentTarget as HTMLElement
+  const containerLeft = container.getBoundingClientRect().left
+  const dayElements = container.querySelectorAll<HTMLElement>('[data-day-index]')
+
+  for (const element of dayElements) {
+    if (element.getBoundingClientRect().right <= containerLeft + 1) continue
+
+    const index = Number(element.dataset.dayIndex)
+    if (Number.isFinite(index)) setLeadingIndex(index)
+    return
+  }
 }
 
 // Move the selection to a day and keep it on screen if it scrolled out of view.
@@ -129,6 +196,10 @@ function openCalendar() {
   router.push({ name: 'calendar' })
 }
 
+function selectDate(date: Date) {
+  model.value = date
+}
+
 function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -137,24 +208,31 @@ function isSameDay(a: Date, b: Date): boolean {
   )
 }
 
-// Nuxt UI overrides
+// Nuxt UI card overrides
 const hostUI = {
-  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
-  header: 'pb-0',
+  root: 'w-full min-w-0 max-w-full overflow-hidden rounded-lg shadow-panel ring-0 divide-y-0 md:rounded-xl',
+  header: 'min-w-0 pb-0',
+  body: 'min-w-0 overflow-hidden',
 }
-const buttonUI = {
-  base: 'flex h-18 w-full flex-col items-center justify-center gap-1 rounded-md border px-1 py-2 text-center transition-colors',
-}
+
+const resolvedHostUI = computed(() =>
+  props.embedded
+    ? {
+        root: 'w-full min-w-0 max-w-full rounded-none bg-transparent! shadow-none ring-0 divide-y-0',
+        body: 'min-w-0 overflow-hidden p-0! sm:p-0!',
+      }
+    : hostUI,
+)
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
+  <UCard :ui="resolvedHostUI">
+    <template v-if="!embedded" #header>
       <div class="flex items-center justify-between">
         <Typography variant="h5" class="text-highlighted font-bold">{{
           monthYearLabel
         }}</Typography>
-        <div class="flex items-center gap-1">
+        <div class="hidden items-center gap-1 md:flex">
           <UButton
             color="neutral"
             variant="soft"
@@ -177,63 +255,45 @@ const buttonUI = {
       </div>
     </template>
 
+    <div
+      class="flex w-full min-w-0 max-w-full gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
+      @scroll.passive="onMobileScroll"
+    >
+      <div
+        v-for="(item, index) in items"
+        :key="item.kind === 'day' ? dateKey(item.date) : item.kind"
+        class="w-14 flex-none"
+        :data-day-index="item.kind === 'day' ? index : undefined"
+      >
+        <ScheduleCalendarItem
+          :item="item"
+          :selected="item.kind === 'day' && isSameDay(item.date, model)"
+          :dots="item.kind === 'day' ? appointmentDots(item.date) : 0"
+          :time-off="item.kind === 'day' ? hasTimeOff(item.date) : false"
+          @select="selectDate"
+          @open-calendar="openCalendar"
+        />
+      </div>
+    </div>
+
     <UCarousel
       ref="carousel"
       v-slot="{ item }"
       :items="items"
       align="start"
       wheel-gestures
+      class="hidden md:block"
       :ui="{ item: 'basis-[calc(100%/6)] ps-1', container: '-ms-1' }"
       @select="onSelect"
     >
-      <UButton
-        v-if="item.kind === 'day'"
-        type="button"
-        color="neutral"
-        variant="ghost"
-        :ui="buttonUI"
-        :class="
-          isSameDay(item.date, model)
-            ? 'border-transparent bg-inverted text-inverted hover:bg-inverted/90'
-            : item.isToday
-              ? 'border-default text-default ring-1 ring-inset ring-primary/40 hover:bg-elevated'
-              : 'border-default text-default hover:bg-elevated'
-        "
-        @click="model = item.date"
-      >
-        <Typography
-          variant="footnote"
-          class="font-medium"
-          :class="isSameDay(item.date, model) ? 'opacity-70' : 'text-muted'"
-        >
-          {{ item.label }}
-        </Typography>
-
-        <Typography variant="h5" class="font-bold">
-          {{ item.dayNum }}
-        </Typography>
-        <span class="flex items-center justify-center gap-0.5">
-          <span
-            v-for="dot in appointmentDots(item.date)"
-            :key="dot"
-            class="size-1 rounded-full"
-            :class="isSameDay(item.date, model) ? 'bg-current' : 'bg-violet-500'"
-          />
-        </span>
-      </UButton>
-
-      <UButton
-        v-else
-        type="button"
-        color="neutral"
-        variant="ghost"
-        :ui="buttonUI"
-        :aria-label="t('home.upcoming.openCalendar')"
-        @click="openCalendar"
-      >
-        <UIcon name="i-lucide-calendar-days" class="size-5" />
-        <span class="text-[0.625rem] font-medium leading-none">{{ t('home.upcoming.more') }}</span>
-      </UButton>
+      <ScheduleCalendarItem
+        :item="item"
+        :selected="item.kind === 'day' && isSameDay(item.date, model)"
+        :dots="item.kind === 'day' ? appointmentDots(item.date) : 0"
+        :time-off="item.kind === 'day' ? hasTimeOff(item.date) : false"
+        @select="selectDate"
+        @open-calendar="openCalendar"
+      />
     </UCarousel>
   </UCard>
 </template>

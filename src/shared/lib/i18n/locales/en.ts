@@ -9,6 +9,18 @@ export default {
     settings: 'Settings',
     logout: 'Logout',
     profile: 'Profile',
+    actions: 'Actions',
+  },
+  formats: {
+    duration: {
+      hoursShort: 'h',
+      minutesShort: 'min',
+    },
+    dateDay: {
+      yesterday: 'Yesterday',
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+    },
   },
   common: {
     dashboardWelcome:
@@ -70,17 +82,19 @@ export default {
     schedule: {
       title: 'Schedule',
       subtitle: 'for {date} · {n} appointments',
+      summary: '{date} · {n} appointments',
       options: 'Options',
     },
     overview: {
       title: 'Overview',
-      earnedToday: 'Earned today',
+      earnedToday: 'Earned',
       appointments: 'Appointments',
       workingHours: 'Working hours',
+      periodLabel: 'Overview period',
       period: {
-        day: 'Day',
-        week: 'Week',
-        month: 'Month',
+        day: 'Today',
+        week: 'This week',
+        month: 'This month',
       },
       subtext: {
         today: 'today',
@@ -576,6 +590,7 @@ export default {
     nav: {
       groupGeneral: 'General',
       groupSystem: 'System',
+      groupWorkspace: 'Workspace',
       profile: 'Profile',
       contacts: 'Contacts & social',
       workingHours: 'Working hours',
@@ -585,6 +600,14 @@ export default {
       notifications: 'Notifications',
       systemRegion: 'System & region',
       account: 'Account',
+      services: 'Services',
+      clients: 'Clients',
+      about: 'About',
+    },
+    about: {
+      title: 'About',
+      description: 'App information and version details.',
+      version: 'Version',
     },
     profile: {
       title: 'Profile',
@@ -1026,6 +1049,8 @@ export default {
       cancelled: 'Cancelled',
       no_show: 'No-show',
       expired: 'Expired',
+      ongoing: 'In progress',
+      past: 'Time passed',
     },
     form: {
       titleCreate: 'New appointment',
@@ -1114,6 +1139,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Blocked time',
+    allDayLabel: 'Time off: All day',
     form: {
       titleCreate: 'Block time',
       titleEdit: 'Edit blocked time',

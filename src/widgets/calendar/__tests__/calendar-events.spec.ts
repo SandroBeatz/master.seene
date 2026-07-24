@@ -75,6 +75,7 @@ describe('buildCalendarEvents', () => {
       unknownClientLabel: 'Unknown client',
       timeBlockLabel: 'Blocked time',
       timeZone: 'UTC',
+      now: new Date('2026-05-01T08:00:00.000Z'), // before the appointment → confirmed
     })
 
     expect(event).toMatchObject({
@@ -87,7 +88,7 @@ describe('buildCalendarEvents', () => {
       textColor: '#1e293b',
       extendedProps: {
         appointment: baseAppointment,
-        statusIcon: 'i-lucide-check',
+        statusIcon: 'i-lucide-clock-check',
         clientName: 'Anna Smith',
         isGroup: false,
         isOnline: false,
@@ -131,6 +132,35 @@ describe('buildCalendarEvents', () => {
       borderColor: '#94a3b8',
       backgroundColor: '#f1f5f9',
       textColor: '#1e293b',
+    })
+  })
+
+  it('derives the effective status icon from the current time', () => {
+    // start 10:00, duration 45m → window 10:00–10:45.
+    const during = buildCalendarEvents({
+      appointments: [baseAppointment],
+      clients,
+      services,
+      timeZone: 'UTC',
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+      now: new Date('2026-05-01T10:20:00.000Z'), // inside the window → ongoing
+    })
+    expect(during[0]).toMatchObject({
+      extendedProps: { statusIcon: 'i-lucide-clock-fading' },
+    })
+
+    const after = buildCalendarEvents({
+      appointments: [baseAppointment],
+      clients,
+      services,
+      timeZone: 'UTC',
+      unknownClientLabel: 'Unknown client',
+      timeBlockLabel: 'Blocked time',
+      now: new Date('2026-05-01T12:00:00.000Z'), // confirmed + past end → past
+    })
+    expect(after[0]).toMatchObject({
+      extendedProps: { statusIcon: 'i-lucide-check' },
     })
   })
 

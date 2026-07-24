@@ -5,12 +5,13 @@ import { ClientAvatar, type Client } from '@entities/client'
 import {
   useClientAppointmentsQuery,
   lastVisitDate,
-  APPOINTMENT_STATUS_VIEW,
+  getEffectiveAppointmentStatusView,
   type Appointment,
 } from '@entities/appointment'
 import { useServicesQuery, type Service } from '@entities/service'
 import { useSessionStore } from '@entities/session'
 import { useFormats } from '@shared/lib/formats'
+import { useNowMinute } from '@shared/lib/now'
 
 const props = defineProps<{
   client: Client
@@ -26,6 +27,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const formats = useFormats()
 const sessionStore = useSessionStore()
+const now = useNowMinute()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const clientId = computed(() => props.client.id)
@@ -76,7 +78,7 @@ function appointmentTotal(appointment: Appointment): number {
 }
 
 function statusView(appointment: Appointment) {
-  return APPOINTMENT_STATUS_VIEW[appointment.status]
+  return getEffectiveAppointmentStatusView(appointment, now.value)
 }
 </script>
 

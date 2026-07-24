@@ -2,6 +2,8 @@
 import type { TopServiceV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { useI18n } from 'vue-i18n'
+import { computed } from 'vue'
+import { AnimatedNumber } from '@shared/ui'
 
 defineProps<{
   services: TopServiceV2[]
@@ -10,6 +12,7 @@ defineProps<{
 
 const { t } = useI18n()
 const formats = useFormats()
+const priceParts = computed(() => formats.priceParts())
 </script>
 
 <template>
@@ -47,7 +50,14 @@ const formats = useFormats()
           <div class="flex-1 space-y-1.5">
             <div class="flex items-center justify-between gap-2 text-sm">
               <span class="truncate font-medium">{{ service.name }}</span>
-              <span class="shrink-0 font-medium">{{ formats.price(service.revenue) }}</span>
+              <span class="shrink-0 font-medium">
+                <AnimatedNumber
+                  :value="service.revenue"
+                  :format="priceParts.format"
+                  :prefix="priceParts.prefix"
+                  :suffix="priceParts.suffix"
+                />
+              </span>
             </div>
             <div class="h-2 w-full overflow-hidden rounded-full bg-elevated">
               <div

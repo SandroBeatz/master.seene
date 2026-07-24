@@ -13,8 +13,8 @@ const emit = defineEmits<{
   toggleFavorite: []
 }>()
 
-const fullName = computed(
-  () => [props.client.first_name, props.client.last_name].filter(Boolean).join(' '),
+const fullName = computed(() =>
+  [props.client.first_name, props.client.last_name].filter(Boolean).join(' '),
 )
 
 const isOnline = computed(() => props.client.source !== 'manual')
@@ -55,7 +55,9 @@ const lastVisitLabel = computed(() => {
             variant="ghost"
             size="sm"
             :aria-label="
-              client.is_favorite ? $t('clients.card.removeFavorite') : $t('clients.card.addFavorite')
+              client.is_favorite
+                ? $t('clients.card.removeFavorite')
+                : $t('clients.card.addFavorite')
             "
             @click="emit('toggleFavorite')"
           />
@@ -83,12 +85,7 @@ const lastVisitLabel = computed(() => {
           </span>
         </span>
 
-        <UBadge
-          :color="isOnline ? 'primary' : 'neutral'"
-          variant="soft"
-          size="sm"
-          class="shrink-0"
-        >
+        <UBadge :color="isOnline ? 'primary' : 'neutral'" variant="soft" size="sm" class="shrink-0">
           {{ isOnline ? $t('clients.source.online') : $t('clients.source.manual') }}
         </UBadge>
       </div>
