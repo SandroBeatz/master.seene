@@ -2,11 +2,12 @@
 import { computed, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useSwipe } from '@vueuse/core'
+import { useElementSize, useSwipe } from '@vueuse/core'
 import { useQuickCreate } from '@widgets/quick-create-action'
 import MobileTabBar from './MobileTabBar.vue'
 import MobileHeader from './MobileHeader.vue'
 import { provideMobilePushTitle } from '../model/push-title'
+import type { MobileTabBarExpose } from '../model/tab-bar'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -20,6 +21,16 @@ const pushTitle = provideMobilePushTitle()
 const ROOT_TAB_ROUTE_NAMES = new Set(['home', 'calendar', 'analytics', 'settings'])
 const isRootScreen = computed(
   () => typeof route.name === 'string' && ROOT_TAB_ROUTE_NAMES.has(route.name),
+)
+
+// Tab bar floats via `position: fixed`, so it doesn't push page content up on
+// its own — measure its real rendered height to pad the scroll area beneath it.
+const tabBar = ref<MobileTabBarExpose | null>(null)
+const { height: tabBarHeight } = useElementSize(computed(() => tabBar.value?.el ?? null))
+const mainPaddingBottom = computed(() =>
+  isRootScreen.value
+    ? `calc(env(safe-area-inset-bottom) + 0.75rem + ${tabBarHeight.value}px + 4.3rem)`
+    : undefined,
 )
 
 const titleKeyByRouteName: Record<string, string> = {
@@ -77,10 +88,11 @@ useSwipe(mainRef, {
     <main
       ref="mainRef"
       class="min-h-0 flex-1"
+      :style="{ paddingBottom: mainPaddingBottom }"
     >
       <RouterView />
     </main>
 
-    <MobileTabBar v-if="isRootScreen" @actions="quickCreate.openMenu()" />
+    <MobileTabBar v-if="isRootScreen" ref="tabBar" @actions="quickCreate.openMenu()" />
   </div>
 </template>

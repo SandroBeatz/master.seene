@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import type { NavigationMenuItem } from '@nuxt/ui'
+import type { MobileTabBarExpose } from '../model/tab-bar'
 
 const emit = defineEmits<{ actions: [] }>()
+
+const navRef = useTemplateRef('nav')
+defineExpose<MobileTabBarExpose>({
+  get el() {
+    // Vue's component `$el` is a placeholder Comment node until it actually
+    // mounts — ResizeObserver.observe() throws on anything but a real Element.
+    const el = navRef.value?.$el
+    return el instanceof HTMLElement ? el : null
+  },
+})
 
 // No-op on web (Capacitor's web implementation of Haptics is a safe stub).
 function tap() {
@@ -27,7 +38,7 @@ const items = computed<NavigationMenuItem[]>(() => [
 ])
 
 const tabBarUI = {
-  root: 'mobile-tab-bar sticky inset-x-0 mx-4 flex-col items-stretch rounded-2xl bg-default/80 backdrop-blur-lg px-4 py-2 shadow-xl shadow-black/10 dark:shadow-black/30',
+  root: 'mobile-tab-bar fixed inset-x-0 mx-4 flex-col items-stretch rounded-2xl bg-default/80 backdrop-blur-lg px-4 py-2 shadow-xl shadow-black/10 dark:shadow-black/30',
   list: 'flex items-center justify-between gap-2',
   link: 'before:hidden',
   linkLeadingIcon: 'size-5.5 dark:group-data-[active]:text-highlighted!',
@@ -36,6 +47,7 @@ const tabBarUI = {
 
 <template>
   <UNavigationMenu
+    ref="nav"
     :items="items"
     :ui="tabBarUI"
     style="bottom: calc(env(safe-area-inset-bottom) + 0.75rem)"
