@@ -99,3 +99,67 @@ describe('formats.monthYear', () => {
     expect(formats.monthYear('not-a-date')).toBe('—')
   })
 })
+
+describe('formats.weekdayDate', () => {
+  afterEach(() => {
+    i18n.global.locale.value = 'en'
+  })
+
+  it('formats a capitalized weekday + day + short month, comma-free', () => {
+    const date = new Date(2026, 5, 8) // Mon Jun 8 2026
+
+    expect(makeFormats('en').weekdayDate(date)).toBe('Monday Jun 8')
+    expect(makeFormats('fr').weekdayDate(date)).toBe('Lundi 8 juin')
+    expect(makeFormats('ru').weekdayDate(date)).toBe('Понедельник 8 июн.')
+  })
+
+  it('returns the placeholder for empty and invalid values', () => {
+    const formats = makeFormats('en')
+
+    expect(formats.weekdayDate(null)).toBe('—')
+    expect(formats.weekdayDate(undefined)).toBe('—')
+    expect(formats.weekdayDate('not-a-date')).toBe('—')
+  })
+})
+
+describe('formats.weekdayDateShort', () => {
+  afterEach(() => {
+    i18n.global.locale.value = 'en'
+  })
+
+  it('formats an abbreviated capitalized weekday + day + short month', () => {
+    const date = new Date(2026, 5, 8) // Mon Jun 8 2026
+
+    expect(makeFormats('en').weekdayDateShort(date)).toBe('Mon Jun 8')
+    expect(makeFormats('ru').weekdayDateShort(date)).toBe('Пн 8 июн.')
+  })
+
+  it('returns the placeholder for empty and invalid values', () => {
+    const formats = makeFormats('en')
+
+    expect(formats.weekdayDateShort(null)).toBe('—')
+    expect(formats.weekdayDateShort('not-a-date')).toBe('—')
+  })
+})
+
+describe('formats.monthName', () => {
+  afterEach(() => {
+    i18n.global.locale.value = 'en'
+  })
+
+  it('formats a capitalized full month name, no year', () => {
+    const date = new Date(2026, 5, 8)
+
+    expect(makeFormats('en').monthName(date)).toBe('June')
+    expect(makeFormats('fr').monthName(date)).toBe('Juin')
+    expect(makeFormats('ru').monthName(date)).toBe('Июнь')
+  })
+
+  it('returns the placeholder for empty and invalid values', () => {
+    const formats = makeFormats('en')
+
+    expect(formats.monthName(null)).toBe('—')
+    expect(formats.monthName(undefined)).toBe('—')
+    expect(formats.monthName('not-a-date')).toBe('—')
+  })
+})

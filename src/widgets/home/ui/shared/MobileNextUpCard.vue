@@ -56,22 +56,12 @@ const cardUI = {
       @keydown.enter="emit('open')"
     >
       <div class="flex items-center justify-between gap-3 mb-3">
-        <div class="min-w-0">
-          <Typography
-            variant="endnote"
-            class="font-medium text-muted px-2 py-0.5 rounded-md bg-elevated"
-          >
-            {{ dateLabel }} {{ timeLabel }}
-          </Typography>
-          <Typography
-            v-if="attentionLabel"
-            variant="endnote"
-            class="mt-1 font-medium"
-            :class="attentionTone === 'error' ? 'text-error' : 'text-warning'"
-          >
-            {{ attentionLabel }}
-          </Typography>
-        </div>
+        <Typography
+          variant="endnote"
+          class="font-medium text-muted px-2 py-0.5 rounded-md bg-elevated"
+        >
+          {{ dateLabel }} {{ timeLabel }}
+        </Typography>
 
         <div class="flex shrink-0 items-center gap-1.5">
           <UTooltip :text="t(statusView.labelKey)">
@@ -117,6 +107,14 @@ const cardUI = {
           </Typography>
           <Typography variant="endnote" class="font-medium text-muted">
             {{ durationLabel }} / {{ priceLabel }}
+          </Typography>
+          <Typography
+            v-if="attentionLabel"
+            variant="endnote"
+            class="mt-1 font-medium"
+            :class="attentionTone === 'error' ? 'text-error' : 'text-warning'"
+          >
+            {{ attentionLabel }}
           </Typography>
         </div>
       </div>

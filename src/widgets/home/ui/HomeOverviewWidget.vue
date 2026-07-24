@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getLocalTimeZone, today } from '@internationalized/date'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
-import { useAnalyticsQueryV2 } from '@entities/analytics'
+import { periodToDateRangeV2, useAnalyticsQueryV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { AnimatedNumber, Typography } from '@shared/ui'
 
@@ -17,6 +17,7 @@ const activeTab = ref<PeriodKey>('day')
 // Home always shows the current day/week/month — anchor the period at today.
 const anchor = today(getLocalTimeZone())
 const anchorISO = `${anchor.year}-${String(anchor.month).padStart(2, '0')}-${String(anchor.day).padStart(2, '0')}`
+const anchorDate = new Date(anchor.year, anchor.month - 1, anchor.day)
 
 const periodToAnalytics: Record<PeriodKey, AnalyticsPeriodV2> = {
   day: { kind: 'day', date: anchorISO },
@@ -35,6 +36,25 @@ const periods = computed(() => [
   { label: t('home.overview.period.week'), value: 'week' as const },
   { label: t('home.overview.period.month'), value: 'month' as const },
 ])
+
+// Mobile header shows the selected period's date instead of a static title.
+const mobileHeaderLabel = computed(() => {
+  if (activeTab.value === 'day') return formats.weekdayDate(anchorDate)
+  if (activeTab.value === 'month') return formats.monthName(anchorDate)
+  const range = periodToDateRangeV2(periodToAnalytics.week)
+  return `${formats.weekdayDateShort(range.from)} - ${formats.weekdayDateShort(range.to)}`
+})
+
+const isPeriodDrawerOpen = ref(false)
+
+const activePeriodLabel = computed(
+  () => periods.value.find((period) => period.value === activeTab.value)?.label ?? '',
+)
+
+function selectPeriod(period: PeriodKey) {
+  activeTab.value = period
+  isPeriodDrawerOpen.value = false
+}
 
 const periodSubtext = computed(() => {
   const p = activeTab.value
@@ -133,20 +153,25 @@ const tabsUI = {
   <UCard :ui="hostUI">
     <template #header>
       <div class="flex items-center justify-between gap-3">
-        <Typography variant="h5" class="min-w-0 text-highlighted font-bold">{{
+        <Typography variant="h5" class="hidden min-w-0 text-highlighted font-bold md:block">{{
           t('home.overview.title')
         }}</Typography>
-        <USelect
-          v-model="activeTab"
-          :items="periods"
+        <Typography variant="h5" class="min-w-0 truncate text-highlighted font-bold md:hidden">{{
+          mobileHeaderLabel
+        }}</Typography>
+
+        <UButton
           color="neutral"
-          variant="ghost"
+          variant="soft"
           size="sm"
+          trailing-icon="i-lucide-chevron-down"
           :aria-label="t('home.overview.periodLabel')"
-          class="w-auto shrink-0 md:hidden"
-          :content="{ align: 'end' }"
-          :ui="{ base: 'rounded-full font-medium' }"
-        />
+          class="w-auto shrink-0 rounded-full font-medium md:hidden"
+          @click="isPeriodDrawerOpen = true"
+        >
+          {{ activePeriodLabel }}
+        </UButton>
+
         <UTabs
           v-model="activeTab"
           variant="pill"
@@ -158,6 +183,30 @@ const tabsUI = {
           class="hidden md:block"
         />
       </div>
+
+      <UDrawer
+        v-model:open="isPeriodDrawerOpen"
+        :title="t('home.overview.periodLabel')"
+        :ui="{
+          content: 'rounded-t-2xl',
+          body: 'space-y-2 pb-[calc(1rem+var(--safe-area-bottom))]',
+        }"
+      >
+        <template #body>
+          <UButton
+            v-for="period in periods"
+            :key="period.value"
+            :color="period.value === activeTab ? 'primary' : 'neutral'"
+            :variant="period.value === activeTab ? 'soft' : 'ghost'"
+            size="lg"
+            block
+            class="justify-start"
+            @click="selectPeriod(period.value)"
+          >
+            {{ period.label }}
+          </UButton>
+        </template>
+      </UDrawer>
     </template>
 
     <div class="grid grid-cols-3 gap-1.5 md:grid-cols-2 md:gap-4 xl:grid-cols-3">

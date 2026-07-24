@@ -50,6 +50,12 @@ export interface Formats {
   dateDayYear(value: string | Date | null | undefined): string
   /** Formats a localized full month and year: `July 2026`. */
   monthYear(value: string | Date | null | undefined): string
+  /** Formats a localized weekday + day + short month, e.g. `Monday Jun 8`. */
+  weekdayDate(value: string | Date | null | undefined): string
+  /** Same as `weekdayDate()`, using the abbreviated weekday, e.g. `Mon Jun 8`. */
+  weekdayDateShort(value: string | Date | null | undefined): string
+  /** Formats a localized full month name, e.g. `June`. */
+  monthName(value: string | Date | null | undefined): string
 }
 
 const PLACEHOLDER = '—'
@@ -86,6 +92,11 @@ function calendarDayDifference(date: Date, reference: Date): number {
   const dateUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
   const referenceUtc = Date.UTC(reference.getFullYear(), reference.getMonth(), reference.getDate())
   return Math.round((dateUtc - referenceUtc) / 86_400_000)
+}
+
+/** Uppercases the first letter — Intl gives lowercase weekday/month names for ru/fr. */
+function capitalize(value: string): string {
+  return value.length === 0 ? value : value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function createFormats(options: FormatsPluginOptions = {}): Formats {
@@ -239,6 +250,35 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     }).format(parsed)
   }
 
+  function formatWeekdayDate(
+    value: string | Date | null | undefined,
+    weekday: 'long' | 'short',
+  ): string {
+    const parsed = parseDate(value)
+    if (!parsed) return PLACEHOLDER
+    const formatted = new Intl.DateTimeFormat(locale(), {
+      weekday,
+      day: 'numeric',
+      month: 'short',
+    }).format(parsed)
+    // Intl separates the weekday with a comma in en/ru — drop it for a compact label.
+    return capitalize(formatted.replace(',', ''))
+  }
+
+  function weekdayDate(value: string | Date | null | undefined): string {
+    return formatWeekdayDate(value, 'long')
+  }
+
+  function weekdayDateShort(value: string | Date | null | undefined): string {
+    return formatWeekdayDate(value, 'short')
+  }
+
+  function monthName(value: string | Date | null | undefined): string {
+    const parsed = parseDate(value)
+    if (!parsed) return PLACEHOLDER
+    return capitalize(new Intl.DateTimeFormat(locale(), { month: 'long' }).format(parsed))
+  }
+
   return {
     time,
     price,
@@ -252,6 +292,9 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     dateDay,
     dateDayYear,
     monthYear,
+    weekdayDate,
+    weekdayDateShort,
+    monthName,
   }
 }
 

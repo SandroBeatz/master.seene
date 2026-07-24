@@ -148,13 +148,25 @@ function formatTime(isoString: string): string {
   return formats.time(hhmm)
 }
 
+function minutesSince(isoString: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 60_000))
+}
+
 // Compact "how long the client has been waiting" label since they booked online.
 function waitingLabel(isoString: string): string {
-  const minutes = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 60_000))
+  const minutes = minutesSince(isoString)
   if (minutes < 60) return t('home.nextUp.unitMinShort', { n: minutes })
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return t('home.nextUp.unitHourShort', { n: hours })
   return t('home.nextUp.unitDayShort', { n: Math.floor(hours / 24) })
+}
+
+// Don't nag the master about an online booking right away — only once it's
+// been sitting unconfirmed for a while.
+const WAITING_ATTENTION_THRESHOLD_MINUTES = 15
+
+function needsWaitingAttention(appointment: Appointment): boolean {
+  return minutesSince(appointment.created_at) >= WAITING_ATTENTION_THRESHOLD_MINUTES
 }
 
 function isOnline(appointment: Appointment): boolean {
@@ -176,7 +188,7 @@ function isToday(isoString: string): boolean {
 function attentionLabel(appointment: Appointment): string | undefined {
   if (appointment.status !== 'pending') return undefined
   if (slotEnded(appointment)) return t('home.nextUp.slotPassed')
-  if (isOnline(appointment)) {
+  if (isOnline(appointment) && needsWaitingAttention(appointment)) {
     return t('home.nextUp.waitingFor', { time: waitingLabel(appointment.created_at) })
   }
   return undefined
@@ -185,7 +197,7 @@ function attentionLabel(appointment: Appointment): string | undefined {
 function attentionTone(appointment: Appointment): 'warning' | 'error' | undefined {
   if (appointment.status !== 'pending') return undefined
   if (slotEnded(appointment)) return 'error'
-  if (isOnline(appointment)) return 'warning'
+  if (isOnline(appointment) && needsWaitingAttention(appointment)) return 'warning'
   return undefined
 }
 

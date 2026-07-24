@@ -137,7 +137,7 @@ beforeEach(() => {
 
 describe('AppointmentWizard — gating & slot prefill', () => {
   it('gates Next per step, skips date/time on prefill, and writes a manual DTO', async () => {
-    // Prefill 10:00 UTC on a future day → skipDateTime, slot = 600, status pending.
+    // Prefill 10:00 UTC on a future day → skipDateTime, slot = 600, status confirmed.
     const wrapper = mountWizard('2035-06-11T10:00:00Z')
     const next = en.quickCreate.appointment.next
 
@@ -181,11 +181,11 @@ describe('AppointmentWizard — gating & slot prefill', () => {
       price: 1000,
       notes: null,
       source: 'manual',
-      status: 'pending',
+      status: 'confirmed',
     })
   })
 
-  it('creates a booking on a past day as confirmed (completed later via checkout)', async () => {
+  it('creates a booking on a past day as confirmed too', async () => {
     // Prefill 10:00 UTC on a day that has already passed.
     const wrapper = mountWizard('2020-01-06T10:00:00Z')
     const vm = wrapper.vm as unknown as { next: () => void; submit: () => Promise<void> }
