@@ -276,19 +276,27 @@ export default defineConfig({
         // The `!` marker is required: the app-config slot value is *merged* with the
         // default, and tailwind-merge doesn't treat the semantic `bg-elevated`
         // utility as conflicting with `bg-black`, so without `!` the default wins.
+        //
+        // `z-50` on both overlay and content: Nuxt UI ships these with no z-index
+        // (z-index: auto), relying on DOM order (teleported to end of body) to paint
+        // above the rest of the page. The mobile tab bar's `z-40` breaks that
+        // assumption — a positive z-index always wins over `auto` regardless of DOM
+        // order — so without this the tab bar would paint over open dialogs. Content
+        // must match overlay's z-index (not just exceed the tab bar) so their
+        // relative order still falls back to DOM order, keeping content above overlay.
         modal: {
           slots: {
-            overlay: 'fixed inset-0 bg-black/60!',
+            overlay: 'bg-black/60!',
           },
         },
         slideover: {
           slots: {
-            overlay: 'fixed inset-0 bg-black/60!',
+            overlay: 'bg-black/60!',
           },
         },
         drawer: {
           slots: {
-            overlay: 'fixed inset-0 bg-black/60!',
+            overlay: 'bg-black/60!',
           },
         },
       },

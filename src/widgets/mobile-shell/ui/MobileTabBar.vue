@@ -15,7 +15,8 @@ const items = computed<NavigationMenuItem[]>(() => [
   { icon: 'i-lucide-calendar', to: '/calendar', onSelect: tap },
   {
     icon: 'i-lucide-plus',
-    class: 'before:block before:bg-primary [&_[data-slot=linkLeadingIcon]]:text-inverted!',
+    class:
+      'before:block before:bg-primary dark:before:bg-white [&_[data-slot=linkLeadingIcon]]:text-inverted! dark:[&_[data-slot=linkLeadingIcon]]:text-zinc-950!',
     onSelect: () => {
       tap()
       emit('actions')
@@ -26,10 +27,10 @@ const items = computed<NavigationMenuItem[]>(() => [
 ])
 
 const tabBarUI = {
-  root: 'mobile-tab-bar fixed inset-x-0 z-40 mx-4 flex-col items-stretch rounded-2xl bg-default px-4 py-2 shadow-xl shadow-black/10 dark:shadow-black/30',
+  root: 'mobile-tab-bar sticky inset-x-0 mx-4 flex-col items-stretch rounded-2xl bg-default/80 backdrop-blur-lg px-4 py-2 shadow-xl shadow-black/10 dark:shadow-black/30',
   list: 'flex items-center justify-between gap-2',
   link: 'before:hidden',
-  linkLeadingIcon: 'size-5.5',
+  linkLeadingIcon: 'size-5.5 dark:group-data-[active]:text-highlighted!',
 }
 </script>
 
@@ -40,17 +41,3 @@ const tabBarUI = {
     style="bottom: calc(env(safe-area-inset-bottom) + 0.75rem)"
   />
 </template>
-
-<!--
-  Overlays (modal / slideover / drawer) render a `role="dialog"` with
-  `data-state="open"` and rely on default (auto) z-index. The tab bar's `z-40`
-  would otherwise paint over them, so hide it whenever such an overlay is open —
-  the native pattern of the tab bar disappearing behind a presented sheet.
-  Dropdowns/selects/popovers use `role="listbox"`/`menu`, not `dialog`, so they
-  don't trigger this and stack correctly above their host modal.
--->
-<style>
-body:has([role='dialog'][data-state='open']) .mobile-tab-bar {
-  display: none;
-}
-</style>

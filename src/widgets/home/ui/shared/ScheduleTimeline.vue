@@ -50,7 +50,7 @@ const now = useNowMinute()
 
 /** Maps a Nuxt UI semantic color to a text utility for the status icon. */
 const STATUS_TEXT_COLOR: Record<string, string> = {
-  primary: 'text-primary',
+  primary: 'text-primary dark:text-neutral-200',
   secondary: 'text-secondary',
   success: 'text-success',
   info: 'text-info',

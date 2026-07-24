@@ -71,13 +71,12 @@ useSwipe(mainRef, {
 </script>
 
 <template>
-  <div class="flex h-dvh flex-col bg-[var(--app-canvas)]">
+  <div class="flex min-h-dvh flex-col bg-[var(--app-canvas)]">
     <MobileHeader v-if="!isRootScreen" :title="headerTitle" @back="router.back()" />
 
     <main
       ref="mainRef"
-      class="min-h-0 flex-1 overflow-auto"
-      :class="{ 'pb-[calc(env(safe-area-inset-bottom)_+_4rem)]': isRootScreen }"
+      class="min-h-0 flex-1"
     >
       <RouterView />
     </main>

@@ -156,7 +156,7 @@ const tabsUI = {
         <Typography variant="h5" class="hidden min-w-0 text-highlighted font-bold md:block">{{
           t('home.overview.title')
         }}</Typography>
-        <Typography variant="h5" class="min-w-0 truncate text-highlighted font-bold md:hidden">{{
+        <Typography variant="h6" class="min-w-0 truncate text-highlighted font-bold md:hidden">{{
           mobileHeaderLabel
         }}</Typography>
 
