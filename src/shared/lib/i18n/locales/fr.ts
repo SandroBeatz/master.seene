@@ -16,6 +16,11 @@ export default {
       hoursShort: 'h',
       minutesShort: 'min',
     },
+    dateDay: {
+      yesterday: 'Hier',
+      today: "Aujourd'hui",
+      tomorrow: 'Demain',
+    },
   },
   common: {
     dashboardWelcome: "Voici ce qui se passe avec vos projets aujourd'hui.",
@@ -1143,6 +1148,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Temps bloqué',
+    allDayLabel: 'Indisponibilité : Toute la journée',
     form: {
       titleCreate: 'Bloquer du temps',
       titleEdit: 'Modifier le temps bloqué',

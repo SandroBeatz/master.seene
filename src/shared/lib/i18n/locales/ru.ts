@@ -16,6 +16,11 @@ export default {
       hoursShort: 'ч',
       minutesShort: 'мин',
     },
+    dateDay: {
+      yesterday: 'Вчера',
+      today: 'Сегодня',
+      tomorrow: 'Завтра',
+    },
   },
   common: {
     dashboardWelcome: 'Вот что происходит с вашими проектами сегодня.',
@@ -1130,6 +1135,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Заблокированное время',
+    allDayLabel: 'Перерыв: Весь день',
     form: {
       titleCreate: 'Заблокировать время',
       titleEdit: 'Редактировать блокировку',

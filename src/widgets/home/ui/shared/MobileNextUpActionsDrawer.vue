@@ -20,7 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const title = computed(() => [props.timeLabel, props.dateLabel].filter(Boolean).join(' · '))
+const title = computed(() => [props.dateLabel, props.timeLabel].filter(Boolean).join(' '))
 
 function run(action: 'edit' | 'decline' | 'noShow') {
   if (!props.appointment) return

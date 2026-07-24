@@ -10,7 +10,6 @@ import { usePaymentTypesQuery } from '@entities/payment-type'
 import { useCompleteSaleMutation } from '@entities/sale'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useFormats } from '@shared/lib/formats'
-import { useLocaleStore } from '@shared/lib/locale'
 import { useIsMobile } from '@shared/lib/viewport'
 import type { Appointment } from '@entities/appointment'
 import type { Service } from '@entities/service'
@@ -30,7 +29,6 @@ const cache = useQueryCache()
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const formats = useFormats()
-const localeStore = useLocaleStore()
 const isMobile = useIsMobile()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -173,20 +171,6 @@ function isSameCalendarDay(a: Date, b: Date): boolean {
 
 function isToday(isoString: string): boolean {
   return isSameCalendarDay(new Date(isoString), new Date())
-}
-
-function isTomorrow(isoString: string): boolean {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  return isSameCalendarDay(new Date(isoString), tomorrow)
-}
-
-function dateLabel(isoString: string): string {
-  if (isToday(isoString)) return t('home.nextUp.today')
-  if (isTomorrow(isoString)) return t('home.nextUp.tomorrow')
-  return new Intl.DateTimeFormat(localeStore.current, { day: 'numeric', month: 'short' }).format(
-    new Date(isoString),
-  )
 }
 
 function attentionLabel(appointment: Appointment): string | undefined {
@@ -435,7 +419,7 @@ const cardUI = {
         :client-name="getClientName(appt)"
         :service-names="getServiceNames(appt)"
         :time-label="formatTime(appt.start_at)"
-        :date-label="dateLabel(appt.start_at)"
+        :date-label="formats.dateDay(appt.start_at)"
         :duration-label="t('home.nextUp.minutesLabel', { n: appt.duration })"
         :price-label="formats.price(appt.price)"
         :attention-label="attentionLabel(appt)"
@@ -481,7 +465,7 @@ const cardUI = {
                   class="font-semibold"
                   :class="isToday(appt.start_at) ? accentTextClass(appt.status) : 'text-muted'"
                 >
-                  {{ dateLabel(appt.start_at) }}
+                  {{ formats.dateDay(appt.start_at) }}
                 </Typography>
                 <Typography variant="endnote" class="font-semibold text-dimmed mt-1">
                   {{ t('home.nextUp.minutesLabel', { n: appt.duration }) }}
@@ -597,7 +581,7 @@ const cardUI = {
     :appointment="actionsAppointment"
     :client-name="actionsClientName"
     :time-label="actionsAppointment ? formatTime(actionsAppointment.start_at) : ''"
-    :date-label="actionsAppointment ? dateLabel(actionsAppointment.start_at) : ''"
+    :date-label="actionsAppointment ? formats.dateDay(actionsAppointment.start_at) : ''"
     :declining="decliningId === actionsAppointment?.id"
     :marking-no-show="markingNoShowId === actionsAppointment?.id"
     @edit="handleEdit"

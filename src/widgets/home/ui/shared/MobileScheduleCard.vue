@@ -5,7 +5,7 @@ import type { Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import type { TimeBlock } from '@entities/time-block'
-import { useLocaleStore } from '@shared/lib/locale'
+import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
 import { isVisibleScheduleAppointment } from '../../model/schedule-appointments'
 import ScheduleCalendar from './ScheduleCalendar.vue'
@@ -27,26 +27,16 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const localeStore = useLocaleStore()
+const formats = useFormats()
 const leadingCalendarDate = ref(model.value)
 
 const visibleAppointmentsCount = computed(
   () => props.appointments.filter(isVisibleScheduleAppointment).length,
 )
 
-const selectedDateLabel = computed(() =>
-  new Intl.DateTimeFormat(localeStore.current, {
-    month: 'long',
-    day: 'numeric',
-  }).format(model.value),
-)
+const selectedDateLabel = computed(() => formats.dateDay(model.value))
 
-const monthYearLabel = computed(() =>
-  new Intl.DateTimeFormat(localeStore.current, {
-    month: 'long',
-    year: 'numeric',
-  }).format(leadingCalendarDate.value),
-)
+const monthYearLabel = computed(() => formats.monthYear(leadingCalendarDate.value))
 
 function handleVisibleDateChange(date: Date) {
   leadingCalendarDate.value = date
@@ -69,7 +59,7 @@ const hostUI = {
 <template>
   <UCard :ui="hostUI">
     <template #header>
-      <div class="flex min-w-0 items-start justify-between gap-3">
+      <div class="flex min-w-0 items-end justify-between gap-3">
         <div class="min-w-0">
           <Typography variant="h5" class="text-highlighted font-bold">
             {{ t('home.schedule.title') }}
@@ -78,10 +68,7 @@ const hostUI = {
             {{ monthYearLabel }}
           </Typography>
         </div>
-        <Typography
-          variant="caption"
-          class="min-w-0 pt-0.5 text-right font-medium leading-tight text-muted"
-        >
+        <Typography variant="endnote" class="min-w-0 pt-0.5 text-right text-muted">
           {{ summaryLabel }}
         </Typography>
       </div>

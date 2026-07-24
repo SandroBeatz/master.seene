@@ -41,6 +41,15 @@ export interface Formats {
   parseDecimal(value: string): string
   date(value: string | Date | null | undefined, overrideFormat?: string): string
   dateTime(value: string | Date | null | undefined, overrideFormat?: string): string
+  /**
+   * Formats a date with a relative day for yesterday/today/tomorrow, otherwise
+   * with a weekday: `Today Jul 24`, `Mon, Jul 27`.
+   */
+  dateDay(value: string | Date | null | undefined): string
+  /** Same as `dateDay()`, including the year. */
+  dateDayYear(value: string | Date | null | undefined): string
+  /** Formats a localized full month and year: `July 2026`. */
+  monthYear(value: string | Date | null | undefined): string
 }
 
 const PLACEHOLDER = '—'
@@ -64,6 +73,19 @@ function formatWithTokens(date: Date, format: string): string {
     mm: pad2(date.getMinutes()),
   }
   return format.replace(/YYYY|MM|DD|HH|mm/g, (token) => map[token] ?? token)
+}
+
+function parseDate(value: string | Date | null | undefined): Date | null {
+  if (!value) return null
+  const parsed = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** Calendar-day difference in local time, unaffected by DST-length days. */
+function calendarDayDifference(date: Date, reference: Date): number {
+  const dateUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  const referenceUtc = Date.UTC(reference.getFullYear(), reference.getMonth(), reference.getDate())
+  return Math.round((dateUtc - referenceUtc) / 86_400_000)
 }
 
 function createFormats(options: FormatsPluginOptions = {}): Formats {
@@ -169,7 +191,68 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     return `${formatWithTokens(parsed, format)} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`
   }
 
-  return { time, price, currency, priceParts, duration, decimal, parseDecimal, date, dateTime }
+  function formatDateDay(value: string | Date | null | undefined, includeYear: boolean): string {
+    const parsed = parseDate(value)
+    if (!parsed) return PLACEHOLDER
+
+    const dateOptions: Intl.DateTimeFormatOptions = {
+      day: 'numeric',
+      month: 'short',
+    }
+    if (includeYear) dateOptions.year = 'numeric'
+
+    const difference = calendarDayDifference(parsed, new Date())
+    const relativeKey =
+      difference === -1
+        ? 'formats.dateDay.yesterday'
+        : difference === 0
+          ? 'formats.dateDay.today'
+          : difference === 1
+            ? 'formats.dateDay.tomorrow'
+            : null
+
+    if (relativeKey) {
+      const formattedDate = new Intl.DateTimeFormat(locale(), dateOptions).format(parsed)
+      return `${i18n.global.t(relativeKey)} ${formattedDate}`
+    }
+
+    return new Intl.DateTimeFormat(locale(), {
+      weekday: 'short',
+      ...dateOptions,
+    }).format(parsed)
+  }
+
+  function dateDay(value: string | Date | null | undefined): string {
+    return formatDateDay(value, false)
+  }
+
+  function dateDayYear(value: string | Date | null | undefined): string {
+    return formatDateDay(value, true)
+  }
+
+  function monthYear(value: string | Date | null | undefined): string {
+    const parsed = parseDate(value)
+    if (!parsed) return PLACEHOLDER
+    return new Intl.DateTimeFormat(locale(), {
+      month: 'long',
+      year: 'numeric',
+    }).format(parsed)
+  }
+
+  return {
+    time,
+    price,
+    currency,
+    priceParts,
+    duration,
+    decimal,
+    parseDecimal,
+    date,
+    dateTime,
+    dateDay,
+    dateDayYear,
+    monthYear,
+  }
 }
 
 const FORMATS_KEY = Symbol('formats')

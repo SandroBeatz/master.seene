@@ -47,7 +47,19 @@ function makeTimeBlock(over: Partial<TimeBlock> = {}): TimeBlock {
 function mountTimeline(appointments: Appointment[], timeBlocks: TimeBlock[]) {
   const pinia = createPinia()
   setActivePinia(pinia)
-  const i18n = createI18n({ legacy: false, locale: 'en', missingWarn: false, fallbackWarn: false })
+  const i18n = createI18n({
+    legacy: false,
+    locale: 'en',
+    missingWarn: false,
+    fallbackWarn: false,
+    messages: {
+      en: {
+        timeBlocks: {
+          allDayLabel: 'Time off: All day',
+        },
+      },
+    },
+  })
   return mount(ScheduleTimeline, {
     props: {
       appointments,
@@ -76,6 +88,7 @@ describe('ScheduleTimeline time off', () => {
     )
     expect(wrapper.find('[data-testid="time-off-block"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Vacation')
+    expect(wrapper.text()).toContain('Time off: All day')
   })
 
   it('shows the schedule (not the empty state) for a day with only time off', () => {

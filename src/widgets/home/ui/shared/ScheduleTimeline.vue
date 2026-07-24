@@ -19,6 +19,8 @@ import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
 import { buildTimelineLayout, type TimelineConstants } from '../../model/timeline-layout'
 import { isVisibleScheduleAppointment } from '../../model/schedule-appointments'
+import ScheduleAppointmentBlock from './ScheduleAppointmentBlock.vue'
+import ScheduleTimeOffBlock from './ScheduleTimeOffBlock.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -129,7 +131,7 @@ function timeBlockInterval(block: TimeBlock): { from: number; to: number } {
 }
 
 function allDayTimeBlockLabel(block: TimeBlock): string {
-  return block.notes || `${t('timeBlocks.calendarTitle')} · ${t('timeBlocks.form.allDay')}`
+  return block.notes || t('timeBlocks.calendarTitle')
 }
 
 const hasTimedContent = computed(
@@ -334,180 +336,96 @@ const resolvedHostUI = computed(() =>
       <div
         v-for="block in allDayTimeBlocks"
         :key="'ad-' + block.id"
-        class="mb-2 flex items-center gap-2 rounded-md bg-elevated px-3 py-2 ring-1 ring-default"
+        class="mb-2 flex items-center gap-2 rounded-sm bg-elevated px-3 py-2 border border-default"
       >
         <UIcon name="i-lucide-ban" class="size-4 shrink-0 text-muted" />
-        <span class="min-w-0 truncate text-xs font-medium text-muted">{{
-          allDayTimeBlockLabel(block)
-        }}</span>
+        <div class="min-w-0">
+          <Typography variant="endnote" class="text-muted font-medium">{{
+            t('timeBlocks.allDayLabel')
+          }}</Typography>
+          <Typography variant="footnote" class="text-muted">{{
+            allDayTimeBlockLabel(block)
+          }}</Typography>
+        </div>
       </div>
 
       <!-- Time grid -->
       <div
         v-if="hasTimedContent"
-        class="relative isolate overflow-hidden"
+        class="relative isolate overflow-hidden px-1"
         :style="{ height: totalHeight + 'px' }"
       >
-      <!-- Grid lines + time labels -->
-      <template v-for="slot in timeSlots" :key="slot.min">
-        <!-- Horizontal line -->
-        <div
-          class="absolute right-0 h-px"
-          :style="{
-            left: LABEL_W + 8 + 'px',
-            top: slot.top + 'px',
-            background: 'var(--ui-border)',
-            opacity: 0.55,
-          }"
-        />
-        <!-- Time label — centered on the line -->
-        <span
-          class="absolute text-[10px] tabular-nums leading-none select-none text-muted"
-          :style="{
-            top: slot.top + 'px',
-            left: 0,
-            width: LABEL_W + 'px',
-            transform: 'translateY(-50%)',
-          }"
-          >{{ slot.label }}</span
-        >
-      </template>
-
-      <!-- Collapsed empty stretches -->
-      <div
-        v-for="(gap, i) in gapSegments"
-        :key="'gap-' + i"
-        class="absolute flex items-center justify-center"
-        :style="{
-          top: gap.top + 'px',
-          height: gap.height + 'px',
-          left: LABEL_W + 8 + 'px',
-          right: '0px',
-        }"
-      >
-        <UIcon name="i-lucide-ellipsis-vertical" class="size-4 text-muted/50" />
-      </div>
-
-      <!-- Appointment blocks -->
-      <div
-        v-for="block in appointmentBlocks"
-        :key="block.appointment.id"
-        data-testid="appointment-block"
-        class="appt-card absolute overflow-hidden rounded-md pr-2.5 pl-3 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        :class="block.isGroup ? 'bg-elevated ring-1 ring-default' : ''"
-        :style="{
-          top: block.top + 'px',
-          height: block.height + 'px',
-          left: LABEL_W + 10 + 'px',
-          right: '0px',
-          paddingTop: '5px',
-          paddingBottom: '5px',
-          '--accent-bar': block.barColor,
-          ...(block.isGroup || !block.accentColor
-            ? {}
-            : { backgroundColor: block.accentColor + '14' }),
-        }"
-        @click="emit('select', block.appointment)"
-      >
-        <!-- Compact single (very short appointment) -->
-        <div v-if="block.compact" class="flex items-center gap-1.5">
-          <span class="text-[11px] font-semibold tabular-nums shrink-0 leading-tight">{{
-            block.startLabel
-          }}</span>
-          <span class="text-[11px] truncate leading-tight">{{ block.clientName }}</span>
-          <UIcon :name="block.statusIcon" class="size-3 shrink-0 ml-auto" :class="block.statusColorClass" />
-        </div>
-
-        <!-- Full card -->
-        <template v-else>
-          <div class="flex items-center justify-between gap-1">
-            <span class="flex min-w-0 items-center gap-1">
-              <span class="text-[11px] font-semibold tabular-nums leading-tight">{{
-                block.timeRange
-              }}</span>
-              <span class="text-[10px] tabular-nums leading-tight text-muted shrink-0"
-                >· {{ block.durationLabel }}</span
-              >
-            </span>
-            <UIcon :name="block.statusIcon" class="size-3.5 shrink-0" :class="block.statusColorClass" />
-          </div>
-          <p class="text-xs font-medium truncate leading-tight mt-0.5">{{ block.clientName }}</p>
-
-          <!-- Group: services as a dotted list -->
-          <ul v-if="block.isGroup" class="mt-1 space-y-0.5">
-            <li v-for="(s, i) in block.serviceList" :key="i" class="flex items-center gap-1.5">
-              <span class="size-2 rounded-full shrink-0" :style="{ backgroundColor: s.color }" />
-              <span class="text-[10px] text-muted truncate leading-tight">{{ s.name }}</span>
-            </li>
-          </ul>
-          <p
-            v-if="block.isGroup && block.priceLabel"
-            class="text-[10px] font-medium text-muted mt-1 leading-tight"
+        <!-- Grid lines + time labels -->
+        <template v-for="slot in timeSlots" :key="slot.min">
+          <!-- Horizontal line -->
+          <div
+            class="absolute right-0 h-px"
+            :style="{
+              left: LABEL_W + 8 + 'px',
+              top: slot.top + 'px',
+              background: 'var(--ui-border)',
+              opacity: 0.55,
+            }"
+          />
+          <!-- Time label — centered on the line -->
+          <span
+            class="absolute text-[10px] tabular-nums leading-none select-none text-muted"
+            :style="{
+              top: slot.top + 'px',
+              left: '3px',
+              width: LABEL_W + 'px',
+              transform: 'translateY(-50%)',
+            }"
+            >{{ slot.label }}</span
           >
-            {{ block.priceLabel }}
-          </p>
-
-          <!-- Single: services + price on one line -->
-          <p v-else class="text-[10px] text-muted truncate leading-tight mt-0.5">
-            {{ block.serviceNames
-            }}<template v-if="block.priceLabel"> · {{ block.priceLabel }}</template>
-          </p>
         </template>
-      </div>
 
-      <!-- Time-off blocks (grey, neutral) -->
-      <div
-        v-for="block in timeBlockBlocks"
-        :key="'tb-' + block.id"
-        data-testid="time-off-block"
-        class="appt-card absolute overflow-hidden rounded-md bg-elevated pr-2.5 pl-3 text-left ring-1 ring-default"
-        :style="{
-          top: block.top + 'px',
-          height: block.height + 'px',
-          left: LABEL_W + 10 + 'px',
-          right: '0px',
-          paddingTop: '5px',
-          paddingBottom: '5px',
-          '--accent-bar': 'var(--ui-border)',
-        }"
-      >
-        <div class="flex items-center gap-1">
-          <UIcon name="i-lucide-ban" class="size-3 shrink-0 text-muted" />
-          <span class="text-[11px] font-semibold tabular-nums leading-tight text-muted">{{
-            block.timeRange
-          }}</span>
-        </div>
-        <p class="mt-0.5 truncate text-xs font-medium leading-tight text-muted">{{ block.label }}</p>
-      </div>
-
-      <!-- Now line — green, with the live time rendered as a chip on the line. -->
-      <div
-        v-if="nowLine"
-        data-testid="now-line"
-        class="absolute z-10 flex -translate-y-1/2 items-center gap-1 pointer-events-none"
-        :style="{ top: nowLine.top + 'px', left: 0, right: 0 }"
-      >
-        <span
-          class="shrink-0 rounded-full bg-success px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-white"
-          >{{ nowLine.label }}</span
+        <!-- Collapsed empty stretches -->
+        <div
+          v-for="(gap, i) in gapSegments"
+          :key="'gap-' + i"
+          class="absolute flex items-center justify-center"
+          :style="{
+            top: gap.top + 'px',
+            height: gap.height + 'px',
+            left: LABEL_W + 8 + 'px',
+            right: '0px',
+          }"
         >
-        <div class="h-0.5 flex-1 rounded-full bg-success" />
-      </div>
+          <UIcon name="i-lucide-ellipsis-vertical" class="size-4 text-muted/50" />
+        </div>
+
+        <!-- Appointment blocks -->
+        <ScheduleAppointmentBlock
+          v-for="block in appointmentBlocks"
+          :key="block.appointment.id"
+          :block="block"
+          :left="LABEL_W + 10"
+          @select="emit('select', $event)"
+        />
+
+        <!-- Time-off blocks (grey, neutral) -->
+        <ScheduleTimeOffBlock
+          v-for="block in timeBlockBlocks"
+          :key="'tb-' + block.id"
+          :block="block"
+          :left="LABEL_W + 10"
+        />
+
+        <!-- Now line — green, with the live time rendered as a chip on the line. -->
+        <div
+          v-if="nowLine"
+          data-testid="now-line"
+          class="absolute z-10 flex -translate-y-1/2 items-center gap-1 pointer-events-none"
+          :style="{ top: nowLine.top + 'px', left: 0, right: 0 }"
+        >
+          <span
+            class="shrink-0 rounded-full bg-success px-1 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-white"
+            >{{ nowLine.label }}</span
+          >
+          <div class="h-0.5 flex-1 rounded-full bg-success" />
+        </div>
       </div>
     </template>
   </UCard>
 </template>
-
-<style scoped>
-/* Left accent rail — a straight (non-rounded) bar, while the card keeps the
-   design-system radius on its right corners. Color is passed via --accent-bar. */
-.appt-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 4px;
-  background: var(--accent-bar, var(--ui-border));
-}
-</style>

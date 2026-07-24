@@ -37,7 +37,9 @@ const primaryLabel = computed(() =>
   isPending.value ? t('home.nextUp.confirm') : t('home.nextUp.complete'),
 )
 
-const primaryIcon = computed(() => (isPending.value ? 'i-lucide-check' : 'i-lucide-badge-check'))
+const primaryIcon = computed(() =>
+  isPending.value ? 'i-lucide-circle-check-big' : 'i-lucide-check-check',
+)
 
 const cardUI = {
   root: 'w-full rounded-md shadow-none ring-1 ring-default md:rounded-lg',
@@ -53,16 +55,14 @@ const cardUI = {
       @click="emit('open')"
       @keydown.enter="emit('open')"
     >
-      <div class="flex items-start justify-between gap-3">
+      <div class="flex items-center justify-between gap-3 mb-3">
         <div class="min-w-0">
-          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <Typography variant="h5" class="font-bold tabular-nums text-highlighted">
-              {{ timeLabel }}
-            </Typography>
-            <Typography variant="caption" class="font-medium text-muted">
-              {{ dateLabel }} · {{ durationLabel }}
-            </Typography>
-          </div>
+          <Typography
+            variant="endnote"
+            class="font-medium text-muted px-2 py-0.5 rounded-md bg-elevated"
+          >
+            {{ dateLabel }} {{ timeLabel }}
+          </Typography>
           <Typography
             v-if="attentionLabel"
             variant="endnote"
@@ -99,40 +99,37 @@ const cardUI = {
         </div>
       </div>
 
-      <USeparator class="my-3" />
-
       <div class="flex items-start gap-3">
         <ClientAvatar
           :first-name="client?.first_name"
           :last-name="client?.last_name"
           :emoji="client?.emoji"
           :seed="client?.id"
-          size="lg"
+          size="md"
           class="shrink-0"
         />
         <div class="min-w-0 flex-1">
           <Typography variant="caption" class="truncate font-semibold text-highlighted">
             {{ clientName }}
           </Typography>
-          <Typography variant="caption" class="mt-0.5 line-clamp-2 text-muted">
+          <Typography variant="endnote" class="mt-0.5 line-clamp-1 text-muted">
             {{ serviceNames }}
           </Typography>
+          <Typography variant="endnote" class="font-medium text-muted">
+            {{ durationLabel }} / {{ priceLabel }}
+          </Typography>
         </div>
-        <Typography variant="caption" class="shrink-0 font-bold text-highlighted">
-          {{ priceLabel }}
-        </Typography>
       </div>
 
-      <div v-if="appointment.notes" class="mt-4 flex items-start gap-2" @click.stop>
-        <UIcon name="i-lucide-message-circle-more" class="mt-0.5 size-4 shrink-0 text-muted" />
-        <Typography variant="caption" class="line-clamp-3 text-muted">
+      <div v-if="appointment.notes" class="mt-3 flex items-start gap-2" @click.stop>
+        <UIcon name="i-lucide-messages-square" class="size-3.5 shrink-0 text-muted" />
+        <Typography variant="endnote" class="line-clamp-2 text-muted">
           {{ appointment.notes }}
         </Typography>
       </div>
 
-      <div class="mt-auto flex items-center justify-between gap-2 pt-5" @click.stop>
+      <div class="mt-auto flex items-center gap-2 pt-3" @click.stop>
         <UButton
-          :color="isPending ? 'primary' : 'success'"
           size="sm"
           :leading-icon="primaryIcon"
           :loading="primaryLoading"
@@ -142,8 +139,7 @@ const cardUI = {
         </UButton>
         <UButton
           color="neutral"
-          variant="soft"
-          size="md"
+          variant="ghost"
           icon="i-lucide-ellipsis"
           :aria-label="t('nav.actions')"
           class="shrink-0"

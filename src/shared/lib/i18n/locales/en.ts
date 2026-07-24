@@ -16,6 +16,11 @@ export default {
       hoursShort: 'h',
       minutesShort: 'min',
     },
+    dateDay: {
+      yesterday: 'Yesterday',
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+    },
   },
   common: {
     dashboardWelcome:
@@ -1134,6 +1139,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Blocked time',
+    allDayLabel: 'Time off: All day',
     form: {
       titleCreate: 'Block time',
       titleEdit: 'Edit blocked time',
