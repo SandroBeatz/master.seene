@@ -82,12 +82,15 @@ useSwipe(mainRef, {
 </script>
 
 <template>
-  <div class="flex min-h-dvh flex-col bg-[var(--app-canvas)]">
+  <div class="flex h-dvh flex-col bg-[var(--app-canvas)]">
     <MobileHeader v-if="!isRootScreen" :title="headerTitle" @back="router.back()" />
 
+    <!-- Fixed-viewport shell (like the desktop dashboard panel): `main` is the
+    scroll container. Content pages scroll here; `fill` pages (e.g. Calendar) get
+    a bounded height so their inner grid can size and scroll on its own. -->
     <main
       ref="mainRef"
-      class="min-h-0 flex-1"
+      class="flex min-h-0 flex-1 flex-col overflow-y-auto"
       :style="{ paddingBottom: mainPaddingBottom }"
     >
       <RouterView />

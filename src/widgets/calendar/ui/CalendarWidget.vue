@@ -378,6 +378,14 @@ const calendarOptions = computed<CalendarOptions>(() => {
   }
 })
 
+// Mobile only: force a readable min-width on the multi-column grids so the
+// wrapper scrolls horizontally instead of squeezing the columns. Reset on md+
+// (desktop keeps FullCalendar sized to its container). The day view has a single
+// column and always fits, so it gets no min-width.
+const mobileScrollMinWidthClass = computed(() =>
+  currentViewType.value === 'timeGridDay' ? '' : 'min-w-[46rem] md:min-w-0',
+)
+
 function getCalendarApi(): CalendarApi | undefined {
   return calendarRef.value?.getApi()
 }
@@ -408,8 +416,12 @@ defineExpose<CalendarWidgetExpose>({
 </script>
 
 <template>
-  <div class="h-full min-h-0 w-full">
-    <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
+  <!-- Outer scroller: on mobile the calendar scrolls horizontally (multi-column
+  grids get a min-width below) while FullCalendar's own scroller handles vertical
+  scroll. On md+ nothing overflows, so it behaves exactly as before. -->
+  <div class="h-full min-h-0 w-full overflow-auto md:overflow-hidden">
+    <div class="h-full" :class="mobileScrollMinWidthClass">
+      <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
       <template #eventContent="arg">
         <!-- Appointment: card-style body matching the home ScheduleTimeline. -->
         <div
@@ -464,6 +476,7 @@ defineExpose<CalendarWidgetExpose>({
           </div>
         </div>
       </template>
-    </FullCalendar>
+      </FullCalendar>
+    </div>
   </div>
 </template>

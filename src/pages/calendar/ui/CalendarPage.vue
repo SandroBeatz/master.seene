@@ -10,8 +10,8 @@ import { TimeBlockFormDialog } from '@features/time-block-form'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import {
   CalendarToolbar,
+  CalendarViewTabs,
   CalendarWidget,
-  MobileCalendarAgenda,
   formatCalendarRangeTitle,
   useCalendarEvents,
   type CalendarDateRange,
@@ -20,11 +20,7 @@ import {
 } from '@widgets/calendar'
 import { Page, Typography } from '@shared/ui'
 import { useIsMobile } from '@shared/lib/viewport'
-import {
-  addDateInputDays,
-  getCalendarDateTimeString,
-  toUtcIsoFromCalendarDateString,
-} from '@shared/lib/time-zone'
+import { getCalendarDateTimeString, toUtcIsoFromCalendarDateString } from '@shared/lib/time-zone'
 
 const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
@@ -52,34 +48,23 @@ const calendarTitle = computed(() =>
   formatCalendarRangeTitle(calendarRange.value, locale.value, masterPreferencesStore.timeZone),
 )
 
-// --- Mobile: agenda view (FullCalendar's grid doesn't fit a phone) ----------
-// Own day cursor, independent of the desktop FullCalendar instance (which
-// isn't mounted on mobile, so calendarRef stays null there).
-function todayInCalendarTimeZone(): string {
-  return getCalendarDateTimeString(new Date(), masterPreferencesStore.timeZone).slice(0, 10)
-}
+// Whether the visible period (day/week/month) contains today. currentFrom/To are
+// UTC ISO (from toISOString), so lexicographic comparison is chronological.
+const isViewingCurrentPeriod = computed(() => {
+  const range = calendarRange.value
+  if (!range) return true
 
-const mobileCurrentDate = ref<string>(todayInCalendarTimeZone())
-
-const mobileDayRange = computed<CalendarDateRange>(() => {
-  const from = toUtcIsoFromCalendarDateString(
-    mobileCurrentDate.value,
-    masterPreferencesStore.timeZone,
+  const timeZone = masterPreferencesStore.timeZone
+  const todayIso = toUtcIsoFromCalendarDateString(
+    getCalendarDateTimeString(new Date(), timeZone).slice(0, 10),
+    timeZone,
   )
-  const to = toUtcIsoFromCalendarDateString(
-    addDateInputDays(mobileCurrentDate.value, 1),
-    masterPreferencesStore.timeZone,
-  )
-  return { from, to, currentFrom: from, currentTo: to, title: '', viewType: 'timeGridDay' }
+  return todayIso >= range.currentFrom && todayIso < range.currentTo
 })
 
-const mobileCalendarTitle = computed(() =>
-  formatCalendarRangeTitle(mobileDayRange.value, locale.value, masterPreferencesStore.timeZone),
-)
-
-const displayedCalendarTitle = computed(() =>
-  isMobile.value ? mobileCalendarTitle.value : calendarTitle.value,
-)
+// Desktop keeps "Today" always visible; on mobile it only shows when we've
+// navigated away from the current period.
+const showTodayButton = computed(() => !isMobile.value || !isViewingCurrentPeriod.value)
 
 watch(defaultCalendarView, (nextViewType, previousViewType) => {
   if (calendarViewType.value !== previousViewType) return
@@ -94,26 +79,14 @@ function handleDatesSet(range: CalendarDateRange) {
 }
 
 function moveCalendarToPrevious() {
-  if (isMobile.value) {
-    mobileCurrentDate.value = addDateInputDays(mobileCurrentDate.value, -1)
-    return
-  }
   calendarRef.value?.moveToPrevious()
 }
 
 function moveCalendarToNext() {
-  if (isMobile.value) {
-    mobileCurrentDate.value = addDateInputDays(mobileCurrentDate.value, 1)
-    return
-  }
   calendarRef.value?.moveToNext()
 }
 
 function moveCalendarToToday() {
-  if (isMobile.value) {
-    mobileCurrentDate.value = todayInCalendarTimeZone()
-    return
-  }
   calendarRef.value?.moveToToday()
 }
 
@@ -156,7 +129,14 @@ const hostUI = {
       </Typography>
     </template>
     <template #header-right>
-      <UTooltip :text="$t('calendar.create.open')">
+      <!-- Mobile: view toggle lives here (the create action is in the tab bar). -->
+      <CalendarViewTabs
+        v-if="isMobile"
+        :view-type="calendarViewType"
+        compact
+        @update:view-type="changeCalendarView"
+      />
+      <UTooltip v-else :text="$t('calendar.create.open')">
         <UButton
           size="xl"
           icon="i-lucide-plus"
@@ -172,18 +152,21 @@ const hostUI = {
     <UCard :ui="hostUI">
       <template #header>
         <CalendarToolbar
-          :title="displayedCalendarTitle"
-          :view-type="isMobile ? 'timeGridDay' : calendarViewType"
+          :title="calendarTitle"
+          :view-type="calendarViewType"
           :hide-view-toggle="isMobile"
+          :show-today="showTodayButton"
           @previous="moveCalendarToPrevious"
           @next="moveCalendarToNext"
           @today="moveCalendarToToday"
           @update:view-type="changeCalendarView"
         />
       </template>
-      <div class="relative flex flex-1 flex-col min-h-0">
+      <!-- `isolate`: trap FullCalendar's internal z-indexes (events, sticky
+      headers) and the loading/empty overlays in their own stacking context so
+      they can't paint above app overlays (preview slideover, quick-create). -->
+      <div class="relative isolate flex flex-1 flex-col min-h-0">
         <CalendarWidget
-          v-if="!isMobile"
           ref="calendarRef"
           :events="calendarEvents"
           :schedule="masterSchedule"
@@ -197,14 +180,6 @@ const hostUI = {
           @time-block-click="onTimeBlockClick"
           @dates-set="handleDatesSet"
         />
-        <MobileCalendarAgenda
-          v-else
-          :date="mobileCurrentDate"
-          :events="calendarEvents"
-          @event-click="onEventClick"
-          @time-block-click="onTimeBlockClick"
-          @create="quickCreate.openAppointment()"
-        />
 
         <!-- Loading overlay -->
         <div
@@ -216,10 +191,9 @@ const hostUI = {
           <USkeleton v-for="i in 8" :key="i" class="h-10 w-full rounded-lg" />
         </div>
 
-        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events.
-        Mobile's agenda has its own inline empty state (per-day, not per query range). -->
+        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events. -->
         <div
-          v-else-if="isEmpty && !isMobile"
+          v-else-if="isEmpty"
           class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4"
         >
           <UEmpty
