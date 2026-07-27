@@ -184,7 +184,9 @@ html.dark {
   gap: 0.25rem;
 }
 
-.fc-week-day-header-weekday {
+.fc-week-day-header-weekday,
+.fc .fc-dayGridMonth-view .fc-col-header-cell-cushion,
+.fc .fc-timeGridDay-view .fc-col-header-cell-cushion {
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
@@ -205,7 +207,9 @@ html.dark {
   color: var(--color-zinc-700);
 }
 
-.dark .fc-week-day-header-weekday {
+.dark .fc-week-day-header-weekday,
+.dark .fc .fc-dayGridMonth-view .fc-col-header-cell-cushion,
+.dark .fc .fc-timeGridDay-view .fc-col-header-cell-cushion {
   color: var(--color-zinc-400);
 }
 
@@ -283,6 +287,69 @@ html.dark {
 
 .fc .fc-event.app-appointment-event .fc-event-main {
   padding: 0;
+}
+
+/* FullCalendar — month events as passive, time-ordered service-colour dots. */
+.fc .fc-dayGridMonth-view .fc-col-header-cell-cushion,
+.fc .fc-timeGridDay-view .fc-col-header-cell-cushion {
+  width: 100%;
+  padding: 0.5rem 0.25rem;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-day-frame {
+  aspect-ratio: 1;
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-day-number,
+.fc .fc-dayGridMonth-view .fc-daygrid-month-start {
+  padding: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-body-natural .fc-daygrid-day-events {
+  min-height: 0;
+  margin: 0;
+  line-height: 0;
+  padding: 0 0.125rem 0.125rem;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-event-harness:has(> .fc-daygrid-event.calendar-month-event) {
+  position: static !important;
+  display: inline-flex;
+  margin: 0.1875rem 0 0 0.1875rem !important;
+  vertical-align: top;
+  pointer-events: none;
+}
+
+.fc .fc-daygrid-day .fc-daygrid-event.calendar-month-event {
+  display: inline-flex;
+  width: 0.5rem;
+  height: 0.5rem;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0;
+  background-color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.app-month-event-marker {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
 }
 
 /* FullCalendar — round the grid itself (border follows the radius, not clipped) */

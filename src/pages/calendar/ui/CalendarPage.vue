@@ -33,7 +33,7 @@ const userId = computed(() => sessionStore.session?.user.id ?? '')
 const unknownClientLabel = computed(() => t('appointments.unknownClient'))
 const timeBlockLabel = computed(() => t('timeBlocks.calendarTitle'))
 
-const { calendarEvents, onDatesSet, isPending, isEmpty } = useCalendarEvents(
+const { calendarEvents, onDatesSet, isPending } = useCalendarEvents(
   userId,
   unknownClientLabel,
   timeBlockLabel,
@@ -114,11 +114,12 @@ function onTimeBlockClick(timeBlock: TimeBlock) {
 }
 
 // Nuxt UI overrides
-const hostUI = {
-  root: 'flex flex-1 min-h-0 flex-col rounded-xl shadow-panel ring-0 divide-y-0',
+const isMonthView = computed(() => calendarViewType.value === 'dayGridMonth')
+const hostUI = computed(() => ({
+  root: `flex min-h-0 flex-col rounded-xl shadow-panel ring-0 divide-y-0 ${isMonthView.value ? 'flex-none' : 'flex-1'}`,
   header: 'pb-0',
-  body: 'flex flex-1 min-h-0 flex-col overflow-hidden',
-}
+  body: `flex min-h-0 flex-col overflow-hidden ${isMonthView.value ? 'flex-none' : 'flex-1'}`,
+}))
 </script>
 
 <template>
@@ -163,9 +164,12 @@ const hostUI = {
         />
       </template>
       <!-- `isolate`: trap FullCalendar's internal z-indexes (events, sticky
-      headers) and the loading/empty overlays in their own stacking context so
-      they can't paint above app overlays (preview slideover, quick-create). -->
-      <div class="relative isolate flex flex-1 flex-col min-h-0">
+      headers) and the loading overlay in their own stacking context so they
+      can't paint above app overlays (preview slideover, quick-create). -->
+      <div
+        class="relative isolate flex min-h-0 flex-col"
+        :class="isMonthView ? 'flex-none' : 'flex-1'"
+      >
         <CalendarWidget
           ref="calendarRef"
           :events="calendarEvents"
@@ -184,34 +188,15 @@ const hostUI = {
         <!-- Loading overlay -->
         <div
           v-if="isPending"
-          class="absolute inset-0 z-10 flex flex-col gap-2 bg-default/70 p-4 backdrop-blur-sm"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-default/50"
           role="status"
           :aria-label="$t('calendar.loading')"
         >
-          <USkeleton v-for="i in 8" :key="i" class="h-10 w-full rounded-lg" />
-        </div>
-
-        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events. -->
-        <div
-          v-else-if="isEmpty"
-          class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4"
-        >
-          <UEmpty
-            variant="naked"
-            icon="i-lucide-calendar-plus"
-            :title="$t('calendar.empty.title')"
-            :description="$t('calendar.empty.description')"
-            class="pointer-events-auto rounded-xl bg-default/90 p-6 shadow-panel backdrop-blur-sm"
-          >
-            <UButton
-              leading-icon="i-lucide-plus"
-              color="primary"
-              class="mt-4"
-              @click="quickCreate.openAppointment()"
-            >
-              {{ $t('calendar.create.appointment') }}
-            </UButton>
-          </UEmpty>
+          <UIcon
+            name="i-lucide-loader-circle"
+            class="size-8 animate-spin text-primary"
+            aria-hidden="true"
+          />
         </div>
       </div>
     </UCard>

@@ -139,6 +139,8 @@ function handleDateClick(info: DateClickArg) {
 }
 
 function handleEventClick(info: EventClickArg) {
+  if (info.view.type === 'dayGridMonth') return
+
   if (info.event.extendedProps.type === 'time-block') {
     emit('time-block-click', info.event.extendedProps.timeBlock as TimeBlock)
     return
@@ -295,7 +297,15 @@ function renderDayHeaderContent(arg: DayHeaderContentArg) {
 }
 
 function getEventClassNames(arg: EventContentArg): string[] {
-  return arg.event.extendedProps.type === 'appointment' ? ['app-appointment-event'] : []
+  const isAppointment = arg.event.extendedProps.type === 'appointment'
+
+  if (arg.view.type === 'dayGridMonth') {
+    return isAppointment
+      ? ['app-appointment-event', 'calendar-month-event']
+      : ['calendar-month-event']
+  }
+
+  return isAppointment ? ['app-appointment-event'] : []
 }
 
 function getDayHeaderClassNames(arg: DayHeaderContentArg): string[] {
@@ -382,6 +392,7 @@ function getCalendarSlotDuration(minutes: number): string {
 
 const calendarOptions = computed<CalendarOptions>(() => {
   const hour12 = props.timeFormat === 12
+  const isMonthView = currentViewType.value === 'dayGridMonth'
   const timeFormat = {
     hour: hour12 ? 'numeric' : '2-digit',
     minute: '2-digit',
@@ -411,11 +422,15 @@ const calendarOptions = computed<CalendarOptions>(() => {
     locale: currentFullCalendarLocale.value,
     initialView: props.defaultView,
     firstDay: props.firstDay,
-    height: '100%',
-    // Mobile: give each day column a minimum width so FullCalendar's own
-    // ScrollGrid turns on native horizontal scrolling (time axis + day header
-    // stay pinned). Desktop keeps columns fitted to the container.
-    dayMinWidth: isMobile.value ? 160 : undefined,
+    height: isMonthView ? 'auto' : '100%',
+    // FullCalendar derives a month's row height from width / aspectRatio / 6.
+    // With seven columns, 7 / 6 makes an empty day cell square.
+    aspectRatio: isMonthView ? 7 / 6 : undefined,
+    fixedWeekCount: false,
+    showNonCurrentDates: false,
+    // Only the mobile week needs horizontally scrollable day columns. Month
+    // and day views stay fitted to the full container width.
+    dayMinWidth: isMobile.value && currentViewType.value === 'timeGridWeek' ? 160 : undefined,
     nowIndicator: true,
     scrollTime: verticalScrollTime.value,
     editable: true,
@@ -425,6 +440,8 @@ const calendarOptions = computed<CalendarOptions>(() => {
     slotDuration: getCalendarSlotDuration(props.slotStepMinutes),
     slotLabelFormat: timeFormat,
     eventTimeFormat: timeFormat,
+    eventOrder: 'start',
+    eventOrderStrict: true,
     displayEventEnd: true,
     headerToolbar: false,
     dateClick: handleDateClick,
@@ -480,12 +497,23 @@ defineExpose<CalendarWidgetExpose>({
 </script>
 
 <template>
-  <div ref="calendarContainerRef" class="h-full min-h-0 w-full">
+  <div
+    ref="calendarContainerRef"
+    class="min-h-0 w-full"
+    :class="currentViewType === 'dayGridMonth' ? 'h-auto' : 'h-full'"
+  >
     <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
       <template #eventContent="arg">
+        <!-- Month: passive service-colour marker; the day cell handles the click. -->
+        <span
+          v-if="arg.view.type === 'dayGridMonth'"
+          class="app-month-event-marker"
+          :style="{ backgroundColor: arg.event.borderColor }"
+        />
+
         <!-- Appointment: card-style body matching the home ScheduleTimeline. -->
         <div
-          v-if="arg.event.extendedProps.type === 'appointment'"
+          v-else-if="arg.event.extendedProps.type === 'appointment'"
           class="flex h-full w-full flex-col gap-0.5 overflow-hidden px-1.5 py-1 text-left"
         >
           <div class="flex items-start justify-between gap-1">

@@ -23,10 +23,6 @@ export function useCalendarEvents(
   // Ticks each minute so effective status icons (ongoing → past) stay current.
   const now = useNowMinute()
 
-  // Empty == no real appointments in the visible range (time-blocks and the
-  // background schedule don't count as "scheduled work").
-  const isEmpty = computed(() => (appointments.value?.length ?? 0) === 0)
-
   const calendarEvents = computed(() =>
     buildCalendarEvents({
       appointments: appointments.value,
@@ -49,7 +45,6 @@ export function useCalendarEvents(
     dateRange,
     onDatesSet,
     isPending,
-    isEmpty,
   }
 }
 
