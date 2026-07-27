@@ -150,7 +150,8 @@ html.dark {
   cursor: pointer;
 }
 
-.fc-slot-time-label {
+.fc .fc-timegrid-slot-lane::after {
+  content: attr(data-slot-time-label);
   position: absolute;
   left: 0.5rem;
   top: 50%;
@@ -164,7 +165,7 @@ html.dark {
   white-space: nowrap;
 }
 
-.fc .fc-timegrid-slot-lane:hover .fc-slot-time-label {
+.fc .fc-timegrid-slot-lane:hover::after {
   opacity: 1;
 }
 
@@ -254,7 +255,7 @@ html.dark {
   cursor: default;
 }
 
-.fc .fc-timegrid-slot-lane.fc-schedule-break-slot:hover .fc-slot-time-label {
+.fc .fc-timegrid-slot-lane.fc-schedule-break-slot:hover::after {
   opacity: 0;
 }
 

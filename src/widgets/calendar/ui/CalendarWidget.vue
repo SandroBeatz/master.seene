@@ -228,11 +228,9 @@ function padDatePart(value: number): string {
 function handleSlotLaneMount(arg: SlotLaneMountArg) {
   if (!arg.date) return
 
-  const timeStr = formatCalendarTime(arg.date)
-  const span = document.createElement('span')
-  span.className = 'fc-slot-time-label'
-  span.textContent = timeStr
-  arg.el.appendChild(span)
+  // Keep the cell DOM-empty so FullCalendar's `.fc-timegrid-slot:empty::before`
+  // continues to establish the same row height as the detached mobile time axis.
+  arg.el.dataset.slotTimeLabel = formatCalendarTime(arg.date)
 }
 
 function getSlotLaneClassNames(arg: SlotLaneContentArg): string[] {
