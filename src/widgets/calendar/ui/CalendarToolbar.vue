@@ -63,6 +63,7 @@ const calendarTitle = computed(() => props.title || t('calendar.title'))
         v-if="showToday"
         color="neutral"
         variant="soft"
+        size="sm"
         :aria-label="$t('calendar.controls.today')"
         @click="emit('today')"
       >

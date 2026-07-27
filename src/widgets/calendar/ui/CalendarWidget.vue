@@ -17,8 +17,9 @@ import type { DateClickArg } from '@fullcalendar/interaction'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import scrollGridPlugin from '@fullcalendar/scrollgrid'
 import FullCalendar from '@fullcalendar/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
 import { updateAppointment } from '@entities/appointment'
@@ -35,6 +36,7 @@ import {
 } from '@entities/master'
 import type { TimeBlock } from '@entities/time-block'
 import { updateTimeBlock } from '@entities/time-block'
+import { useIsMobile } from '@shared/lib/viewport'
 import { toUtcIsoFromCalendarDateString } from '@shared/lib/time-zone'
 import {
   normalizeCalendarViewType,
@@ -77,10 +79,10 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const toast = useToast()
+const isMobile = useIsMobile()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
+const calendarContainerRef = ref<HTMLElement | null>(null)
 const currentViewType = ref<CalendarViewType>(props.defaultView)
-// Open the time grid scrolled to ~1h before the current time so "now" is in view.
-const initialScrollTime = getInitialScrollTime(props.timeZone)
 const currentFullCalendarLocale = computed(() => normalizeCalendarLocale(locale.value))
 const scheduleDisplay = computed(() => buildCalendarScheduleDisplay(props.schedule))
 const timeGridScheduleDisplay = computed(() =>
@@ -92,6 +94,24 @@ const calendarEventsWithSchedule = computed(() => [
   ...props.events,
   ...timeGridScheduleDisplay.value.backgroundEvents,
 ])
+
+// Vertical scroll position (and, when needed, the grid's top boundary): the
+// schedule's slotMinTime by default (top of the grid — no scroll offset), or an
+// earlier real event's start time if one falls before that, so it's never left
+// scrolled out of view above the fold. Time-off/break background events don't
+// count — only real appointments/time-blocks in `props.events`.
+const gridTopMinutes = computed(() => {
+  const scheduleMinTime = timeGridScheduleDisplay.value.slotMinTime
+  const scheduleMinMinutes = scheduleMinTime ? (parseSlotTimeToMinutes(scheduleMinTime) ?? 0) : 0
+  const earliestEventMinutes = getEarliestEventStartMinutes(props.events)
+
+  if (earliestEventMinutes !== null && earliestEventMinutes < scheduleMinMinutes) {
+    return Math.max(0, earliestEventMinutes)
+  }
+
+  return scheduleMinMinutes
+})
+const verticalScrollTime = computed(() => minutesToSlotTime(gridTopMinutes.value))
 const calendarRenderKey = computed(() => {
   const display = scheduleDisplay.value
 
@@ -153,8 +173,23 @@ async function handleEventDrop(info: EventDropArg) {
   }
 }
 
+// Horizontal auto-scroll to today's column — only where a horizontal scroll
+// actually exists (mobile week view, via dayMinWidth/ScrollGrid). FullCalendar
+// only ever applies `fc-day-today` to a column when today falls within the
+// displayed week, so a missing element already means "not the current week" —
+// no separate date-range check needed.
+function scrollToTodayColumn() {
+  if (!isMobile.value || currentViewType.value !== 'timeGridWeek') return
+
+  const todayColumn = calendarContainerRef.value?.querySelector<HTMLElement>(
+    '.fc-timegrid-col.fc-day-today',
+  )
+  todayColumn?.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' })
+}
+
 function handleDatesSet(info: DatesSetArg) {
   currentViewType.value = normalizeCalendarViewType(info.view.type)
+  scrollToTodayColumn()
 
   emit('dates-set', {
     from: toUtcIsoFromCalendarDateString(info.startStr, props.timeZone),
@@ -299,22 +334,45 @@ function getCalendarDateParts(date: Date) {
   }
 }
 
-function getInitialScrollTime(timeZone: string): string {
-  const now = new Date()
-  let hour = now.getHours()
+function parseSlotTimeToMinutes(value: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})/.exec(value)
+  if (!match) return null
 
-  if (timeZone && timeZone !== DEFAULT_TIME_ZONE) {
-    try {
-      hour = Number(
-        new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone }).format(now),
-      )
-    } catch {
-      hour = now.getHours()
-    }
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+
+  return hours * 60 + minutes
+}
+
+function minutesToSlotTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+
+  return `${padDatePart(hours)}:${padDatePart(remainder)}:00`
+}
+
+function getEventStartMinutes(value: EventInput['start']): number | null {
+  if (typeof value !== 'string') return null
+
+  const match = /T(\d{2}):(\d{2})/.exec(value)
+  if (!match) return null
+
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function getEarliestEventStartMinutes(events: EventInput[]): number | null {
+  let earliest: number | null = null
+
+  for (const event of events) {
+    if (event.allDay) continue
+
+    const minutes = getEventStartMinutes(event.start)
+    if (minutes === null) continue
+    if (earliest === null || minutes < earliest) earliest = minutes
   }
 
-  const start = Math.max(0, hour - 1)
-  return `${padDatePart(start)}:00:00`
+  return earliest
 }
 
 function getCalendarSlotDuration(minutes: number): string {
@@ -334,8 +392,11 @@ const calendarOptions = computed<CalendarOptions>(() => {
   const calendarScheduleDisplay = timeGridScheduleDisplay.value
   const scheduleOptions: Pick<CalendarOptions, 'slotMinTime' | 'slotMaxTime' | 'businessHours'> = {}
 
-  if (calendarScheduleDisplay.slotMinTime) {
-    scheduleOptions.slotMinTime = calendarScheduleDisplay.slotMinTime
+  // Extend the grid's top boundary only when an early event needs it (or the
+  // schedule itself defines one); otherwise leave slotMinTime unset so an
+  // unconfigured schedule still shows the full day.
+  if (calendarScheduleDisplay.slotMinTime || gridTopMinutes.value > 0) {
+    scheduleOptions.slotMinTime = minutesToSlotTime(gridTopMinutes.value)
   }
 
   if (calendarScheduleDisplay.slotMaxTime) {
@@ -347,14 +408,18 @@ const calendarOptions = computed<CalendarOptions>(() => {
   }
 
   return {
-    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, scrollGridPlugin],
     locales: [frLocale, ruLocale],
     locale: currentFullCalendarLocale.value,
     initialView: props.defaultView,
     firstDay: props.firstDay,
     height: '100%',
+    // Mobile: give each day column a minimum width so FullCalendar's own
+    // ScrollGrid turns on native horizontal scrolling (time axis + day header
+    // stay pinned). Desktop keeps columns fitted to the container.
+    dayMinWidth: isMobile.value ? 160 : undefined,
     nowIndicator: true,
-    scrollTime: initialScrollTime,
+    scrollTime: verticalScrollTime.value,
     editable: true,
     allDaySlot: true,
     allDayText: t('calendar.allDay'),
@@ -378,14 +443,6 @@ const calendarOptions = computed<CalendarOptions>(() => {
   }
 })
 
-// Mobile only: force a readable min-width on the multi-column grids so the
-// wrapper scrolls horizontally instead of squeezing the columns. Reset on md+
-// (desktop keeps FullCalendar sized to its container). The day view has a single
-// column and always fits, so it gets no min-width.
-const mobileScrollMinWidthClass = computed(() =>
-  currentViewType.value === 'timeGridDay' ? '' : 'min-w-[46rem] md:min-w-0',
-)
-
 function getCalendarApi(): CalendarApi | undefined {
   return calendarRef.value?.getApi()
 }
@@ -407,6 +464,15 @@ function changeView(viewType: CalendarViewType) {
   getCalendarApi()?.changeView(viewType)
 }
 
+// `scrollTime` is only guaranteed to re-apply on FullCalendar's own datesSet
+// (scrollTimeReset). Watching it explicitly also covers the case where the
+// target changes without a range change — e.g. events for the same range
+// finish loading and reveal an earlier appointment than the schedule's start.
+watch(verticalScrollTime, (value) => {
+  if (currentViewType.value === 'dayGridMonth') return
+  getCalendarApi()?.scrollToTime(value)
+})
+
 defineExpose<CalendarWidgetExpose>({
   moveToPrevious,
   moveToNext,
@@ -416,12 +482,8 @@ defineExpose<CalendarWidgetExpose>({
 </script>
 
 <template>
-  <!-- Outer scroller: on mobile the calendar scrolls horizontally (multi-column
-  grids get a min-width below) while FullCalendar's own scroller handles vertical
-  scroll. On md+ nothing overflows, so it behaves exactly as before. -->
-  <div class="h-full min-h-0 w-full overflow-auto md:overflow-hidden">
-    <div class="h-full" :class="mobileScrollMinWidthClass">
-      <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
+  <div ref="calendarContainerRef" class="h-full min-h-0 w-full">
+    <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
       <template #eventContent="arg">
         <!-- Appointment: card-style body matching the home ScheduleTimeline. -->
         <div
@@ -476,7 +538,6 @@ defineExpose<CalendarWidgetExpose>({
           </div>
         </div>
       </template>
-      </FullCalendar>
-    </div>
+    </FullCalendar>
   </div>
 </template>

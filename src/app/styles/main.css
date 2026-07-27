@@ -314,3 +314,10 @@ html.dark {
   margin-bottom: 0.125rem;
   min-height: 0;
 }
+
+/* FullCalendar — hide the "invalid license key" watermark from the unlicensed
+   @fullcalendar/scrollgrid premium plugin. Remove this rule once a real
+   schedulerLicenseKey is configured (the message disappears on its own then). */
+.fc .fc-license-message {
+  display: none;
+}
