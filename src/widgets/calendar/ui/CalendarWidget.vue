@@ -2,8 +2,10 @@
 import type {
   CalendarApi,
   CalendarOptions,
+  DateSelectArg,
   DatesSetArg,
   DayHeaderContentArg,
+  EventApi,
   EventClickArg,
   EventContentArg,
   EventDropArg,
@@ -13,16 +15,23 @@ import type {
 } from '@fullcalendar/core'
 import frLocale from '@fullcalendar/core/locales/fr'
 import ruLocale from '@fullcalendar/core/locales/ru'
-import type { DateClickArg } from '@fullcalendar/interaction'
+import type {
+  DateClickArg,
+  EventDragStartArg,
+  EventDragStopArg,
+  EventResizeDoneArg,
+  EventResizeStartArg,
+  EventResizeStopArg,
+} from '@fullcalendar/interaction'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import scrollGridPlugin from '@fullcalendar/scrollgrid'
 import FullCalendar from '@fullcalendar/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Appointment } from '@entities/appointment'
-import { updateAppointment } from '@entities/appointment'
+import { useUpdateAppointmentMutation } from '@entities/appointment'
 import {
   DEFAULT_TIME_FORMAT,
   DEFAULT_TIME_ZONE,
@@ -35,7 +44,7 @@ import {
   type TimeFormat,
 } from '@entities/master'
 import type { TimeBlock } from '@entities/time-block'
-import { updateTimeBlock } from '@entities/time-block'
+import { useUpdateTimeBlockMutation } from '@entities/time-block'
 import { useIsMobile } from '@shared/lib/viewport'
 import { toUtcIsoFromCalendarDateString } from '@shared/lib/time-zone'
 import {
@@ -52,6 +61,7 @@ import { normalizeCalendarLocale } from '../model/calendar-locale'
 
 const props = withDefaults(
   defineProps<{
+    userId: string
     events?: EventInput[]
     schedule?: MasterSchedule | null
     timeFormat?: TimeFormat
@@ -77,12 +87,26 @@ const emit = defineEmits<{
   'dates-set': [range: CalendarDateRange]
 }>()
 
+type CalendarEventChange = 'move' | 'resize'
+
+interface FullCalendarEventSelectionApi extends CalendarApi {
+  dispatch: (action: { type: 'UNSELECT_EVENT' }) => void
+}
+
 const { t, locale } = useI18n()
 const toast = useToast()
 const isMobile = useIsMobile()
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
 const calendarContainerRef = ref<HTMLElement | null>(null)
 const currentViewType = ref<CalendarViewType>(props.defaultView)
+const editingEventId = ref<string | null>(null)
+const MOBILE_LONG_PRESS_DELAY_MS = 450
+const MOBILE_HAPTIC_DURATION_MS = 35
+const EVENT_CLICK_SUPPRESS_AFTER_DRAG_MS = 350
+let suppressEventClickUntil = 0
+const mutationUserId = computed(() => props.userId)
+const updateAppointmentMutation = useUpdateAppointmentMutation(mutationUserId)
+const updateTimeBlockMutation = useUpdateTimeBlockMutation(mutationUserId)
 const currentFullCalendarLocale = computed(() => normalizeCalendarLocale(locale.value))
 const scheduleDisplay = computed(() => buildCalendarScheduleDisplay(props.schedule))
 const timeGridScheduleDisplay = computed(() =>
@@ -135,11 +159,34 @@ const calendarRenderKey = computed(() => {
 })
 
 function handleDateClick(info: DateClickArg) {
+  if (info.view.type === 'dayGridMonth') {
+    currentViewType.value = 'timeGridDay'
+    info.view.calendar.changeView('timeGridDay', info.dateStr)
+    return
+  }
+
+  if (isMobile.value && isTimeGridViewType(info.view.type)) return
+
   emit('slot-click', toUtcIsoFromCalendarDateString(info.dateStr, props.timeZone))
+}
+
+function handleDateSelect(info: DateSelectArg) {
+  if (!isMobile.value || !isTimeGridViewType(info.view.type)) return
+
+  info.view.calendar.unselect()
+  navigator.vibrate?.(MOBILE_HAPTIC_DURATION_MS)
+  emit('slot-click', toUtcIsoFromCalendarDateString(info.startStr, props.timeZone))
+}
+
+function isTimeGridViewType(viewType: string): boolean {
+  return viewType === 'timeGridWeek' || viewType === 'timeGridDay'
 }
 
 function handleEventClick(info: EventClickArg) {
   if (info.view.type === 'dayGridMonth') return
+  if (isMobile.value && Date.now() < suppressEventClickUntil) return
+
+  clearEventEditing()
 
   if (info.event.extendedProps.type === 'time-block') {
     emit('time-block-click', info.event.extendedProps.timeBlock as TimeBlock)
@@ -150,30 +197,113 @@ function handleEventClick(info: EventClickArg) {
   emit('event-click', appointment)
 }
 
-async function handleEventDrop(info: EventDropArg) {
+function beginMobileEventEditing(info: EventDragStartArg | EventResizeStartArg) {
+  if (!isMobile.value || !isTimeGridViewType(info.view.type)) return
+
+  if (editingEventId.value !== info.event.id) {
+    navigator.vibrate?.(MOBILE_HAPTIC_DURATION_MS)
+  }
+
+  editingEventId.value = info.event.id
+}
+
+function finishMobileEventGesture(info: EventDragStopArg | EventResizeStopArg) {
+  if (!isMobile.value || !isTimeGridViewType(info.view.type)) return
+
+  suppressEventClickUntil = Date.now() + EVENT_CLICK_SUPPRESS_AFTER_DRAG_MS
+}
+
+function getCalendarEventRange(event: EventApi) {
+  const startAt = event.startStr
+    ? toUtcIsoFromCalendarDateString(event.startStr, props.timeZone)
+    : undefined
+  const endAt = event.endStr
+    ? toUtcIsoFromCalendarDateString(event.endStr, props.timeZone)
+    : undefined
+
+  if (!startAt) throw new Error('Calendar event has no start date')
+
+  return { startAt, endAt }
+}
+
+function getCalendarEventDurationMinutes(event: EventApi): number {
+  if (!event.start || !event.end) throw new Error('Calendar event has no duration')
+
+  const duration = Math.round((event.end.getTime() - event.start.getTime()) / 60_000)
+  if (duration <= 0) throw new Error('Calendar event has invalid duration')
+
+  return duration
+}
+
+async function persistCalendarEventTiming(event: EventApi, change: CalendarEventChange) {
+  const { startAt, endAt } = getCalendarEventRange(event)
+
+  if (event.extendedProps.type === 'time-block') {
+    if (!endAt) throw new Error('Time block has no end date')
+
+    await updateTimeBlockMutation.mutateAsync({
+      id: event.id,
+      start_at: startAt,
+      end_at: endAt,
+      all_day: event.allDay,
+    })
+    return
+  }
+
+  await updateAppointmentMutation.mutateAsync({
+    id: event.id,
+    start_at: startAt,
+    ...(change === 'resize' ? { duration: getCalendarEventDurationMinutes(event) } : {}),
+  })
+}
+
+async function handleCalendarEventChange(
+  info: EventDropArg | EventResizeDoneArg,
+  change: CalendarEventChange,
+) {
   try {
-    if (info.event.extendedProps.type === 'time-block') {
-      const startAt = info.event.startStr
-        ? toUtcIsoFromCalendarDateString(info.event.startStr, props.timeZone)
-        : undefined
-      const endAt = info.event.endStr
-        ? toUtcIsoFromCalendarDateString(info.event.endStr, props.timeZone)
-        : undefined
-      if (!startAt || !endAt) throw new Error('Invalid time block range')
-
-      await updateTimeBlock({ id: info.event.id, start_at: startAt, end_at: endAt })
-      return
-    }
-
-    await updateAppointment({
-      id: info.event.id,
-      start_at: toUtcIsoFromCalendarDateString(info.event.startStr, props.timeZone),
+    await persistCalendarEventTiming(info.event, change)
+    toast.add({
+      title: t(change === 'move' ? 'calendar.moveSuccess' : 'calendar.resizeSuccess'),
+      color: 'success',
     })
   } catch {
     info.revert()
-    toast.add({ title: t('calendar.dragError'), color: 'error' })
+    toast.add({ title: t('calendar.updateError'), color: 'error' })
+  } finally {
+    clearEventEditing()
   }
 }
+
+function handleEventDrop(info: EventDropArg) {
+  return handleCalendarEventChange(info, 'move')
+}
+
+function handleEventResize(info: EventResizeDoneArg) {
+  return handleCalendarEventChange(info, 'resize')
+}
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (!editingEventId.value) return
+
+  const target = event.target
+  if (target instanceof Element && target.closest('.fc-event')) return
+
+  clearEventEditing()
+}
+
+function clearEventEditing() {
+  editingEventId.value = null
+
+  // `CalendarApi.unselect()` only clears a date selection. FullCalendar has
+  // no public equivalent for its touch-selected event, so dispatch the same
+  // action its interaction plugin uses when the user taps outside an event.
+  const calendarApi = getCalendarApi() as FullCalendarEventSelectionApi | undefined
+  calendarApi?.dispatch({ type: 'UNSELECT_EVENT' })
+}
+
+onMounted(() => document.addEventListener('pointerdown', handleDocumentPointerDown, true))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', handleDocumentPointerDown, true))
 
 // Horizontal auto-scroll to today's column — only where a horizontal scroll
 // actually exists (mobile week view, via dayMinWidth/ScrollGrid). FullCalendar
@@ -191,6 +321,7 @@ function scrollToTodayColumn() {
 
 function handleDatesSet(info: DatesSetArg) {
   currentViewType.value = normalizeCalendarViewType(info.view.type)
+  clearEventEditing()
   scrollToTodayColumn()
 
   emit('dates-set', {
@@ -298,14 +429,21 @@ function renderDayHeaderContent(arg: DayHeaderContentArg) {
 
 function getEventClassNames(arg: EventContentArg): string[] {
   const isAppointment = arg.event.extendedProps.type === 'appointment'
+  const classNames: string[] = []
 
   if (arg.view.type === 'dayGridMonth') {
-    return isAppointment
-      ? ['app-appointment-event', 'calendar-month-event']
-      : ['calendar-month-event']
+    classNames.push('calendar-month-event')
   }
 
-  return isAppointment ? ['app-appointment-event'] : []
+  if (isAppointment) {
+    classNames.push('app-appointment-event')
+  }
+
+  if (editingEventId.value === arg.event.id) {
+    classNames.push('calendar-event-editing-target')
+  }
+
+  return classNames
 }
 
 function getDayHeaderClassNames(arg: DayHeaderContentArg): string[] {
@@ -393,6 +531,7 @@ function getCalendarSlotDuration(minutes: number): string {
 const calendarOptions = computed<CalendarOptions>(() => {
   const hour12 = props.timeFormat === 12
   const isMonthView = currentViewType.value === 'dayGridMonth'
+  const isTimeGridView = isTimeGridViewType(currentViewType.value)
   const timeFormat = {
     hour: hour12 ? 'numeric' : '2-digit',
     minute: '2-digit',
@@ -433,7 +572,10 @@ const calendarOptions = computed<CalendarOptions>(() => {
     dayMinWidth: isMobile.value && currentViewType.value === 'timeGridWeek' ? 160 : undefined,
     nowIndicator: true,
     scrollTime: verticalScrollTime.value,
-    editable: true,
+    editable: !isMonthView,
+    selectable: isMobile.value && isTimeGridView,
+    selectLongPressDelay: MOBILE_LONG_PRESS_DELAY_MS,
+    eventLongPressDelay: isMobile.value ? MOBILE_LONG_PRESS_DELAY_MS : undefined,
     allDaySlot: true,
     allDayText: t('calendar.allDay'),
     timeZone: props.timeZone,
@@ -442,11 +584,18 @@ const calendarOptions = computed<CalendarOptions>(() => {
     eventTimeFormat: timeFormat,
     eventOrder: 'start',
     eventOrderStrict: true,
+    eventOverlap: true,
     displayEventEnd: true,
     headerToolbar: false,
     dateClick: handleDateClick,
+    select: handleDateSelect,
     eventClick: handleEventClick,
+    eventDragStart: beginMobileEventEditing,
+    eventDragStop: finishMobileEventGesture,
     eventDrop: handleEventDrop,
+    eventResizeStart: beginMobileEventEditing,
+    eventResizeStop: finishMobileEventGesture,
+    eventResize: handleEventResize,
     datesSet: handleDatesSet,
     dayHeaderContent: renderDayHeaderContent,
     dayHeaderClassNames: getDayHeaderClassNames,
@@ -500,7 +649,10 @@ defineExpose<CalendarWidgetExpose>({
   <div
     ref="calendarContainerRef"
     class="min-h-0 w-full"
-    :class="currentViewType === 'dayGridMonth' ? 'h-auto' : 'h-full'"
+    :class="[
+      currentViewType === 'dayGridMonth' ? 'h-auto' : 'h-full',
+      { 'calendar-event-editing': isMobile && editingEventId },
+    ]"
   >
     <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
       <template #eventContent="arg">

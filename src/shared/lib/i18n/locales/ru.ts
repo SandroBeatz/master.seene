@@ -250,7 +250,9 @@ export default {
       day: 'День',
     },
     allDay: 'Весь день',
-    dragError: 'Не удалось обновить время события',
+    moveSuccess: 'Событие перенесено',
+    resizeSuccess: 'Длительность события изменена',
+    updateError: 'Не удалось обновить событие',
     event: {
       onlineHint: 'Онлайн-запись',
     },

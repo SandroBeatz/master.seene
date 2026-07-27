@@ -253,7 +253,9 @@ export default {
       day: 'Jour',
     },
     allDay: 'Toute la journée',
-    dragError: "Impossible de mettre à jour l'heure de l'événement",
+    moveSuccess: 'Événement déplacé',
+    resizeSuccess: "Durée de l'événement mise à jour",
+    updateError: "Impossible de mettre à jour l'événement",
     event: {
       onlineHint: 'Réservé en ligne',
     },

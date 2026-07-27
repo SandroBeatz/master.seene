@@ -253,7 +253,9 @@ export default {
       day: 'Day',
     },
     allDay: 'All day',
-    dragError: 'Failed to update calendar event time',
+    moveSuccess: 'Event moved',
+    resizeSuccess: 'Event duration updated',
+    updateError: 'Failed to update calendar event',
     event: {
       onlineHint: 'Booked online',
     },

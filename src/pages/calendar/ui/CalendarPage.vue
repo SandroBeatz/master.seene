@@ -172,6 +172,7 @@ const hostUI = computed(() => ({
       >
         <CalendarWidget
           ref="calendarRef"
+          :user-id="userId"
           :events="calendarEvents"
           :schedule="masterSchedule"
           :time-format="masterPreferencesStore.timeFormat"

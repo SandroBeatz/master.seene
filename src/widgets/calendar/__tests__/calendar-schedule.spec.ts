@@ -96,6 +96,7 @@ describe('buildCalendarScheduleDisplay', () => {
         endTime: '13:00:00',
         display: 'background',
         classNames: ['fc-schedule-break'],
+        overlap: true,
       },
       {
         daysOfWeek: [1],
@@ -103,6 +104,7 @@ describe('buildCalendarScheduleDisplay', () => {
         endTime: '18:00:00',
         display: 'background',
         classNames: ['fc-schedule-break'],
+        overlap: true,
       },
     ])
   })
