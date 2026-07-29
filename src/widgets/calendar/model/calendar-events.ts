@@ -5,7 +5,8 @@ import type { Service } from '@entities/service'
 import type { TimeBlock } from '@entities/time-block'
 import {
   getAppointmentAccentColor,
-  getEffectiveAppointmentStatusIcon,
+  getAppointmentStatusTextColorClass,
+  getEffectiveAppointmentStatusView,
   isGroupAppointment,
 } from '@entities/appointment'
 import { getCalendarDateTimeString } from '@shared/lib/time-zone'
@@ -30,6 +31,19 @@ interface CalendarEventSources {
 interface CalendarServiceSummary {
   name: string
   color: string
+}
+
+export interface CalendarAppointmentEventDetails {
+  type: 'appointment'
+  appointment: Appointment
+  statusIcon: string
+  statusColorClass: string
+  statusLabelKey: string
+  clientName: string
+  serviceList: CalendarServiceSummary[]
+  serviceNames: string
+  isGroup: boolean
+  isOnline: boolean
 }
 
 export function buildCalendarEvents({
@@ -106,6 +120,7 @@ function buildAppointmentCalendarEvent(
     appointment,
     serviceMap,
   )
+  const statusView = getEffectiveAppointmentStatusView(appointment, now)
 
   return {
     id: appointment.id,
@@ -118,12 +133,15 @@ function buildAppointmentCalendarEvent(
     extendedProps: {
       type: 'appointment',
       appointment,
-      statusIcon: getEffectiveAppointmentStatusIcon(appointment, now),
+      statusIcon: statusView.icon,
+      statusColorClass: getAppointmentStatusTextColorClass(statusView.color),
+      statusLabelKey: statusView.labelKey,
       clientName,
       serviceList,
+      serviceNames,
       isGroup: isGroupAppointment(appointment),
       isOnline: appointment.source === 'online_booking',
-    },
+    } satisfies CalendarAppointmentEventDetails,
   }
 }
 

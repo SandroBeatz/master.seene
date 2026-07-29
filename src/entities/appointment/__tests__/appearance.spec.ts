@@ -4,6 +4,7 @@ import {
   EFFECTIVE_APPOINTMENT_STATUS_VIEW,
   getAppointmentAccentColor,
   getAppointmentServiceColors,
+  getAppointmentStatusTextColorClass,
   getAppointmentStatusIcon,
   getEffectiveAppointmentStatus,
   getEffectiveAppointmentStatusIcon,
@@ -100,6 +101,14 @@ describe('getAppointmentStatusIcon', () => {
   })
 })
 
+describe('getAppointmentStatusTextColorClass', () => {
+  it('maps semantic status colors to stable text utilities', () => {
+    expect(getAppointmentStatusTextColorClass('warning')).toBe('text-warning')
+    expect(getAppointmentStatusTextColorClass('success')).toBe('text-success')
+    expect(getAppointmentStatusTextColorClass('neutral')).toBe('text-muted')
+  })
+})
+
 describe('getEffectiveAppointmentStatus', () => {
   // Window: 2026-06-14 09:00 → 10:00 UTC (duration 60m).
   const base = { start_at: '2026-06-14T09:00:00.000Z', duration: 60 } as const
@@ -116,7 +125,9 @@ describe('getEffectiveAppointmentStatus', () => {
 
   it('returns the stored status for future appointments', () => {
     expect(getEffectiveAppointmentStatus({ ...base, status: 'pending' }, before)).toBe('pending')
-    expect(getEffectiveAppointmentStatus({ ...base, status: 'confirmed' }, before)).toBe('confirmed')
+    expect(getEffectiveAppointmentStatus({ ...base, status: 'confirmed' }, before)).toBe(
+      'confirmed',
+    )
   })
 
   it('returns ongoing while now is inside the window (pending or confirmed)', () => {

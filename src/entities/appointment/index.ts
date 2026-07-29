@@ -40,6 +40,7 @@ export {
   getEffectiveAppointmentStatus,
   getEffectiveAppointmentStatusIcon,
   getEffectiveAppointmentStatusView,
+  getAppointmentStatusTextColorClass,
 } from './lib/appearance'
 export type { ServiceColorRef, EffectiveStatusInput } from './lib/appearance'
 export { collectDayBusyIntervals, timeBlockToBusyInterval } from './model/busy-intervals'

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import {
   EFFECTIVE_APPOINTMENT_STATUS_VIEW,
   getAppointmentAccentColor,
+  getAppointmentStatusTextColorClass,
   getEffectiveAppointmentStatus,
   isGroupAppointment,
   type Appointment,
@@ -47,17 +48,6 @@ const { t } = useI18n()
 const masterStore = useMasterPreferencesStore()
 const formats = useFormats()
 const now = useNowMinute()
-
-/** Maps a Nuxt UI semantic color to a text utility for the status icon. */
-const STATUS_TEXT_COLOR: Record<string, string> = {
-  primary: 'text-primary dark:text-neutral-200',
-  secondary: 'text-secondary',
-  success: 'text-success',
-  info: 'text-info',
-  warning: 'text-warning',
-  error: 'text-error',
-  neutral: 'text-muted',
-}
 
 const serviceById = computed(() => new Map(props.services.map((s) => [s.id, s] as const)))
 
@@ -232,7 +222,7 @@ const appointmentBlocks = computed(() => {
       // Left accent rail color: service accent for singles, neutral otherwise.
       barColor: accentColor ?? 'var(--ui-border)',
       statusIcon: statusView.icon,
-      statusColorClass: STATUS_TEXT_COLOR[statusView.color as string] ?? 'text-muted',
+      statusColorClass: getAppointmentStatusTextColorClass(statusView.color),
       startLabel: formats.time(minutesToLabel(startMin)),
       timeRange: `${formats.time(minutesToLabel(startMin))}–${formats.time(minutesToLabel(endMin))}`,
       durationLabel: formats.duration(a.duration),

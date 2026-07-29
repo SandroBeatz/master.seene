@@ -58,6 +58,7 @@ import {
   isCalendarScheduleBreakSlot,
 } from '../model/calendar-schedule'
 import { normalizeCalendarLocale } from '../model/calendar-locale'
+import CalendarAppointmentEventContent from './CalendarAppointmentEventContent.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -106,7 +107,7 @@ const EVENT_CLICK_SUPPRESS_AFTER_DRAG_MS = 350
 let suppressEventClickUntil = 0
 // `datesSet` also fires for non-navigation updates. Only align the mobile week
 // after initialization or an explicit calendar navigation.
-let shouldAlignWeekAfterDatesSet = true
+let shouldAlignMobileWeekAfterDatesSet = true
 const mutationUserId = computed(() => props.userId)
 const updateAppointmentMutation = useUpdateAppointmentMutation(mutationUserId)
 const updateTimeBlockMutation = useUpdateTimeBlockMutation(mutationUserId)
@@ -333,12 +334,12 @@ function alignMobileWeek() {
   if (!isMobile.value || currentViewType.value !== 'timeGridWeek') return
 
   const calendarContainer = calendarContainerRef.value
-  const firstColumn = calendarContainer?.querySelector<HTMLElement>(
+  if (!calendarContainer) return
+
+  const firstColumn = calendarContainer.querySelector<HTMLElement>(
     '.fc-timegrid-cols .fc-timegrid-col:not(.fc-timegrid-axis)',
   )
-  const todayColumn = calendarContainerRef.value?.querySelector<HTMLElement>(
-    '.fc-timegrid-col.fc-day-today',
-  )
+  const todayColumn = calendarContainer.querySelector<HTMLElement>('.fc-timegrid-col.fc-day-today')
   const targetColumn = todayColumn ?? firstColumn
 
   targetColumn?.scrollIntoView({ behavior: 'auto', inline: 'start', block: 'nearest' })
@@ -348,8 +349,8 @@ function handleDatesSet(info: DatesSetArg) {
   currentViewType.value = normalizeCalendarViewType(info.view.type)
   clearEventEditing()
 
-  if (shouldAlignWeekAfterDatesSet) {
-    shouldAlignWeekAfterDatesSet = false
+  if (shouldAlignMobileWeekAfterDatesSet) {
+    shouldAlignMobileWeekAfterDatesSet = false
     alignMobileWeek()
   }
 
@@ -458,14 +459,22 @@ function renderDayHeaderContent(arg: DayHeaderContentArg) {
 
 function getEventClassNames(arg: EventContentArg): string[] {
   const isAppointment = arg.event.extendedProps.type === 'appointment'
+  const isTimeBlock = arg.event.extendedProps.type === 'time-block'
   const classNames: string[] = []
 
   if (arg.view.type === 'dayGridMonth') {
     classNames.push('calendar-month-event')
-  }
-
-  if (isAppointment) {
+  } else if (isAppointment) {
     classNames.push('app-appointment-event')
+
+    if (isMobile.value) {
+      classNames.push('calendar-mobile-appointment-event')
+      if (arg.event.extendedProps.isGroup) {
+        classNames.push('calendar-mobile-group-appointment-event')
+      }
+    }
+  } else if (isMobile.value && isTimeBlock) {
+    classNames.push('calendar-mobile-time-off-event')
   }
 
   if (editingEventId.value === arg.event.id) {
@@ -640,19 +649,24 @@ function getCalendarApi(): CalendarApi | undefined {
   return calendarRef.value?.getApi()
 }
 
+function navigateCalendar(method: 'prev' | 'next' | 'today') {
+  if (currentViewType.value === 'timeGridWeek') {
+    shouldAlignMobileWeekAfterDatesSet = true
+  }
+
+  getCalendarApi()?.[method]()
+}
+
 function moveToPrevious() {
-  if (currentViewType.value === 'timeGridWeek') shouldAlignWeekAfterDatesSet = true
-  getCalendarApi()?.prev()
+  navigateCalendar('prev')
 }
 
 function moveToNext() {
-  if (currentViewType.value === 'timeGridWeek') shouldAlignWeekAfterDatesSet = true
-  getCalendarApi()?.next()
+  navigateCalendar('next')
 }
 
 function moveToToday() {
-  if (currentViewType.value === 'timeGridWeek') shouldAlignWeekAfterDatesSet = true
-  getCalendarApi()?.today()
+  navigateCalendar('today')
 }
 
 function changeView(viewType: CalendarViewType) {
@@ -660,7 +674,7 @@ function changeView(viewType: CalendarViewType) {
   currentViewType.value = viewType
 
   if (viewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek') {
-    shouldAlignWeekAfterDatesSet = true
+    shouldAlignMobileWeekAfterDatesSet = true
   }
 
   getCalendarApi()?.changeView(viewType)
@@ -705,46 +719,25 @@ defineExpose<CalendarWidgetExpose>({
         />
 
         <!-- Appointment: card-style body matching the home ScheduleTimeline. -->
-        <div
+        <CalendarAppointmentEventContent
           v-else-if="arg.event.extendedProps.type === 'appointment'"
-          class="flex h-full w-full flex-col gap-0.5 overflow-hidden px-1.5 py-1 text-left"
+          :event="arg.event"
+          :time-text="arg.timeText"
+          :is-mobile="isMobile"
+        />
+
+        <!-- Mobile time off mirrors ScheduleTimeline's neutral card. -->
+        <div
+          v-else-if="isMobile && arg.event.extendedProps.type === 'time-block'"
+          class="flex h-full w-full flex-col gap-0.5 overflow-hidden px-2 py-1 text-left"
         >
-          <div class="flex items-start justify-between gap-1">
+          <div class="flex items-center gap-1">
+            <UIcon name="i-lucide-ban" class="size-3 shrink-0 text-muted" aria-hidden="true" />
             <span class="truncate text-[11px] font-semibold tabular-nums leading-tight">{{
               arg.timeText
             }}</span>
-            <div class="mt-px flex shrink-0 items-center gap-0.5">
-              <UIcon
-                v-if="arg.event.extendedProps.isOnline"
-                name="i-lucide-globe"
-                class="size-3 opacity-70"
-                :aria-label="$t('calendar.event.onlineHint')"
-                :title="$t('calendar.event.onlineHint')"
-              />
-              <UIcon
-                v-if="arg.event.extendedProps.statusIcon"
-                :name="arg.event.extendedProps.statusIcon"
-                class="size-3 opacity-70"
-              />
-            </div>
           </div>
-          <span class="truncate text-[11px] font-medium leading-tight">{{
-            arg.event.extendedProps.clientName
-          }}</span>
-          <ul class="space-y-px">
-            <li
-              v-for="(service, i) in arg.event.extendedProps.serviceList"
-              :key="i"
-              class="flex items-center gap-1"
-            >
-              <span
-                v-if="arg.event.extendedProps.isGroup"
-                class="size-1.5 shrink-0 rounded-full"
-                :style="{ backgroundColor: service.color }"
-              />
-              <span class="truncate text-[10px] leading-tight opacity-80">{{ service.name }}</span>
-            </li>
-          </ul>
+          <span class="truncate text-[10px] leading-tight text-muted">{{ arg.event.title }}</span>
         </div>
 
         <!-- Time blocks / other: FullCalendar's default-style body. -->

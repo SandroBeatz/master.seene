@@ -3,11 +3,7 @@ import {
   EFFECTIVE_APPOINTMENT_STATUS_VIEW,
   type AppointmentStatusViewConfig,
 } from '../config/status'
-import type {
-  Appointment,
-  AppointmentStatus,
-  EffectiveAppointmentStatus,
-} from '../model/types'
+import type { Appointment, AppointmentStatus, EffectiveAppointmentStatus } from '../model/types'
 
 /**
  * Minimal service shape this module needs to resolve colors.
@@ -19,6 +15,17 @@ import type {
  */
 export interface ServiceColorRef {
   color: string
+}
+
+const DEFAULT_APPOINTMENT_STATUS_TEXT_COLOR_CLASS = 'text-muted'
+const APPOINTMENT_STATUS_TEXT_COLOR_CLASS: Record<string, string> = {
+  primary: 'text-primary dark:text-neutral-200',
+  secondary: 'text-secondary',
+  success: 'text-success',
+  info: 'text-info',
+  warning: 'text-warning',
+  error: 'text-error',
+  neutral: DEFAULT_APPOINTMENT_STATUS_TEXT_COLOR_CLASS,
 }
 
 /** True when the appointment bundles two or more services ("group" appointment). */
@@ -110,4 +117,14 @@ export function getEffectiveAppointmentStatusView(
   now: Date = new Date(),
 ): AppointmentStatusViewConfig {
   return EFFECTIVE_APPOINTMENT_STATUS_VIEW[getEffectiveAppointmentStatus(appointment, now)]
+}
+
+/** Tailwind text utility matching a status view's Nuxt UI semantic color. */
+export function getAppointmentStatusTextColorClass(
+  color: AppointmentStatusViewConfig['color'],
+): string {
+  return (
+    APPOINTMENT_STATUS_TEXT_COLOR_CLASS[String(color)] ??
+    DEFAULT_APPOINTMENT_STATUS_TEXT_COLOR_CLASS
+  )
 }

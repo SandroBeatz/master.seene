@@ -89,10 +89,13 @@ describe('buildCalendarEvents', () => {
       extendedProps: {
         appointment: baseAppointment,
         statusIcon: 'i-lucide-clock-check',
+        statusColorClass: 'text-primary dark:text-neutral-200',
+        statusLabelKey: 'appointments.status.confirmed',
         clientName: 'Anna Smith',
         isGroup: false,
         isOnline: false,
         serviceList: [{ name: 'Haircut', color: '#2563eb' }],
+        serviceNames: 'Haircut',
       },
     })
   })
