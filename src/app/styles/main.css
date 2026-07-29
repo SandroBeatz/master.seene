@@ -226,6 +226,27 @@ html.dark {
   color: var(--color-white);
 }
 
+/* Mobile week view keeps the weekday and date on one compact line. */
+.calendar-widget-mobile .fc .fc-week-day-header .fc-col-header-cell-cushion {
+  padding: 0.125rem;
+}
+
+.calendar-widget-mobile .fc-week-day-header-content {
+  min-height: 1.75rem;
+  flex-direction: row;
+  gap: 0.25rem;
+}
+
+.calendar-widget-mobile .fc-week-day-header-weekday {
+  font-size: 0.6875rem;
+}
+
+.calendar-widget-mobile .fc-week-day-header-number {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.75rem;
+}
+
 /* FullCalendar — master schedule availability */
 .fc .fc-non-business {
   background:

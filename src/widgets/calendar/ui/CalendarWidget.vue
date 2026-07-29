@@ -104,6 +104,9 @@ const MOBILE_LONG_PRESS_DELAY_MS = 450
 const MOBILE_HAPTIC_DURATION_MS = 35
 const EVENT_CLICK_SUPPRESS_AFTER_DRAG_MS = 350
 let suppressEventClickUntil = 0
+// `datesSet` also fires for non-navigation updates. Only align the mobile week
+// after initialization or an explicit calendar navigation.
+let shouldAlignWeekAfterDatesSet = true
 const mutationUserId = computed(() => props.userId)
 const updateAppointmentMutation = useUpdateAppointmentMutation(mutationUserId)
 const updateTimeBlockMutation = useUpdateTimeBlockMutation(mutationUserId)
@@ -118,6 +121,24 @@ const calendarEventsWithSchedule = computed(() => [
   ...props.events,
   ...timeGridScheduleDisplay.value.backgroundEvents,
 ])
+const displayedCalendarEvents = computed(() => {
+  if (!isMobile.value || !isTimeGridViewType(currentViewType.value)) {
+    return calendarEventsWithSchedule.value
+  }
+
+  return calendarEventsWithSchedule.value.map((event) =>
+    event.allDay
+      ? {
+          ...event,
+          allDay: false,
+          extendedProps: {
+            ...event.extendedProps,
+            calendarOriginalAllDay: true,
+          },
+        }
+      : event,
+  )
+})
 
 // Vertical scroll position (and, when needed, the grid's top boundary): the
 // schedule's slotMinTime by default (top of the grid — no scroll offset), or an
@@ -245,7 +266,7 @@ async function persistCalendarEventTiming(event: EventApi, change: CalendarEvent
       id: event.id,
       start_at: startAt,
       end_at: endAt,
-      all_day: event.allDay,
+      all_day: event.extendedProps.calendarOriginalAllDay === true || event.allDay,
     })
     return
   }
@@ -305,24 +326,32 @@ function clearEventEditing() {
 onMounted(() => document.addEventListener('pointerdown', handleDocumentPointerDown, true))
 onBeforeUnmount(() => document.removeEventListener('pointerdown', handleDocumentPointerDown, true))
 
-// Horizontal auto-scroll to today's column — only where a horizontal scroll
-// actually exists (mobile week view, via dayMinWidth/ScrollGrid). FullCalendar
-// only ever applies `fc-day-today` to a column when today falls within the
-// displayed week, so a missing element already means "not the current week" —
-// no separate date-range check needed.
-function scrollToTodayColumn() {
+// FullCalendar only applies `fc-day-today` when today belongs to the displayed
+// week. Current week → align today to the left; any other week → align Monday
+// (or the configured first day) to the left.
+function alignMobileWeek() {
   if (!isMobile.value || currentViewType.value !== 'timeGridWeek') return
 
+  const calendarContainer = calendarContainerRef.value
+  const firstColumn = calendarContainer?.querySelector<HTMLElement>(
+    '.fc-timegrid-cols .fc-timegrid-col:not(.fc-timegrid-axis)',
+  )
   const todayColumn = calendarContainerRef.value?.querySelector<HTMLElement>(
     '.fc-timegrid-col.fc-day-today',
   )
-  todayColumn?.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' })
+  const targetColumn = todayColumn ?? firstColumn
+
+  targetColumn?.scrollIntoView({ behavior: 'auto', inline: 'start', block: 'nearest' })
 }
 
 function handleDatesSet(info: DatesSetArg) {
   currentViewType.value = normalizeCalendarViewType(info.view.type)
   clearEventEditing()
-  scrollToTodayColumn()
+
+  if (shouldAlignWeekAfterDatesSet) {
+    shouldAlignWeekAfterDatesSet = false
+    alignMobileWeek()
+  }
 
   emit('dates-set', {
     from: toUtcIsoFromCalendarDateString(info.startStr, props.timeZone),
@@ -576,7 +605,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     selectable: isMobile.value && isTimeGridView,
     selectLongPressDelay: MOBILE_LONG_PRESS_DELAY_MS,
     eventLongPressDelay: isMobile.value ? MOBILE_LONG_PRESS_DELAY_MS : undefined,
-    allDaySlot: true,
+    allDaySlot: !isMobile.value,
     allDayText: t('calendar.allDay'),
     timeZone: props.timeZone,
     slotDuration: getCalendarSlotDuration(props.slotStepMinutes),
@@ -603,7 +632,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     slotLaneClassNames: getSlotLaneClassNames,
     slotLaneDidMount: handleSlotLaneMount,
     ...scheduleOptions,
-    events: calendarEventsWithSchedule.value,
+    events: displayedCalendarEvents.value,
   }
 })
 
@@ -612,19 +641,28 @@ function getCalendarApi(): CalendarApi | undefined {
 }
 
 function moveToPrevious() {
+  if (currentViewType.value === 'timeGridWeek') shouldAlignWeekAfterDatesSet = true
   getCalendarApi()?.prev()
 }
 
 function moveToNext() {
+  if (currentViewType.value === 'timeGridWeek') shouldAlignWeekAfterDatesSet = true
   getCalendarApi()?.next()
 }
 
 function moveToToday() {
+  if (currentViewType.value === 'timeGridWeek') shouldAlignWeekAfterDatesSet = true
   getCalendarApi()?.today()
 }
 
 function changeView(viewType: CalendarViewType) {
+  const previousViewType = currentViewType.value
   currentViewType.value = viewType
+
+  if (viewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek') {
+    shouldAlignWeekAfterDatesSet = true
+  }
+
   getCalendarApi()?.changeView(viewType)
 }
 
@@ -651,7 +689,10 @@ defineExpose<CalendarWidgetExpose>({
     class="min-h-0 w-full"
     :class="[
       currentViewType === 'dayGridMonth' ? 'h-auto' : 'h-full',
-      { 'calendar-event-editing': isMobile && editingEventId },
+      {
+        'calendar-widget-mobile': isMobile,
+        'calendar-event-editing': isMobile && editingEventId,
+      },
     ]"
   >
     <FullCalendar :key="calendarRenderKey" ref="calendarRef" :options="calendarOptions">
