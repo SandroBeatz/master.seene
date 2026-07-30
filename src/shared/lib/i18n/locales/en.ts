@@ -506,9 +506,9 @@ export default {
   },
   analytics: {
     title: 'Analytics',
-    description: 'See how your business is performing.',
     comingSoon: 'Analytics coming soon',
     period: {
+      title: 'Period',
       today: 'Today',
       day: 'Day',
       week: 'Week',

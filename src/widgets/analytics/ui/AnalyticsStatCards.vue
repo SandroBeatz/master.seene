@@ -26,6 +26,8 @@ interface Card {
   value: string | number
   current: number
   previous: number
+  /** Comparison-period value, formatted like `value` — shown under the label when comparing. */
+  previousDisplay: string
   secondary?: string
   /** 'earned' animates through AnimatedNumber; the rest render `value` as plain text. */
   money?: boolean
@@ -46,6 +48,7 @@ const cards = computed<Card[]>(() => {
       value: cur?.earned ?? 0,
       current: cur?.earned ?? 0,
       previous: prev?.earned ?? 0,
+      previousDisplay: formats.price(prev?.earned ?? 0),
       secondary: `${t('analytics.avgCheckInline')} ${
         cur?.avg_check != null ? formats.price(cur.avg_check) : '—'
       }`,
@@ -60,6 +63,7 @@ const cards = computed<Card[]>(() => {
       value: cur?.clients_served ?? 0,
       current: cur?.clients_served ?? 0,
       previous: prev?.clients_served ?? 0,
+      previousDisplay: String(prev?.clients_served ?? 0),
     },
     {
       key: 'hours',
@@ -70,6 +74,7 @@ const cards = computed<Card[]>(() => {
       value: workingHoursLabel(cur?.working_minutes ?? 0, t),
       current: cur?.working_minutes ?? 0,
       previous: prev?.working_minutes ?? 0,
+      previousDisplay: workingHoursLabel(prev?.working_minutes ?? 0, t),
     },
     {
       key: 'appointments',
@@ -80,14 +85,15 @@ const cards = computed<Card[]>(() => {
       value: cur?.appointments_count ?? 0,
       current: cur?.appointments_count ?? 0,
       previous: prev?.appointments_count ?? 0,
+      previousDisplay: String(prev?.appointments_count ?? 0),
     },
   ]
 })
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <UCard v-for="card in cards" :key="card.key" :ui="{ root: 'shadow-panel ring-0' }">
+  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <UCard v-for="card in cards" :key="card.key" :ui="{ root: 'rounded-lg md:rounded-xl shadow-panel ring-0' }">
       <div class="space-y-3">
         <div class="flex items-start justify-between gap-2">
           <div
@@ -133,8 +139,12 @@ const cards = computed<Card[]>(() => {
             <template v-else>{{ card.value }}</template>
           </p>
           <p class="text-sm font-medium">{{ card.label }}</p>
-          <p v-if="compare || card.secondary" class="text-xs text-muted">
-            {{ compare ? compareLabel : card.secondary }}
+          <p v-if="compare" class="text-xs text-muted">
+            {{ compareLabel }}:
+            <span class="font-medium text-default">{{ card.previousDisplay }}</span>
+          </p>
+          <p v-else-if="card.secondary" class="text-xs text-muted">
+            {{ card.secondary }}
           </p>
         </div>
       </div>

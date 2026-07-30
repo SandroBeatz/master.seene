@@ -153,8 +153,8 @@ function applyCustom() {
 <template>
   <div class="space-y-2">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <!-- Granularity + jump-to-current -->
-      <div class="flex items-center gap-2">
+      <!-- Granularity + jump-to-current — hidden on mobile (picked via the page-header drawer) -->
+      <div class="hidden items-center gap-2 md:flex">
         <USelect
           :model-value="period.kind"
           :items="kindItems"

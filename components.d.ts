@@ -39,10 +39,8 @@ declare module 'vue' {
     UModal: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Modal.vue')['default']
     UNavigationMenu: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/NavigationMenu.vue')['default']
     UPage: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Page.vue')['default']
-    UPageBody: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageBody.vue')['default']
     UPageCard: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageCard.vue')['default']
     UPageGrid: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageGrid.vue')['default']
-    UPageHeader: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageHeader.vue')['default']
     UPageList: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/PageList.vue')['default']
     UProgress: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Progress.vue')['default']
     USelect: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Select.vue')['default']
@@ -53,7 +51,6 @@ declare module 'vue' {
     USwitch: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Switch.vue')['default']
     UTabs: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Tabs.vue')['default']
     UTextarea: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Textarea.vue')['default']
-    UTheme: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Theme.vue')['default']
     UTooltip: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Tooltip.vue')['default']
   }
 }

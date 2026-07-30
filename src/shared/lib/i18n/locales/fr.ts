@@ -510,9 +510,9 @@ export default {
   },
   analytics: {
     title: 'Analytique',
-    description: 'Découvrez les performances de votre entreprise.',
     comingSoon: 'Analytique bientôt disponible',
     period: {
+      title: 'Période',
       today: "Aujourd'hui",
       day: 'Jour',
       week: 'Semaine',

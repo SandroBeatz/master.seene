@@ -501,9 +501,9 @@ export default {
   },
   analytics: {
     title: 'Аналитика',
-    description: 'Смотрите, как работает ваш бизнес.',
     comingSoon: 'Аналитика скоро появится',
     period: {
+      title: 'Период',
       today: 'Сегодня',
       day: 'День',
       week: 'Неделя',

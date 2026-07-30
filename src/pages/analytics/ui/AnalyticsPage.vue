@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getLocalTimeZone, today } from '@internationalized/date'
+import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
 import type {
   AnalyticsAnchoredKind,
   AnalyticsPeriodKind,
@@ -16,6 +16,7 @@ import {
   AnalyticsBusiestDays,
   AnalyticsTopServices,
 } from '@widgets/analytics'
+import { Page } from '@shared/ui'
 
 const { t } = useI18n()
 // The last selected period survives page reloads.
@@ -98,64 +99,171 @@ const COMPARE_KEYS: Record<AnalyticsPeriodKind, string> = {
   custom: 'prevPeriod',
 }
 const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period.value.kind]}`))
+
+// --- Mobile period picker ---------------------------------------------------
+// On mobile the granularity <USelect> in the toolbar is hidden; instead a pill
+// button next to the page title opens this drawer. The desktop toolbar keeps
+// its own select, so the two paths never show at once.
+const tz = getLocalTimeZone()
+const isPeriodDrawerOpen = ref(false)
+const isCustomOpen = ref(false)
+
+const PERIOD_KINDS: readonly AnalyticsPeriodKind[] = ['day', 'week', 'month', 'year', 'custom']
+const kindItems = computed(() =>
+  PERIOD_KINDS.map((value) => ({ value, label: t(`analytics.period.${value}`) })),
+)
+/** Label shown on the mobile pill button — the active granularity. */
+const activePeriodLabel = computed(() => t(`analytics.period.${period.value.kind}`))
+
+/** 'YYYY-MM-DD' → CalendarDate for seeding the custom-range calendar. */
+function toCalendarDate(value: string): CalendarDate {
+  const parts = value.split('-')
+  return new CalendarDate(Number(parts[0]), Number(parts[1]), Number(parts[2]))
+}
+function fromCalendarDate(d: CalendarDate): string {
+  return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
+}
+
+/** Analytics only looks at the past — the calendar stops at today. */
+const maxDate = today(tz)
+const customDraft = shallowRef<{ start: CalendarDate | undefined; end: CalendarDate | undefined }>({
+  start: undefined,
+  end: undefined,
+})
+
+/** Pick a granularity: anchored kinds jump to their current period; custom opens the calendar. */
+function selectKind(kind: AnalyticsPeriodKind) {
+  if (kind === 'custom') {
+    if (period.value.kind === 'custom') {
+      customDraft.value = {
+        start: toCalendarDate(period.value.range.from),
+        end: toCalendarDate(period.value.range.to),
+      }
+    } else {
+      const t0 = today(tz)
+      customDraft.value = { start: t0.subtract({ days: 6 }), end: t0 }
+    }
+    isPeriodDrawerOpen.value = false
+    isCustomOpen.value = true
+    return
+  }
+  period.value = { kind, date: todayISO() } as AnalyticsPeriodV2
+  isPeriodDrawerOpen.value = false
+}
+
+function applyCustom() {
+  const { start, end } = customDraft.value
+  if (!start || !end) return
+  period.value = {
+    kind: 'custom',
+    range: { from: fromCalendarDate(start), to: fromCalendarDate(end) },
+  }
+  isCustomOpen.value = false
+}
 </script>
 
 <template>
-  <UTheme
-    :ui="{
-      page: { root: 'px-4 sm:px-6 lg:px-12 py-3 w-full max-w-7xl mx-auto' },
-      pageHeader: { root: 'border-none pb-2' },
-    }"
-  >
-    <UPage as="main">
-      <UPageHeader :title="t('analytics.title')" :description="t('analytics.description')" />
-      <UPageBody>
-        <div class="space-y-6">
-          <AnalyticsToolbar v-model="period" v-model:compare="compare" />
-          <!-- While a new period loads, previous data stays visible but dimmed. -->
-          <div
-            class="space-y-6 transition-opacity duration-200"
-            :class="{ 'pointer-events-none opacity-50': isPlaceholderData }"
-            :aria-busy="isPlaceholderData"
-          >
-            <AnalyticsStatCards
-              :data="data"
-              :loading="isPending"
-              :compare="compare"
-              :compare-label="compareLabel"
-            />
-            <AnalyticsRevenueChart
-              :series="data?.revenue_series ?? []"
-              :earned="data?.current.earned ?? 0"
-              :period-label="periodLabel"
-              :period-kind="period.kind"
-              :compare="compare"
-              :loading="isPending"
-            />
-          </div>
+  <Page :title="t('analytics.title')">
+    <template #header-right>
+      <!-- Mobile-only period picker; the desktop select lives in the toolbar. -->
+      <UButton
+        size="sm"
+        color="neutral"
+        variant="soft"
+        trailing-icon="i-lucide-chevron-down"
+        :aria-label="t('analytics.period.title')"
+        class="w-auto shrink-0 rounded-full font-medium md:hidden"
+        @click="isPeriodDrawerOpen = true"
+      >
+        {{ activePeriodLabel }}
+      </UButton>
+    </template>
 
-          <!-- Fixed-window widgets: unaffected by the period filter, so they sit
-             outside the dimming wrapper and never refetch on period switch. -->
-          <div class="grid gap-6 lg:grid-cols-2">
-            <AnalyticsTopServices
-              :services="widgets?.top_services ?? []"
-              :loading="widgetsPending"
-            />
-            <div class="space-y-6">
-              <AnalyticsClientMix
-                :mix="widgets?.client_mix ?? EMPTY_MIX"
-                :loading="widgetsPending"
-              />
-              <AnalyticsBusiestDays
-                :days="widgets?.busiest_days ?? EMPTY_DAYS"
-                :peak-from="widgets?.peak_hour_from ?? null"
-                :peak-to="widgets?.peak_hour_to ?? null"
-                :loading="widgetsPending"
-              />
-            </div>
-          </div>
+    <div class="space-y-4 md:space-y-6">
+      <AnalyticsToolbar v-model="period" v-model:compare="compare" />
+      <!-- While a new period loads, previous data stays visible but dimmed. -->
+      <div
+        class="space-y-4 transition-opacity duration-200 md:space-y-6"
+        :class="{ 'pointer-events-none opacity-50': isPlaceholderData }"
+        :aria-busy="isPlaceholderData"
+      >
+        <AnalyticsStatCards
+          :data="data"
+          :loading="isPending"
+          :compare="compare"
+          :compare-label="compareLabel"
+        />
+        <AnalyticsRevenueChart
+          :series="data?.revenue_series ?? []"
+          :earned="data?.current.earned ?? 0"
+          :period-label="periodLabel"
+          :period-kind="period.kind"
+          :compare="compare"
+          :loading="isPending"
+        />
+      </div>
+
+      <!-- Fixed-window widgets: unaffected by the period filter, so they sit
+         outside the dimming wrapper and never refetch on period switch. -->
+      <div class="grid gap-4 md:gap-6 lg:grid-cols-2">
+        <AnalyticsTopServices :services="widgets?.top_services ?? []" :loading="widgetsPending" />
+        <div class="space-y-4 md:space-y-6">
+          <AnalyticsClientMix :mix="widgets?.client_mix ?? EMPTY_MIX" :loading="widgetsPending" />
+          <AnalyticsBusiestDays
+            :days="widgets?.busiest_days ?? EMPTY_DAYS"
+            :peak-from="widgets?.peak_hour_from ?? null"
+            :peak-to="widgets?.peak_hour_to ?? null"
+            :loading="widgetsPending"
+          />
         </div>
-      </UPageBody>
-    </UPage>
-  </UTheme>
+      </div>
+    </div>
+
+    <!-- Mobile granularity drawer -->
+    <UDrawer
+      v-model:open="isPeriodDrawerOpen"
+      :title="t('analytics.period.title')"
+      :ui="{
+        content: 'rounded-t-2xl',
+        body: 'space-y-2 pb-[calc(1rem+var(--safe-area-bottom))]',
+      }"
+    >
+      <template #body>
+        <UButton
+          v-for="item in kindItems"
+          :key="item.value"
+          :color="item.value === period.kind ? 'primary' : 'neutral'"
+          :variant="item.value === period.kind ? 'soft' : 'ghost'"
+          size="lg"
+          block
+          class="justify-start"
+          @click="selectKind(item.value)"
+        >
+          {{ item.label }}
+        </UButton>
+      </template>
+    </UDrawer>
+
+    <!-- Custom range picker (opened from the drawer's "Custom" option) -->
+    <UModal v-model:open="isCustomOpen" :title="t('analytics.period.custom')">
+      <template #body>
+        <UCalendar v-model="customDraft" range :max-value="maxDate" />
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" @click="isCustomOpen = false">
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton
+            color="primary"
+            size="sm"
+            :disabled="!customDraft.start || !customDraft.end"
+            @click="applyCustom"
+          >
+            {{ t('analytics.toolbar.apply') }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+  </Page>
 </template>

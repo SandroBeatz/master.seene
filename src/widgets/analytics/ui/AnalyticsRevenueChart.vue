@@ -138,7 +138,7 @@ const barOptions = computed<ChartOptions<'bar'>>(() => ({
 </script>
 
 <template>
-  <UCard :ui="{ root: 'shadow-panel ring-0' }">
+  <UCard :ui="{ root: 'rounded-lg md:rounded-xl shadow-panel ring-0' }">
     <div class="space-y-4">
       <div class="flex items-start justify-between gap-4">
         <div>
