@@ -16,7 +16,7 @@ import {
   AnalyticsBusiestDays,
   AnalyticsTopServices,
 } from '@widgets/analytics'
-import { Page } from '@shared/ui'
+import { Page, OptionsDrawer, type OptionsDrawerItem } from '@shared/ui'
 
 const { t } = useI18n()
 // The last selected period survives page reloads.
@@ -100,12 +100,15 @@ const COMPARE_KEYS: Record<AnalyticsPeriodKind, string> = {
 }
 const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period.value.kind]}`))
 
-// --- Mobile period picker ---------------------------------------------------
-// On mobile the granularity <USelect> in the toolbar is hidden; instead a pill
-// button next to the page title opens this drawer. The desktop toolbar keeps
-// its own select, so the two paths never show at once.
+// --- Mobile options / period picker -----------------------------------------
+// On mobile the granularity <USelect> and compare toggle in the toolbar are
+// hidden; instead a "⋯" button next to the page title opens an OptionsDrawer.
+// From there "Period" opens a small centered modal and "Compare" flips the
+// compare switch. The desktop toolbar keeps its own controls, so the two paths
+// never show at once.
 const tz = getLocalTimeZone()
-const isPeriodDrawerOpen = ref(false)
+const isOptionsDrawerOpen = ref(false)
+const isPeriodModalOpen = ref(false)
 const isCustomOpen = ref(false)
 
 const PERIOD_KINDS: readonly AnalyticsPeriodKind[] = ['day', 'week', 'month', 'year', 'custom']
@@ -143,12 +146,12 @@ function selectKind(kind: AnalyticsPeriodKind) {
       const t0 = today(tz)
       customDraft.value = { start: t0.subtract({ days: 6 }), end: t0 }
     }
-    isPeriodDrawerOpen.value = false
+    isPeriodModalOpen.value = false
     isCustomOpen.value = true
     return
   }
   period.value = { kind, date: todayISO() } as AnalyticsPeriodV2
-  isPeriodDrawerOpen.value = false
+  isPeriodModalOpen.value = false
 }
 
 function applyCustom() {
@@ -160,23 +163,47 @@ function applyCustom() {
   }
   isCustomOpen.value = false
 }
+
+// Rows shown in the mobile OptionsDrawer opened from the "⋯" header button.
+const optionItems = computed<OptionsDrawerItem[]>(() => [
+  {
+    id: 'period',
+    icon: 'i-lucide-calendar-range',
+    iconColor: 'primary',
+    label: t('analytics.period.title'),
+    description: activePeriodLabel.value,
+  },
+  {
+    id: 'compare',
+    icon: 'i-lucide-git-compare-arrows',
+    iconColor: 'info',
+    label: t('analytics.toolbar.compare'),
+    type: 'switch',
+    checked: compare.value,
+  },
+])
+
+function onOptionSelect(item: OptionsDrawerItem) {
+  if (item.id === 'period') isPeriodModalOpen.value = true
+}
+
+function onOptionToggle(item: OptionsDrawerItem, checked: boolean) {
+  if (item.id === 'compare') compare.value = checked
+}
 </script>
 
 <template>
   <Page :title="t('analytics.title')">
     <template #header-right>
-      <!-- Mobile-only period picker; the desktop select lives in the toolbar. -->
+      <!-- Mobile-only options menu; the desktop controls live in the toolbar. -->
       <UButton
-        size="sm"
         color="neutral"
-        variant="soft"
-        trailing-icon="i-lucide-chevron-down"
-        :aria-label="t('analytics.period.title')"
-        class="w-auto shrink-0 rounded-full font-medium md:hidden"
-        @click="isPeriodDrawerOpen = true"
-      >
-        {{ activePeriodLabel }}
-      </UButton>
+        variant="ghost"
+        icon="i-lucide-ellipsis-vertical"
+        :aria-label="t('analytics.options.title')"
+        class="shrink-0 rounded-full md:hidden"
+        @click="isOptionsDrawerOpen = true"
+      />
     </template>
 
     <div class="space-y-4 md:space-y-6">
@@ -219,30 +246,34 @@ function applyCustom() {
       </div>
     </div>
 
-    <!-- Mobile granularity drawer -->
-    <UDrawer
-      v-model:open="isPeriodDrawerOpen"
-      :title="t('analytics.period.title')"
-      :ui="{
-        content: 'rounded-t-2xl',
-        body: 'space-y-2 pb-[calc(1rem+var(--safe-area-bottom))]',
-      }"
-    >
+    <!-- Mobile options drawer (opened from the "⋯" header button) -->
+    <OptionsDrawer
+      v-model:open="isOptionsDrawerOpen"
+      :title="t('analytics.options.title')"
+      :items="optionItems"
+      @select="onOptionSelect"
+      @toggle="onOptionToggle"
+    />
+
+    <!-- Mobile granularity picker (opened from the drawer's "Period" option) -->
+    <UModal v-model:open="isPeriodModalOpen" :title="t('analytics.period.title')">
       <template #body>
-        <UButton
-          v-for="item in kindItems"
-          :key="item.value"
-          :color="item.value === period.kind ? 'primary' : 'neutral'"
-          :variant="item.value === period.kind ? 'soft' : 'ghost'"
-          size="lg"
-          block
-          class="justify-start"
-          @click="selectKind(item.value)"
-        >
-          {{ item.label }}
-        </UButton>
+        <div class="space-y-2">
+          <UButton
+            v-for="item in kindItems"
+            :key="item.value"
+            :color="item.value === period.kind ? 'primary' : 'neutral'"
+            :variant="item.value === period.kind ? 'soft' : 'ghost'"
+            size="lg"
+            block
+            class="justify-start"
+            @click="selectKind(item.value)"
+          >
+            {{ item.label }}
+          </UButton>
+        </div>
       </template>
-    </UDrawer>
+    </UModal>
 
     <!-- Custom range picker (opened from the drawer's "Custom" option) -->
     <UModal v-model:open="isCustomOpen" :title="t('analytics.period.custom')">

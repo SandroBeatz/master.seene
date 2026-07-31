@@ -502,6 +502,9 @@ export default {
   analytics: {
     title: 'Аналитика',
     comingSoon: 'Аналитика скоро появится',
+    options: {
+      title: 'Опции',
+    },
     period: {
       title: 'Период',
       today: 'Сегодня',
@@ -521,7 +524,6 @@ export default {
       export: 'Экспорт',
       exportComingSoon: 'Экспорт скоро появится',
       apply: 'Применить',
-      vs: 'vs',
       prevPeriod: 'Предыдущий период',
       nextPeriod: 'Следующий период',
     },
@@ -566,11 +568,11 @@ export default {
     avgCheckInline: 'средний чек',
     deltaNew: 'новое',
     compareVs: {
-      yesterday: 'vs вчера',
-      lastWeek: 'vs прошлая неделя',
-      lastMonth: 'vs прошлый месяц',
-      lastYear: 'vs прошлый год',
-      prevPeriod: 'vs предыдущий период',
+      yesterday: 'вчера',
+      lastWeek: 'прошлая неделя',
+      lastMonth: 'прошлый месяц',
+      lastYear: 'прошлый год',
+      prevPeriod: 'предыдущий период',
     },
     topServicesTitle: 'Топ услуг',
     topServicesSubtitle: 'По доходу',

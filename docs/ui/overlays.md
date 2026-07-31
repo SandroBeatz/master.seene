@@ -186,6 +186,7 @@ for the rationale and the `!`-marker gotcha.
 
 ## Related docs
 
+- [`options-drawer.md`](./options-drawer.md) — declarative bottom-sheet option list sharing this slice and `DialogColor`
 - [`nuxt-ui-components.md`](./nuxt-ui-components.md) — full component catalog
 - [`themes-and-variables.md`](../design/themes-and-variables.md) — color utilities used by the dialogs, and the global overlay scrim override
 - [`appointments.md`](../business/appointments.md) — the appointment preview popup built on this overlay pattern

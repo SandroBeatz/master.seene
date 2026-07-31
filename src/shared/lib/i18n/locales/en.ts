@@ -507,6 +507,9 @@ export default {
   analytics: {
     title: 'Analytics',
     comingSoon: 'Analytics coming soon',
+    options: {
+      title: 'Options',
+    },
     period: {
       title: 'Period',
       today: 'Today',
@@ -526,7 +529,6 @@ export default {
       export: 'Export',
       exportComingSoon: 'Export is coming soon',
       apply: 'Apply',
-      vs: 'vs',
       prevPeriod: 'Previous period',
       nextPeriod: 'Next period',
     },
@@ -571,11 +573,11 @@ export default {
     avgCheckInline: 'avg check',
     deltaNew: 'new',
     compareVs: {
-      yesterday: 'vs yesterday',
-      lastWeek: 'vs last week',
-      lastMonth: 'vs last month',
-      lastYear: 'vs last year',
-      prevPeriod: 'vs previous period',
+      yesterday: 'yesterday',
+      lastWeek: 'last week',
+      lastMonth: 'last month',
+      lastYear: 'last year',
+      prevPeriod: 'previous period',
     },
     topServicesTitle: 'Top services',
     topServicesSubtitle: 'Ranked by revenue',

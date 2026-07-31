@@ -14,6 +14,7 @@ import {
   toCalendarDate,
   type DateRange,
 } from '../model/period-step'
+import { Typography } from '@shared/ui'
 
 const period = defineModel<AnalyticsPeriodV2>({ required: true })
 const compare = defineModel<boolean>('compare', { default: false })
@@ -95,8 +96,8 @@ function fmtMonth(d: CalendarDate): string {
   return new DateFormatter(locale.value, { month: 'long', year: 'numeric' }).format(d.toDate(tz))
 }
 
-const centerLabel = computed(() => {
-  const r = resolvedRange.value
+/** Formats a resolved range per granularity: month/year as a single label, week/custom as a range. */
+function fmtByKind(r: DateRange): string {
   switch (period.value.kind) {
     case 'day':
       return fmtDay(r.start)
@@ -107,12 +108,12 @@ const centerLabel = computed(() => {
     default: // week | custom → a date range
       return fmtRange(r)
   }
-})
+}
 
-/** When comparing, the caption of the preceding window: "vs 1 – 31 May". */
-const compareCaption = computed(
-  () => `${t('analytics.toolbar.vs')} ${fmtRange(previousRange(period.value))}`,
-)
+const centerLabel = computed(() => fmtByKind(resolvedRange.value))
+
+/** When comparing, the preceding window formatted like the centre caption (e.g. "May 2026"). */
+const compareCaption = computed(() => fmtByKind(previousRange(period.value)))
 
 // --- Custom range picker ----------------------------------------------------
 
@@ -152,7 +153,7 @@ function applyCustom() {
 
 <template>
   <div class="space-y-2">
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center justify-center gap-3 md:justify-between">
       <!-- Granularity + jump-to-current — hidden on mobile (picked via the page-header drawer) -->
       <div class="hidden items-center gap-2 md:flex">
         <USelect
@@ -171,19 +172,19 @@ function applyCustom() {
         <UButton
           color="neutral"
           variant="ghost"
-          size="sm"
           icon="i-lucide-chevron-left"
           :aria-label="t('analytics.toolbar.prevPeriod')"
           @click="step(-1)"
         />
         <span class="flex min-w-40 flex-col items-center text-center">
-          <span class="text-sm font-medium text-highlighted">{{ centerLabel }}</span>
-          <span v-if="compare" class="text-xs text-muted">{{ compareCaption }}</span>
+          <Typography class="font-medium text-highlighted">{{ centerLabel }}</Typography>
+          <Typography v-if="compare" variant="footnote" class="text-muted">{{
+            compareCaption
+          }}</Typography>
         </span>
         <UButton
           color="neutral"
           variant="ghost"
-          size="sm"
           icon="i-lucide-chevron-right"
           :disabled="!canStepForward"
           :aria-label="t('analytics.toolbar.nextPeriod')"
@@ -191,8 +192,9 @@ function applyCustom() {
         />
       </div>
 
-      <!-- Compare (Export button hidden until export is implemented — see task 1iwu) -->
-      <div class="flex items-center gap-3">
+      <!-- Compare — hidden on mobile (moved to the page-header options drawer).
+           Export button hidden until export is implemented — see task 1iwu. -->
+      <div class="hidden items-center gap-3 md:flex">
         <USwitch v-model="compare" :label="t('analytics.toolbar.compare')" />
       </div>
     </div>

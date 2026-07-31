@@ -511,6 +511,9 @@ export default {
   analytics: {
     title: 'Analytique',
     comingSoon: 'Analytique bientôt disponible',
+    options: {
+      title: 'Options',
+    },
     period: {
       title: 'Période',
       today: "Aujourd'hui",
@@ -530,7 +533,6 @@ export default {
       export: 'Exporter',
       exportComingSoon: "L'export arrive bientôt",
       apply: 'Appliquer',
-      vs: 'vs',
       prevPeriod: 'Période précédente',
       nextPeriod: 'Période suivante',
     },
@@ -575,11 +577,11 @@ export default {
     avgCheckInline: 'ticket moyen',
     deltaNew: 'nouveau',
     compareVs: {
-      yesterday: 'vs hier',
-      lastWeek: 'vs la semaine dernière',
-      lastMonth: 'vs le mois dernier',
-      lastYear: "vs l'année dernière",
-      prevPeriod: 'vs la période précédente',
+      yesterday: 'hier',
+      lastWeek: 'la semaine dernière',
+      lastMonth: 'le mois dernier',
+      lastYear: "l'année dernière",
+      prevPeriod: 'la période précédente',
     },
     topServicesTitle: 'Top services',
     topServicesSubtitle: 'Classés par revenu',
