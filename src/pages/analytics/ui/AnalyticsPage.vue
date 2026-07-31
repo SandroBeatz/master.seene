@@ -16,7 +16,13 @@ import {
   AnalyticsBusiestDays,
   AnalyticsTopServices,
 } from '@widgets/analytics'
-import { Page, OptionsDrawer, type OptionsDrawerItem } from '@shared/ui'
+import {
+  Page,
+  OptionsDrawer,
+  OptionsList,
+  type OptionsDrawerItem,
+  type OptionsListItem,
+} from '@shared/ui'
 
 const { t } = useI18n()
 // The last selected period survives page reloads.
@@ -115,6 +121,14 @@ const PERIOD_KINDS: readonly AnalyticsPeriodKind[] = ['day', 'week', 'month', 'y
 const kindItems = computed(() =>
   PERIOD_KINDS.map((value) => ({ value, label: t(`analytics.period.${value}`) })),
 )
+/** Same granularities as {@link kindItems}, rendered as an icon-less selection list. */
+const periodOptions = computed<OptionsListItem[]>(() =>
+  kindItems.value.map((item) => ({
+    id: item.value,
+    label: item.label,
+    active: item.value === period.value.kind,
+  })),
+)
 /** Label shown on the mobile pill button — the active granularity. */
 const activePeriodLabel = computed(() => t(`analytics.period.${period.value.kind}`))
 
@@ -169,15 +183,15 @@ const optionItems = computed<OptionsDrawerItem[]>(() => [
   {
     id: 'period',
     icon: 'i-lucide-calendar-range',
-    iconColor: 'primary',
     label: t('analytics.period.title'),
     description: activePeriodLabel.value,
   },
   {
     id: 'compare',
-    icon: 'i-lucide-git-compare-arrows',
-    iconColor: 'info',
-    label: t('analytics.toolbar.compare'),
+    icon: 'i-lucide-chart-candlestick',
+    iconColor: 'warning',
+    label: t('analytics.options.compare'),
+    description: t('analytics.options.compareDescription'),
     type: 'switch',
     checked: compare.value,
   },
@@ -189,6 +203,10 @@ function onOptionSelect(item: OptionsDrawerItem) {
 
 function onOptionToggle(item: OptionsDrawerItem, checked: boolean) {
   if (item.id === 'compare') compare.value = checked
+}
+
+function onPeriodSelect(item: OptionsListItem) {
+  selectKind(item.id as AnalyticsPeriodKind)
 }
 </script>
 
@@ -207,7 +225,11 @@ function onOptionToggle(item: OptionsDrawerItem, checked: boolean) {
     </template>
 
     <div class="space-y-4 md:space-y-6">
-      <AnalyticsToolbar v-model="period" v-model:compare="compare" />
+      <AnalyticsToolbar
+        v-model="period"
+        v-model:compare="compare"
+        @pick-period="isPeriodModalOpen = true"
+      />
       <!-- While a new period loads, previous data stays visible but dimmed. -->
       <div
         class="space-y-4 transition-opacity duration-200 md:space-y-6"
@@ -258,20 +280,7 @@ function onOptionToggle(item: OptionsDrawerItem, checked: boolean) {
     <!-- Mobile granularity picker (opened from the drawer's "Period" option) -->
     <UModal v-model:open="isPeriodModalOpen" :title="t('analytics.period.title')">
       <template #body>
-        <div class="space-y-2">
-          <UButton
-            v-for="item in kindItems"
-            :key="item.value"
-            :color="item.value === period.kind ? 'primary' : 'neutral'"
-            :variant="item.value === period.kind ? 'soft' : 'ghost'"
-            size="lg"
-            block
-            class="justify-start"
-            @click="selectKind(item.value)"
-          >
-            {{ item.label }}
-          </UButton>
-        </div>
+        <OptionsList :items="periodOptions" @select="onPeriodSelect" />
       </template>
     </UModal>
 
@@ -282,12 +291,11 @@ function onOptionToggle(item: OptionsDrawerItem, checked: boolean) {
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="ghost" size="sm" @click="isCustomOpen = false">
+          <UButton color="neutral" variant="ghost" @click="isCustomOpen = false">
             {{ t('common.cancel') }}
           </UButton>
           <UButton
             color="primary"
-            size="sm"
             :disabled="!customDraft.start || !customDraft.end"
             @click="applyCustom"
           >

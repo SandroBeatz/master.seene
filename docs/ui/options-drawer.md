@@ -1,12 +1,12 @@
 ---
-version: 1.0
+version: 1.2
 date: 2026-07-31
 category: ui
 ---
 
 # OptionsDrawer — Reusable Bottom-Sheet Option List
 
-> Version 1.0 · 2026-07-31 · [UI](../)
+> Version 1.2 · 2026-07-31 · [UI](../)
 
 ## Overview
 
@@ -19,49 +19,41 @@ You feed it a translated `items` array and bind `v-model:open`; the component ha
 icons, descriptions, the trailing switch, and closing behaviour. It holds **no business logic** and
 **no i18n** — every label/description/title is passed in already translated by the caller.
 
-Under the hood it composes Nuxt UI's [`UDrawer`](https://ui.nuxt.com/docs/components/drawer) with a
-vertical [`UNavigationMenu`](https://ui.nuxt.com/docs/components/navigation-menu) for the rows, so
-it inherits the design system's spacing, focus, and keyboard behaviour for free.
+Under the hood it is a thin container: Nuxt UI's [`UDrawer`](https://ui.nuxt.com/docs/components/drawer)
+wrapping [`OptionsList`](./options-list.md), the reusable row list that actually renders the icons,
+labels, switches, and selection state. `OptionsDrawer` only adds the sheet chrome, the open/close
+model, and closing behaviour.
 
 Lives in `@shared/ui` (slice `src/shared/ui/overlays/`).
 
 ## Architecture
 
-### Two row behaviours
+### Composition over OptionsList
 
-Each option declares a `type`:
+The row rendering — the vertical `UNavigationMenu`, the leading icon, label/description, and the
+trailing switch/check/chevron — was extracted into [`OptionsList`](./options-list.md). `OptionsDrawer`
+now renders `<OptionsList :items @select @toggle>` inside the drawer body and layers three drawer-only
+concerns on top:
 
-| `type`     | Renders                                   | On tap                                  |
-| ---------- | ----------------------------------------- | --------------------------------------- |
-| `'action'` (default) | leading icon · label · description · trailing chevron | emits `select(item)`          |
-| `'switch'` | leading icon · label · description · trailing `USwitch` | emits `toggle(item, nextChecked)` |
+1. the `UDrawer` shell (rounded top, safe-area bottom padding, header `title`);
+2. the `open` model (`v-model:open`), the only state the component owns;
+3. **close-on-select** — after a `select`/`toggle` it dismisses the sheet when
+   `item.closeOnSelect ?? closeOnSelect` is truthy (per-row override beats the drawer default).
 
-### The whole row is the tap target
-
-For `switch` rows the `USwitch` is rendered **display-only** — `pointer-events-none`,
-`tabindex="-1"`, `aria-hidden`. The interactive element is the navigation-menu row itself, whose
-`onSelect` fires the `toggle` event. This deliberately avoids the classic conflict where tapping the
-switch and tapping the row both fire (double toggle) or fight over the event. The switch merely
-*reflects* state the caller owns; the caller updates its own boolean in response to `toggle`, which
-flows back through `items` and animates the switch.
+For the row model itself — the `action` / `switch` / selection behaviours, the display-only switch
+tap-target trick, and icon-colour resolution — see [`options-list.md`](./options-list.md).
 
 ### Data flow
 
 ```
-caller state ──items──▶ OptionsDrawer ──renders──▶ UNavigationMenu rows
-     ▲                        │
+caller state ──items──▶ OptionsDrawer ──▶ OptionsList ──renders──▶ UNavigationMenu rows
+     ▲                        │  (may close the drawer)
      │                        │ tap
      └── select / toggle ◀────┘   (caller mutates its own state)
 ```
 
-The component owns only the open/closed state (via `defineModel`). Option values (`checked`) are
-owned by the caller — `OptionsDrawer` never mutates them.
-
-### Icon colour resolution
-
-`iconColor` accepts either a semantic `DialogColor` (`'primary'`, `'error'`, …) or any raw class
-string (`'text-pink-500'`). `optionsDrawerIconClass()` maps semantic colors to their `text-*`
-utility and passes raw classes through unchanged; omitting it falls back to `text-muted`.
+The drawer owns only the open/closed state (via `defineModel`). Option values (`checked`) are owned
+by the caller — neither `OptionsDrawer` nor `OptionsList` mutates them.
 
 ## Configuration
 
@@ -88,19 +80,30 @@ utility and passes raw classes through unchanged; omitting it falls back to `tex
 
 ### `OptionsDrawerItem`
 
+Since the refactor, `OptionsDrawerItem` is a **back-compat alias** of `OptionsListItem` (and
+`optionsDrawerIconClass` aliases `optionsListIconClass`) — existing imports keep working unchanged.
+The canonical definition, including the `active` selection field, lives in
+[`options-list.md`](./options-list.md#optionslistitem):
+
 ```ts
-interface OptionsDrawerItem {
+type OptionsDrawerItem = OptionsListItem
+
+interface OptionsListItem {
   id: string                        // stable id, echoed back in select/toggle
   label: string                     // primary text (already translated)
   description?: string              // secondary line under the label
   icon?: string                     // leading icon, e.g. 'i-lucide-calendar-range'
-  iconColor?: DialogColor | string  // semantic color OR raw text-* class; defaults to text-muted
+  iconColor?: SemanticColor | string // semantic color OR raw text-* class; defaults to text-default
   type?: 'action' | 'switch'        // default 'action'
   checked?: boolean                 // switch rows only — current on/off state
+  active?: boolean                  // selection row (check when true, blank when false)
   disabled?: boolean                // greys out and blocks interaction
   closeOnSelect?: boolean           // per-row override of the drawer-level setting
 }
 ```
+
+> `DialogColor` (from the `overlays` slice) is itself now an alias of `SemanticColor`, so
+> `iconColor: 'primary' | 'error' | …` continues to type-check exactly as before.
 
 ## Usage
 
@@ -176,13 +179,19 @@ translated via `t(...)`. There are **no** default strings resolved inside `Optio
 
 ```
 src/shared/ui/overlays/
-  OptionsDrawer.vue   # the drawer + UNavigationMenu rows
-  types.ts            # OptionsDrawerItem, OptionsDrawerProps, optionsDrawerIconClass()
+  OptionsDrawer.vue   # the UDrawer shell wrapping <OptionsList>
+  types.ts            # OptionsDrawerProps + back-compat aliases (OptionsDrawerItem,
+                      #   optionsDrawerIconClass, DialogColor) re-exported from options-list
   index.ts            # public API (re-exported from @shared/ui)
+
+src/shared/ui/options-list/
+  OptionsList.vue     # the actual row list (see options-list.md)
+  types.ts            # canonical OptionsListItem, SemanticColor, optionsListIconClass()
 ```
 
 ## Cross-references
 
+- [`options-list.md`](./options-list.md) — the reusable row list this drawer wraps; owns the item model, row behaviours, and icon-colour resolution
 - [`overlays.md`](./overlays.md) — the programmatic Confirm/Alert dialogs that share the `overlays` slice and `DialogColor`
 - [`nuxt-ui-components.md`](./nuxt-ui-components.md) — Drawer, NavigationMenu and Switch component catalog
 - [`themes-and-variables.md`](../design/themes-and-variables.md) — color utilities used by `iconColor` and the global overlay scrim

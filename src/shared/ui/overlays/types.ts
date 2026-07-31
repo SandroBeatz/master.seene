@@ -1,12 +1,13 @@
+import {
+  semanticColorText,
+  optionsListIconClass,
+  type SemanticColor,
+  type OptionsListItem,
+  type OptionsListItemType,
+} from '../options-list/types'
+
 /** Semantic color names registered for Nuxt UI components. */
-export type DialogColor =
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'info'
-  | 'warning'
-  | 'error'
-  | 'neutral'
+export type DialogColor = SemanticColor
 
 export interface ConfirmDialogProps {
   /** Heading shown in the modal header. */
@@ -37,51 +38,15 @@ export interface AlertDialogProps {
 }
 
 /** Static color → text-utility map (kept explicit so Tailwind can detect the classes). */
-export const dialogColorText: Record<DialogColor, string> = {
-  primary: 'text-primary',
-  secondary: 'text-secondary',
-  success: 'text-success',
-  info: 'text-info',
-  warning: 'text-warning',
-  error: 'text-error',
-  neutral: 'text-highlighted',
-}
-
-/** Behaviour of an {@link OptionsDrawerItem}. */
-export type OptionsDrawerItemType = 'action' | 'switch'
+export const dialogColorText: Record<DialogColor, string> = semanticColorText
 
 /**
- * A single row inside an {@link OptionsDrawer}.
- *
- * All human-readable text (`label`, `description`) must already be translated by
- * the caller — the drawer never touches i18n itself.
+ * The options list moved to `shared/ui/options-list`. These aliases keep the
+ * historical `OptionsDrawer*` names working for existing callers.
  */
-export interface OptionsDrawerItem {
-  /** Stable identifier — echoed back in `select`/`toggle` so callers know which row fired. */
-  id: string
-  /** Primary label (already translated). */
-  label: string
-  /** Optional secondary line shown under the label. */
-  description?: string
-  /** Leading icon, e.g. `i-lucide-calendar-range`. */
-  icon?: string
-  /**
-   * Icon tint. Either a semantic {@link DialogColor} (mapped to a `text-*` utility)
-   * or any raw class string (e.g. `text-pink-500`). Defaults to the muted foreground.
-   */
-  iconColor?: DialogColor | string
-  /** `'action'` (clickable row) or `'switch'` (trailing USwitch). Defaults to `'action'`. */
-  type?: OptionsDrawerItemType
-  /** For `type: 'switch'` — the current on/off state. */
-  checked?: boolean
-  /** Greys the row out and blocks interaction. */
-  disabled?: boolean
-  /**
-   * Per-row override of the drawer's `closeOnSelect`. When omitted the drawer-level
-   * setting applies.
-   */
-  closeOnSelect?: boolean
-}
+export type OptionsDrawerItem = OptionsListItem
+export type OptionsDrawerItemType = OptionsListItemType
+export const optionsDrawerIconClass = optionsListIconClass
 
 export interface OptionsDrawerProps {
   /** Heading shown in the drawer header. */
@@ -90,10 +55,4 @@ export interface OptionsDrawerProps {
   items: OptionsDrawerItem[]
   /** Close the drawer after a row is activated. Defaults to `true`. */
   closeOnSelect?: boolean
-}
-
-/** Resolves an option's `iconColor` to a Tailwind text-utility class. */
-export function optionsDrawerIconClass(color: OptionsDrawerItem['iconColor']): string {
-  if (!color) return 'text-muted'
-  return color in dialogColorText ? dialogColorText[color as DialogColor] : color
 }

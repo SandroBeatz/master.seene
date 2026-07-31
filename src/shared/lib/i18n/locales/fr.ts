@@ -146,7 +146,9 @@ export default {
       title: 'Créer',
       description: 'Choisissez ce que vous voulez ajouter.',
       appointment: 'Nouveau rendez-vous',
+      appointmentDescription: 'Ajoutez un client à votre agenda',
       timeOff: 'Indisponibilité',
+      timeOffDescription: 'Réservez un moment de pause',
     },
     actions: {
       back: 'Retour',
@@ -513,6 +515,8 @@ export default {
     comingSoon: 'Analytique bientôt disponible',
     options: {
       title: 'Options',
+      compare: 'Comparer la période',
+      compareDescription: 'Comparer avec la période précédente',
     },
     period: {
       title: 'Période',

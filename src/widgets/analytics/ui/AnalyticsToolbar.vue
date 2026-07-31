@@ -19,6 +19,11 @@ import { Typography } from '@shared/ui'
 const period = defineModel<AnalyticsPeriodV2>({ required: true })
 const compare = defineModel<boolean>('compare', { default: false })
 
+const emit = defineEmits<{
+  /** The centre caption was tapped — the caller opens its granularity picker. */
+  pickPeriod: []
+}>()
+
 const { t, locale } = useI18n()
 
 const tz = getLocalTimeZone()
@@ -176,12 +181,17 @@ function applyCustom() {
           :aria-label="t('analytics.toolbar.prevPeriod')"
           @click="step(-1)"
         />
-        <span class="flex min-w-40 flex-col items-center text-center">
+        <button
+          type="button"
+          class="flex min-w-40 cursor-pointer flex-col items-center rounded-md px-2 py-0.5 text-center transition-colors hover:bg-elevated"
+          :aria-label="t('analytics.period.title')"
+          @click="emit('pickPeriod')"
+        >
           <Typography class="font-medium text-highlighted">{{ centerLabel }}</Typography>
           <Typography v-if="compare" variant="footnote" class="text-muted">{{
             compareCaption
           }}</Typography>
-        </span>
+        </button>
         <UButton
           color="neutral"
           variant="ghost"

@@ -5,7 +5,7 @@ import { getLocalTimeZone, today } from '@internationalized/date'
 import type { AnalyticsPeriodV2 } from '@entities/analytics'
 import { periodToDateRangeV2, useAnalyticsQueryV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
-import { AnimatedNumber, Typography } from '@shared/ui'
+import { AnimatedNumber, OptionsDrawer, Typography, type OptionsListItem } from '@shared/ui'
 
 const { t } = useI18n()
 const formats = useFormats()
@@ -51,9 +51,19 @@ const activePeriodLabel = computed(
   () => periods.value.find((period) => period.value === activeTab.value)?.label ?? '',
 )
 
-function selectPeriod(period: PeriodKey) {
-  activeTab.value = period
-  isPeriodDrawerOpen.value = false
+// Same periods as the desktop UTabs, shaped for the mobile OptionsDrawer (icon-less
+// selection list; `active` marks the current period).
+const periodOptions = computed<OptionsListItem[]>(() =>
+  periods.value.map((period) => ({
+    id: period.value,
+    label: period.label,
+    active: period.value === activeTab.value,
+  })),
+)
+
+// The drawer closes itself via `closeOnSelect`; we only need to switch the period.
+function onPeriodSelect(item: OptionsListItem) {
+  activeTab.value = item.id as PeriodKey
 }
 
 const periodSubtext = computed(() => {
@@ -184,29 +194,12 @@ const tabsUI = {
         />
       </div>
 
-      <UDrawer
+      <OptionsDrawer
         v-model:open="isPeriodDrawerOpen"
         :title="t('home.overview.periodLabel')"
-        :ui="{
-          content: 'rounded-t-2xl',
-          body: 'space-y-2 pb-[calc(1rem+var(--safe-area-bottom))]',
-        }"
-      >
-        <template #body>
-          <UButton
-            v-for="period in periods"
-            :key="period.value"
-            :color="period.value === activeTab ? 'primary' : 'neutral'"
-            :variant="period.value === activeTab ? 'soft' : 'ghost'"
-            size="lg"
-            block
-            class="justify-start"
-            @click="selectPeriod(period.value)"
-          >
-            {{ period.label }}
-          </UButton>
-        </template>
-      </UDrawer>
+        :items="periodOptions"
+        @select="onPeriodSelect"
+      />
     </template>
 
     <div class="grid grid-cols-3 gap-1.5 md:grid-cols-2 md:gap-4 xl:grid-cols-3">

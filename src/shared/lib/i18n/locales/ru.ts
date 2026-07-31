@@ -144,7 +144,9 @@ export default {
       title: 'Создать',
       description: 'Выберите, что добавить.',
       appointment: 'Новая запись',
+      appointmentDescription: 'Записать клиента в расписание',
       timeOff: 'Перерыв',
+      timeOffDescription: 'Отметить перерыв или выходной',
     },
     actions: {
       back: 'Назад',
@@ -504,6 +506,8 @@ export default {
     comingSoon: 'Аналитика скоро появится',
     options: {
       title: 'Опции',
+      compare: 'Сравнить период',
+      compareDescription: 'Сравнить с предыдущим периодом времени',
     },
     period: {
       title: 'Период',

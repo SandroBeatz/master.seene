@@ -146,7 +146,9 @@ export default {
       title: 'Create',
       description: 'Choose what to add.',
       appointment: 'New appointment',
+      appointmentDescription: 'Book a client into your schedule',
       timeOff: 'Time off',
+      timeOffDescription: 'Set aside time for a break',
     },
     actions: {
       back: 'Back',
@@ -509,6 +511,8 @@ export default {
     comingSoon: 'Analytics coming soon',
     options: {
       title: 'Options',
+      compare: 'Compare period',
+      compareDescription: 'Compare with the previous time period',
     },
     period: {
       title: 'Period',
