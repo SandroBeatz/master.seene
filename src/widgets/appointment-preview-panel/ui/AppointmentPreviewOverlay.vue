@@ -203,6 +203,7 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   <AppointmentCheckoutModal
     :open="isCheckoutOpen"
     :appointment="current"
+    :client="client"
     :services="selectedServices"
     :payment-types="paymentTypes ?? []"
     :loading="completeSaleMutation.isLoading.value"

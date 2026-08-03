@@ -580,6 +580,7 @@ const cardUI = {
     v-if="checkoutAppointment"
     :open="isCheckoutOpen"
     :appointment="checkoutAppointment"
+    :client="getClient(checkoutAppointment) ?? null"
     :services="getCheckoutServices(checkoutAppointment)"
     :payment-types="paymentTypes ?? []"
     :loading="completeSaleMutation.isLoading.value"

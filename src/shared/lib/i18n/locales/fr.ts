@@ -1195,13 +1195,13 @@ export default {
   },
   checkout: {
     title: 'Terminer le rendez-vous',
+    client: 'Client',
     services: 'Services',
     total: 'Total',
     paymentMethod: 'Mode de paiement',
     noPaymentTypes:
       'Aucun mode de paiement configuré. Ajoutez-en un dans Paramètres → Modes de paiement.',
-    confirm: 'Confirmer le paiement',
-    cancel: 'Annuler',
+    confirm: 'Terminer le rendez-vous',
     paymentInfo: 'Paiement',
     paidAmount: 'Montant payé',
     paidVia: 'Mode de paiement',

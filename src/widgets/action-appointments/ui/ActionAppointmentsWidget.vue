@@ -114,6 +114,7 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
     v-if="checkoutAppointment"
     :open="isCheckoutOpen"
     :appointment="checkoutAppointment"
+    :client="getClient(checkoutAppointment) ?? null"
     :services="checkoutServices"
     :payment-types="paymentTypes ?? []"
     :loading="completeSaleMutation.isLoading.value"
