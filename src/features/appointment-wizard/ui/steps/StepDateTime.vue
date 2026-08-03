@@ -11,6 +11,7 @@ import {
   minutesToTimeInput,
   type PartOfDay,
 } from '@shared/lib/scheduling'
+import { AppCalendar } from '@shared/ui'
 
 const props = defineProps<{
   /** Selected day, `YYYY-MM-DD`, or '' when none chosen yet. */
@@ -113,9 +114,8 @@ function slotLabel(minutes: number): string {
 
 <template>
   <div class="space-y-4">
-    <UCalendar
+    <AppCalendar
       :model-value="calendarValue"
-      :year-controls="false"
       class="mx-auto"
       @update:model-value="onDateChange($event as CalendarDate)"
       @update:placeholder="emit('update:month', $event as CalendarDate)"
@@ -133,7 +133,7 @@ function slotLabel(minutes: number): string {
           />
         </span>
       </template>
-    </UCalendar>
+    </AppCalendar>
 
     <div class="flex items-center justify-center gap-4 text-xs text-muted">
       <span class="flex items-center gap-1.5">

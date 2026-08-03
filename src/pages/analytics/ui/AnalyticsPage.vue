@@ -17,6 +17,7 @@ import {
   AnalyticsTopServices,
 } from '@widgets/analytics'
 import {
+  AppCalendar,
   Page,
   OptionsDrawer,
   OptionsList,
@@ -287,7 +288,7 @@ function onPeriodSelect(item: OptionsListItem) {
     <!-- Custom range picker (opened from the drawer's "Custom" option) -->
     <UModal v-model:open="isCustomOpen" :title="t('analytics.period.custom')">
       <template #body>
-        <UCalendar v-model="customDraft" range :max-value="maxDate" />
+        <AppCalendar v-model="customDraft" range :max-value="maxDate" />
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">

@@ -14,7 +14,7 @@ import {
   toCalendarDate,
   type DateRange,
 } from '../model/period-step'
-import { Typography } from '@shared/ui'
+import { AppCalendar, Typography } from '@shared/ui'
 
 const period = defineModel<AnalyticsPeriodV2>({ required: true })
 const compare = defineModel<boolean>('compare', { default: false })
@@ -212,7 +212,7 @@ function applyCustom() {
     <!-- Custom range picker -->
     <UModal v-model:open="open" :title="t('analytics.period.custom')">
       <template #body>
-        <UCalendar v-model="draft" range :max-value="maxDate" />
+        <AppCalendar v-model="draft" range :max-value="maxDate" />
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
