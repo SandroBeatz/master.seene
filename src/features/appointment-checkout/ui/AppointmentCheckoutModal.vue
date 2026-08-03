@@ -11,6 +11,7 @@ import type { CompleteSaleDto } from '@entities/sale'
 import { useFormats } from '@shared/lib/formats'
 import { useIsMobile } from '@shared/lib/viewport'
 import { PriceInput } from '@shared/ui/price-input'
+import { Typography } from '@shared/ui'
 import { useCheckout } from '../model/use-checkout'
 
 // Share the body/footer markup between the desktop modal and the mobile drawer.
@@ -76,21 +77,22 @@ function handleConfirm() {
           :first-name="client?.first_name"
           :last-name="client?.last_name"
           :seed="appointment.client_id"
+          :emoji="client?.emoji"
           size="lg"
         />
         <div class="min-w-0">
-          <p class="text-xs font-semibold uppercase text-muted">
+          <Typography variant="endnote" class="font-semibold uppercase text-muted">
             {{ $t('checkout.client') }}
-          </p>
-          <p class="truncate font-medium">{{ clientName }}</p>
+          </Typography>
+          <Typography class="truncate font-medium">{{ clientName }}</Typography>
         </div>
       </div>
 
       <!-- Services list -->
       <div v-if="services.length" class="space-y-2">
-        <p class="text-xs font-semibold uppercase text-muted">
+        <Typography variant="endnote" class="font-semibold uppercase text-muted">
           {{ $t('checkout.services') }}
-        </p>
+        </Typography>
         <div class="space-y-2">
           <div
             v-for="(service, i) in services"
@@ -111,18 +113,18 @@ function handleConfirm() {
       <div v-if="services.length > 1" class="space-y-3">
         <USeparator />
         <div class="flex items-center justify-between gap-3">
-          <label class="text-xs font-semibold uppercase text-muted">
+          <Typography as="label" variant="endnote" class="font-semibold uppercase text-muted">
             {{ $t('checkout.total') }}
-          </label>
+          </Typography>
           <PriceInput :model-value="total" class="w-32" @update:model-value="total = $event ?? 0" />
         </div>
       </div>
 
       <!-- Payment method -->
       <div class="space-y-2">
-        <p class="text-xs font-semibold uppercase text-muted">
+        <Typography variant="endnote" class="font-semibold uppercase text-muted">
           {{ $t('checkout.paymentMethod') }}
-        </p>
+        </Typography>
         <div v-if="activePaymentTypes.length" class="flex flex-wrap gap-2">
           <button
             v-for="pt in activePaymentTypes"
@@ -143,9 +145,9 @@ function handleConfirm() {
             {{ methodLabel(pt) }}
           </button>
         </div>
-        <p v-else class="text-sm text-muted">
+        <Typography v-else variant="caption" class="text-muted">
           {{ $t('checkout.noPaymentTypes') }}
-        </p>
+        </Typography>
       </div>
     </div>
   </DefineBody>
