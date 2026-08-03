@@ -15,13 +15,14 @@ import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import {
   useCompleteSaleMutation,
+  useUpdateSaleMutation,
   useSaleByAppointmentQuery,
   type CompleteSaleDto,
 } from '@entities/sale'
-import { AppointmentFormDialog } from '@features/appointment-form'
 import { AppointmentCheckoutModal } from '@features/appointment-checkout'
-import { useConfirm } from '@shared/ui'
-import AppointmentPreviewPanel from './AppointmentPreviewPanel.vue'
+import { ComingSoon, useConfirm } from '@shared/ui'
+import type { AppointmentEditPayload } from '../model/edit-payload'
+import MobileAppointmentSheet from './MobileAppointmentSheet.vue'
 
 const props = defineProps<{ appointment: Appointment }>()
 
@@ -38,9 +39,10 @@ const masterPreferencesStore = useMasterPreferencesStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-// Local copy so status changes are reflected in the panel without a refetch.
+// Local copy so status changes are reflected in the sheet without a refetch.
 // The overlay instance is reused across opens (see `useAppointmentPreview`), so
-// re-sync whenever a different appointment is passed in.
+// we must re-sync whenever a different appointment is passed in — otherwise the
+// sheet keeps showing the first one that was ever opened.
 const current = ref<Appointment>(props.appointment)
 watch(
   () => props.appointment,
@@ -49,7 +51,6 @@ watch(
   },
 )
 const currentId = computed(() => current.value.id)
-
 const clientId = computed(() => current.value.client_id)
 
 const { data: clients } = useClientsQuery(userId)
@@ -61,13 +62,14 @@ const { data: clientAppointmentsCount } = useClientAppointmentsCountQuery(client
 const updateMutation = useUpdateAppointmentMutation(userId)
 const removeMutation = useRemoveAppointmentMutation(userId)
 const completeSaleMutation = useCompleteSaleMutation(userId)
+const updateSaleMutation = useUpdateSaleMutation(userId)
 
 // "New client" = this appointment is the client's only one (their first visit).
 const isNew = computed(() => (clientAppointmentsCount.value ?? 0) <= 1)
 const isBusy = computed(() => updateMutation.isLoading.value || removeMutation.isLoading.value)
 
-const isFormOpen = ref(false)
 const isCheckoutOpen = ref(false)
+const isNotifyOpen = ref(false)
 
 const client = computed(() => clients.value?.find((c) => c.id === current.value.client_id) ?? null)
 
@@ -146,9 +148,33 @@ async function handleDelete() {
   }
 }
 
-function handleSaved() {
-  isFormOpen.value = false
-  open.value = false
+async function handleSave(payload: AppointmentEditPayload) {
+  try {
+    const updated = await updateMutation.mutateAsync({
+      id: payload.id,
+      client_id: payload.client_id,
+      service_ids: payload.service_ids,
+      start_at: payload.start_at,
+      duration: payload.duration,
+      price: payload.price,
+    })
+    if (payload.sale) {
+      await updateSaleMutation.mutateAsync({
+        id: payload.sale.id,
+        appointmentId: payload.id,
+        patch: {
+          payment_type_id: payload.sale.payment_type_id,
+          amount: payload.sale.amount,
+        },
+      })
+    }
+    current.value = updated
+    toast.add({ title: t('appointments.form.successEdit'), color: 'success' })
+  } catch (error) {
+    toast.add({ title: t('appointments.form.errorTitle'), color: 'error' })
+    // Re-throw so the sheet keeps the user's draft and stays in edit mode.
+    throw error
+  }
 }
 
 async function handleCheckoutConfirm(payload: CompleteSaleDto) {
@@ -170,42 +196,26 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
 </script>
 
 <template>
-  <USlideover
+  <MobileAppointmentSheet
     v-model:open="open"
-    side="right"
-    :title="$t('appointments.preview.title')"
-    :close="false"
-    :ui="{ body: 'p-0 sm:p-0', header: 'sr-only' }"
-    @after:leave="emit('after:leave')"
-  >
-    <template #body>
-      <AppointmentPreviewPanel
-        :appointment="current"
-        :client="client"
-        :services="selectedServices"
-        :sale="sale"
-        :is-new="isNew"
-        :time-zone="masterPreferencesStore.timeZone"
-        :time-format="masterPreferencesStore.timeFormat"
-        :loading="isBusy"
-        @edit="isFormOpen = true"
-        @cancel="handleCancel"
-        @confirm="updateStatus('confirmed')"
-        @complete="isCheckoutOpen = true"
-        @decline="handleDecline"
-        @no_show="handleNoShow"
-        @delete="handleDelete"
-        @close="open = false"
-      />
-    </template>
-  </USlideover>
-
-  <AppointmentFormDialog
-    :open="isFormOpen"
     :appointment="current"
+    :clients="clients ?? []"
+    :services="services ?? []"
+    :payment-types="paymentTypes ?? []"
+    :sale="sale"
+    :is-new="isNew"
     :time-zone="masterPreferencesStore.timeZone"
-    @update:open="isFormOpen = $event"
-    @saved="handleSaved"
+    :time-format="masterPreferencesStore.timeFormat"
+    :loading="isBusy"
+    :on-save="handleSave"
+    @cancel="handleCancel"
+    @confirm="updateStatus('confirmed')"
+    @complete="isCheckoutOpen = true"
+    @decline="handleDecline"
+    @no_show="handleNoShow"
+    @delete="handleDelete"
+    @notify="isNotifyOpen = true"
+    @after:leave="emit('after:leave')"
   />
 
   <AppointmentCheckoutModal
@@ -218,4 +228,15 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
     @update:open="isCheckoutOpen = $event"
     @confirm="handleCheckoutConfirm"
   />
+
+  <!-- Notify-client entry point — placeholder until the notification flow ships. -->
+  <UModal v-model:open="isNotifyOpen" :title="$t('appointments.preview.notifyTitle')">
+    <template #body>
+      <ComingSoon
+        :title="$t('appointments.preview.notifyTitle')"
+        :description="$t('appointments.preview.notifyComingSoon')"
+        icon="i-lucide-message-circle"
+      />
+    </template>
+  </UModal>
 </template>

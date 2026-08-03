@@ -16,7 +16,6 @@ import {
   type AppointmentActionKey,
   type AppointmentTagKey,
 } from '../config/action-config'
-import { formatDurationChip } from '../lib/format-duration'
 
 const props = defineProps<{
   appointment: Appointment
@@ -94,7 +93,7 @@ const timeRange = computed(() => {
   return `${start} – ${end}`
 })
 
-const durationChip = computed(() => formatDurationChip(props.appointment.duration, t))
+const durationChip = computed(() => formats.duration(props.appointment.duration))
 
 const total = computed(() => {
   if (props.appointment.price != null) return props.appointment.price
@@ -134,24 +133,15 @@ const TAG_VIEW: Record<
     color: 'primary',
     labelKey: 'appointments.preview.tags.newClient',
   },
-  paid: {
-    icon: 'i-lucide-circle-check',
-    color: 'success',
-    labelKey: 'appointments.preview.tags.paid',
-  },
 }
 
 function isTagVisible(tag: AppointmentTagKey): boolean {
   if (tag === 'online_booking') return props.appointment.source === 'online_booking'
-  if (tag === 'new_client') return Boolean(props.isNew)
-  return Boolean(props.sale)
+  return Boolean(props.isNew)
 }
 const visibleTags = computed(() => actions.value.tags.filter(isTagVisible))
 
 function tagLabel(tag: AppointmentTagKey): string {
-  if (tag === 'paid') {
-    return t(TAG_VIEW.paid.labelKey, { amount: formats.price(props.sale?.amount ?? 0) })
-  }
   return t(TAG_VIEW[tag].labelKey)
 }
 
@@ -331,7 +321,7 @@ function runAction(key: AppointmentActionKey) {
             >
               <div class="min-w-0">
                 <p class="truncate text-sm font-medium">{{ service.name }}</p>
-                <p class="text-xs text-muted">{{ formatDurationChip(service.duration, t) }}</p>
+                <p class="text-xs text-muted">{{ formats.duration(service.duration) }}</p>
               </div>
               <span class="shrink-0 text-sm font-medium">{{ formats.price(service.price) }}</span>
             </div>

@@ -13,7 +13,7 @@ export type AppointmentActionKey =
 
 /** Contextual badge potentially shown for an appointment. Actual visibility is
  *  resolved by the panel against real data (source / isNew / sale). */
-export type AppointmentTagKey = 'online_booking' | 'new_client' | 'paid'
+export type AppointmentTagKey = 'online_booking' | 'new_client'
 
 export interface AppointmentAction {
   key: AppointmentActionKey
@@ -108,7 +108,7 @@ export const APPOINTMENT_ACTION_CONFIG: Record<AppointmentStatus, AppointmentSta
     menu: [EDIT, NO_SHOW, DELETE],
   },
   completed: {
-    tags: ['paid'],
+    tags: [],
     menu: [EDIT, DELETE],
   },
   cancelled: {

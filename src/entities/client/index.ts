@@ -1,5 +1,6 @@
 export type { Client, CreateClientDto, UpdateClientDto } from './model/types'
 export { default as ClientAvatar } from './ui/ClientAvatar.vue'
+export { default as ClientPickerList } from './ui/ClientPickerList.vue'
 export {
   useClientsQuery,
   useCreateClientMutation,

@@ -5,4 +5,8 @@ export type {
   SaleItem,
   SalePaymentType,
 } from './model/types'
-export { useSaleByAppointmentQuery, useCompleteSaleMutation } from './model/sale.queries'
+export {
+  useSaleByAppointmentQuery,
+  useCompleteSaleMutation,
+  useUpdateSaleMutation,
+} from './model/sale.queries'

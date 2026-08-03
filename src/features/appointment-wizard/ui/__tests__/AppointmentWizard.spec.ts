@@ -44,6 +44,7 @@ vi.mock('@entities/appointment', async () => {
 })
 vi.mock('@entities/client', () => ({
   ClientAvatar: { name: 'ClientAvatar', render: () => null },
+  ClientPickerList: { name: 'ClientPickerList', render: () => null },
   useClientsQuery: () => ({ data: mocks.clients }),
   useCreateClientMutation: () => ({
     mutateAsync: vi.fn<() => Promise<unknown>>(),
@@ -55,6 +56,7 @@ vi.mock('@entities/client', () => ({
   }),
 }))
 vi.mock('@entities/service', () => ({
+  ServicePickerList: { name: 'ServicePickerList', render: () => null },
   useServicesQuery: () => ({ data: mocks.services }),
 }))
 vi.mock('@entities/time-block', () => ({
