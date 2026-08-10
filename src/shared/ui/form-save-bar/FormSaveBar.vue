@@ -31,24 +31,24 @@ const { t } = useI18n()
     >
       <div
         v-if="dirty"
-        class="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
+        class="fixed inset-x-0 bottom-[calc(var(--safe-area-bottom)+1rem)] z-50 flex justify-center px-3 md:bottom-6 md:px-4"
         role="region"
         :aria-label="message ?? t('common.unsavedChanges')"
       >
         <div
-          class="flex items-center gap-4 rounded-full bg-zinc-900 py-2 pl-5 pr-2 shadow-2xl ring-1 ring-white/10 dark:bg-zinc-800"
+          class="flex w-full max-w-lg flex-col gap-3 rounded-lg bg-zinc-900 p-3 shadow-2xl ring-1 ring-white/10 md:w-auto md:max-w-none md:flex-row md:items-center md:gap-4 md:rounded-full md:py-2 md:pl-5 md:pr-2 dark:bg-zinc-800"
         >
-          <div class="flex items-center gap-2.5">
+          <div class="flex min-w-0 items-center gap-2.5 px-1 md:px-0">
             <span class="size-2 shrink-0 rounded-full bg-amber-400" />
-            <span class="text-sm font-medium text-white whitespace-nowrap">
+            <span class="text-sm font-medium text-white md:whitespace-nowrap">
               {{ message ?? t('common.unsavedChanges') }}
             </span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center">
             <UButton
               variant="ghost"
               size="md"
-              class="text-zinc-400 hover:bg-white/10 hover:text-white"
+              class="w-full justify-center text-sm text-zinc-400 hover:bg-white/10 hover:text-white md:w-auto md:text-base"
               :disabled="saving"
               @click="emit('discard')"
             >
@@ -57,7 +57,7 @@ const { t } = useI18n()
             <UButton
               size="md"
               :loading="saving"
-              class="rounded-full bg-white text-zinc-900 hover:bg-zinc-100"
+              class="w-full justify-center rounded-full bg-white text-sm text-zinc-900 hover:bg-zinc-100 md:w-auto md:text-base"
               @click="emit('save')"
             >
               {{ saveLabel ?? t('common.saveChanges') }}

@@ -20,7 +20,7 @@ function onScroll(event: Event) {
       </template>
     </MobileHeader>
 
-    <section class="flex flex-1 flex-col rounded-t-3xl bg-default">
+    <section class="flex flex-1 flex-col rounded-t-xl bg-default">
       <slot />
     </section>
   </div>
