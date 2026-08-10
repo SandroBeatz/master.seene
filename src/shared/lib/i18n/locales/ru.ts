@@ -29,6 +29,7 @@ export default {
     or: 'или',
     previous: 'Назад',
     next: 'Вперёд',
+    back: 'Назад',
     edit: 'Редактировать',
     delete: 'Удалить',
     cancel: 'Отмена',

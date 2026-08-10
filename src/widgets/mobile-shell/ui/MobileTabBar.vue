@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, useTemplateRef } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import type { MobileTabBarExpose } from '../model/tab-bar'
 
 const emit = defineEmits<{ actions: [] }>()
 
-const navRef = useTemplateRef('nav')
+const navRef = useTemplateRef<ComponentPublicInstance>('nav')
 defineExpose<MobileTabBarExpose>({
   get el() {
     // Vue's component `$el` is a placeholder Comment node until it actually

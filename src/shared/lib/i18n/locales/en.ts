@@ -30,6 +30,7 @@ export default {
     or: 'or',
     previous: 'Previous',
     next: 'Next',
+    back: 'Back',
     edit: 'Edit',
     delete: 'Delete',
     cancel: 'Cancel',

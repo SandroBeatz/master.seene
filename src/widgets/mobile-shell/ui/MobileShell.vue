@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useElementSize, useSwipe } from '@vueuse/core'
 import { useQuickCreate } from '@widgets/quick-create-action'
 import MobileTabBar from './MobileTabBar.vue'
-import MobileHeader from './MobileHeader.vue'
+import MobilePushPage from './MobilePushPage.vue'
 import { provideMobilePushTitle } from '../model/push-title'
 import type { MobileTabBarExpose } from '../model/tab-bar'
 
@@ -83,17 +83,21 @@ useSwipe(mainRef, {
 
 <template>
   <div class="flex h-dvh flex-col bg-[var(--app-canvas)]">
-    <MobileHeader v-if="!isRootScreen" :title="headerTitle" @back="router.back()" />
-
     <!-- Fixed-viewport shell (like the desktop dashboard panel): `main` is the
-    scroll container. Content pages scroll here; `fill` pages (e.g. Calendar) get
-    a bounded height so their inner grid can size and scroll on its own. -->
+    scroll container for root screens. Pushed screens use MobilePushPage as their
+    own scroll container so its header can remain sticky. -->
     <main
       ref="mainRef"
-      class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      class="flex min-h-0 flex-1 flex-col"
+      :class="{ 'overflow-y-auto': isRootScreen, 'overflow-hidden': !isRootScreen }"
       :style="{ paddingBottom: mainPaddingBottom }"
     >
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <component :is="Component" v-if="isRootScreen" />
+        <MobilePushPage v-else :key="route.fullPath" :title="headerTitle" @back="router.back()">
+          <component :is="Component" />
+        </MobilePushPage>
+      </RouterView>
     </main>
 
     <MobileTabBar v-if="isRootScreen" ref="tabBar" @actions="quickCreate.openMenu()" />

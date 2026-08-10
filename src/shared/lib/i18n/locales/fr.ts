@@ -29,6 +29,7 @@ export default {
     or: 'ou',
     previous: 'Précédent',
     next: 'Suivant',
+    back: 'Retour',
     edit: 'Modifier',
     delete: 'Supprimer',
     cancel: 'Annuler',

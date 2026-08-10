@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, RouterView } from 'vue-router'
 import type { NavigationMenuItem } from '@nuxt/ui'
+import { Page } from '@shared/ui'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -65,16 +66,21 @@ const groups = computed(() => [
   <div v-if="hasActiveChild" class="p-4">
     <RouterView />
   </div>
-  <div v-else class="flex flex-col gap-6 px-4 py-4">
-    <h1 class="text-xl font-semibold text-highlighted">{{ t('settings.title') }}</h1>
-
-    <div v-for="group in groups" :key="group.label" class="flex flex-col gap-1">
-      <p class="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-dimmed">
-        {{ group.label }}
-      </p>
-      <UCard :ui="{ root: 'rounded-xl shadow-panel ring-0 divide-y-0', body: 'p-2' }">
-        <UNavigationMenu orientation="vertical" variant="pill" :items="group.items" :ui="navUI" />
-      </UCard>
+  <Page v-else :title="t('settings.title')">
+    <div class="flex flex-col gap-6">
+      <div v-for="group in groups" :key="group.label" class="flex flex-col gap-1">
+        <p class="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-dimmed">
+          {{ group.label }}
+        </p>
+        <UCard :ui="{ root: 'rounded-lg shadow-sm ring-0 divide-y-0', body: 'p-2' }">
+          <UNavigationMenu
+            orientation="vertical"
+            variant="pill"
+            :items="group.items"
+            :ui="navUI"
+          />
+        </UCard>
+      </div>
     </div>
-  </div>
+  </Page>
 </template>
