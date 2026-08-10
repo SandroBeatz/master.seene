@@ -48,18 +48,6 @@ export async function setPaymentTypeActive(id: string, isActive: boolean): Promi
   if (error) throw error
 }
 
-export async function updatePaymentTypeSortOrders(
-  items: Array<{ id: string; sort_order: number }>,
-): Promise<void> {
-  for (const item of items) {
-    const { error } = await supabase
-      .from('payment_type')
-      .update({ sort_order: item.sort_order })
-      .eq('id', item.id)
-    if (error) throw error
-  }
-}
-
 /**
  * Guarantees the two system methods (cash + card) exist for the user.
  * Idempotent: only inserts the methods that are missing, so repeated calls do nothing.

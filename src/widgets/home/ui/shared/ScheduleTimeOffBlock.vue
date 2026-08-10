@@ -37,9 +37,7 @@ defineProps<{
 
     <div class="flex items-center gap-1">
       <UIcon name="i-lucide-ban" class="size-3 shrink-0 text-muted" />
-      <Typography variant="footnote" class="font-semibold">{{
-        block.timeRange
-      }}</Typography>
+      <Typography variant="footnote" class="font-semibold">{{ block.timeRange }}</Typography>
     </div>
     <Typography variant="caption" class="text-muted">{{ block.label }}</Typography>
   </div>

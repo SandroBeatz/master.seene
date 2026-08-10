@@ -77,18 +77,20 @@ export default defineConfig({
         toaster: {
           slots: {
             viewport:
-              'top-8! left-1/2! right-auto! w-full! max-w-[calc(100vw-2rem)] -translate-x-1/2! items-center',
-            base: 'w-fit! max-w-[calc(100vw-2rem)] mx-auto',
+              'top-[calc(var(--safe-area-top)+0.75rem)]! left-1/2! right-auto! w-full! max-w-[calc(100vw-1rem)] -translate-x-1/2! items-center sm:top-8! sm:max-w-[calc(100vw-2rem)]',
+            base: 'mx-auto w-fit! max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)]',
           },
         },
 
         toast: {
           slots: {
-            root: "min-h-0 w-fit max-w-[calc(100vw-2rem)] rounded-full bg-zinc-950! px-5 py-4 shadow-2xl shadow-zinc-950/15 ring-0 gap-3 text-white before:flex before:size-7 before:shrink-0 before:items-center before:justify-center before:rounded-full before:text-base before:font-bold before:leading-none before:text-white before:content-['\\2713'] dark:bg-white! dark:text-zinc-950 dark:shadow-black/25",
-            wrapper: 'w-auto min-w-0 flex-none',
-            title: 'truncate text-base font-semibold leading-none text-white dark:text-zinc-950',
-            description: 'mt-1 text-sm leading-5 text-zinc-300 dark:text-zinc-600',
-            icon: '',
+            root: 'min-h-0 w-fit max-w-[calc(100vw-1rem)] items-center gap-2 rounded-xl bg-zinc-950! px-3 py-2 text-white shadow-xl shadow-zinc-950/15 ring-0 sm:max-w-[calc(100vw-2rem)] sm:gap-3 sm:rounded-full sm:px-5 sm:py-4 sm:shadow-2xl dark:bg-white! dark:text-zinc-950 dark:shadow-black/25',
+            wrapper: 'w-auto min-w-0 flex-[0_1_auto] justify-center',
+            title:
+              'truncate text-sm font-medium leading-5 text-white sm:text-base sm:font-semibold sm:leading-none dark:text-zinc-950',
+            description:
+              'text-xs leading-4 text-zinc-300 sm:text-sm sm:leading-5 dark:text-zinc-600',
+            icon: 'size-4 shrink-0 self-center sm:size-5',
             actions: 'hidden',
             close: 'hidden',
             progress: 'hidden',
@@ -96,25 +98,38 @@ export default defineConfig({
           variants: {
             color: {
               primary: {
-                root: 'before:bg-zinc-600 dark:before:bg-zinc-500',
+                icon: 'text-zinc-300 dark:text-zinc-600',
               },
               secondary: {
-                root: 'before:bg-violet-500',
+                icon: 'text-violet-400 dark:text-violet-600',
               },
               success: {
-                root: 'before:bg-emerald-500',
+                icon: 'text-emerald-400 dark:text-emerald-600',
               },
               info: {
-                root: "before:bg-sky-500 before:content-['i']",
+                icon: 'text-sky-400 dark:text-sky-600',
               },
               warning: {
-                root: "before:bg-amber-500 before:content-['!']",
+                icon: 'text-amber-400 dark:text-amber-600',
               },
               error: {
-                root: "before:bg-rose-500 before:content-['\\00D7']",
+                icon: 'text-rose-400 dark:text-rose-600',
               },
               neutral: {
-                root: 'before:bg-zinc-600 dark:before:bg-zinc-500',
+                icon: 'text-zinc-300 dark:text-zinc-600',
+              },
+            },
+            orientation: {
+              horizontal: {
+                root: 'items-center',
+              },
+              vertical: {
+                root: 'items-center',
+              },
+            },
+            title: {
+              true: {
+                description: 'mt-0.5 sm:mt-1',
               },
             },
           },
@@ -142,6 +157,15 @@ export default defineConfig({
                 icon: 'group-data-[state=checked]:text-accent!',
               },
             },
+          },
+        },
+
+        // Selected radio fill follows `primary` (zinc), which is near-invisible on
+        // the dark surface. Force a light fill in dark mode so the checked state
+        // reads clearly; the inner `after` dot stays `bg-default` (dark) for contrast.
+        radioGroup: {
+          slots: {
+            indicator: 'dark:bg-white!',
           },
         },
 
@@ -279,24 +303,30 @@ export default defineConfig({
         //
         // `z-50` on both overlay and content: Nuxt UI ships these with no z-index
         // (z-index: auto), relying on DOM order (teleported to end of body) to paint
-        // above the rest of the page. The mobile tab bar's `z-40` breaks that
-        // assumption — a positive z-index always wins over `auto` regardless of DOM
-        // order — so without this the tab bar would paint over open dialogs. Content
-        // must match overlay's z-index (not just exceed the tab bar) so their
-        // relative order still falls back to DOM order, keeping content above overlay.
+        // above the rest of the page. `#app` has no z-index, so it doesn't establish
+        // a stacking context — its positioned mobile chrome (tab bar `z-40`, floating
+        // push header `z-30`) therefore competes directly in the root stacking context
+        // with the teleported overlays, and any positive z-index always wins over
+        // `auto` regardless of DOM order. Pinning overlay + content to `z-50` puts
+        // every dialog above that chrome. Content must *match* overlay's z-index (not
+        // just exceed the chrome) so their relative order still falls back to DOM
+        // order (overlay is rendered before content), keeping content above the scrim.
         modal: {
           slots: {
-            overlay: 'bg-black/60!',
+            overlay: 'bg-black/60! z-50',
+            content: 'z-50',
           },
         },
         slideover: {
           slots: {
-            overlay: 'bg-black/60!',
+            overlay: 'bg-black/60! z-50',
+            content: 'z-50',
           },
         },
         drawer: {
           slots: {
-            overlay: 'bg-black/60!',
+            overlay: 'bg-black/60! z-50',
+            content: 'z-50',
           },
         },
       },

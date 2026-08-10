@@ -75,7 +75,10 @@ describe('ScheduleTimeline now-line', () => {
   })
 
   it('does not show the now-line on a day that is not today', () => {
-    const wrapper = mountTimeline([makeAppointment({ start_at: '2020-01-06T10:00:00.000Z' })], PAST_DATE)
+    const wrapper = mountTimeline(
+      [makeAppointment({ start_at: '2020-01-06T10:00:00.000Z' })],
+      PAST_DATE,
+    )
     expect(wrapper.find('[data-testid="now-line"]').exists()).toBe(false)
   })
 

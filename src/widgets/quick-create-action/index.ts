@@ -1,2 +1,2 @@
 export { useQuickCreate } from './model/use-quick-create'
-export type { QuickCreateChoice } from './model/types'
+export type { QuickCreateChoice, QuickCreatePresentation } from './model/types'

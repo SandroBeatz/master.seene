@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-import draggable from 'vuedraggable'
+import { createReusableTemplate } from '@vueuse/core'
+import { useIsMobile } from '@shared/lib/viewport'
+import { useMobilePushActions } from '@widgets/mobile-shell'
 import {
   ensureSystemPaymentTypes,
-  updatePaymentTypeSortOrders,
   useDeletePaymentTypeMutation,
   usePaymentTypesQuery,
   useSetPaymentTypeActiveMutation,
@@ -31,6 +32,9 @@ onMounted(async () => {
   }
 })
 
+// Server already returns methods in their sort order; the list is read-only now.
+const list = computed(() => paymentTypes.value ?? [])
+
 // --- Display helpers -------------------------------------------------------
 const KIND_ICON: Record<PaymentTypeKind, string> = {
   cash: 'i-lucide-banknote',
@@ -52,33 +56,6 @@ function methodSubtitle(pt: PaymentType): string {
   if (pt.kind === 'cash') return t('settings.paymentTypes.system.cash.subtitle')
   if (pt.kind === 'card') return t('settings.paymentTypes.system.card.subtitle')
   return ''
-}
-
-// Local copy of the full list so drag-and-drop can reorder any method optimistically.
-const sortedList = ref<PaymentType[]>([])
-
-watch(
-  paymentTypes,
-  (val) => {
-    if (val) sortedList.value = [...val]
-  },
-  { immediate: true },
-)
-
-async function onDragEnd() {
-  // Skip if the order didn't actually change (vuedraggable fires @end on any drop).
-  const current = sortedList.value.map((pt) => pt.id).join()
-  const original = (paymentTypes.value ?? []).map((pt) => pt.id).join()
-  if (current === original) return
-
-  const updates = sortedList.value.map((pt, i) => ({ id: pt.id, sort_order: i }))
-  try {
-    await updatePaymentTypeSortOrders(updates)
-    toast.add({ title: t('settings.paymentTypes.reorderSuccess'), color: 'success' })
-  } catch {
-    toast.add({ title: t('settings.paymentTypes.saveError'), color: 'error' })
-    if (paymentTypes.value) sortedList.value = [...paymentTypes.value]
-  }
 }
 
 async function onToggle(pt: PaymentType, value: boolean) {
@@ -128,7 +105,32 @@ async function confirmDelete() {
   }
 }
 
-// Nuxt UI overrides
+const isMobile = useIsMobile()
+
+// On mobile the add button lives in the push header — register it there rather
+// than rendering it in the page body. Cleared on unmount so it doesn't leak to
+// the next screen.
+const { setActions, clearActions } = useMobilePushActions()
+watchEffect(() => {
+  if (isMobile.value && !isLoading.value) {
+    setActions([
+      {
+        icon: 'i-lucide-plus',
+        ariaLabel: t('settings.paymentTypes.addCustomButton'),
+        onClick: openCreate,
+      },
+    ])
+  } else {
+    clearActions()
+  }
+})
+onUnmounted(clearActions)
+
+// Reused across the two layouts so the markup isn't duplicated: desktop wraps
+// it in a UCard, mobile drops the card and renders flush inside the p-4 gutter.
+const [DefineHeaderText, ReuseHeaderText] = createReusableTemplate()
+const [DefineBody, ReuseBody] = createReusableTemplate()
+
 const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
@@ -136,14 +138,16 @@ const hostUI = {
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
+  <DefineHeaderText>
+    <div class="flex flex-col gap-1">
       <Typography variant="h5" class="text-highlighted font-bold">
         {{ t('settings.paymentTypes.title') }}
       </Typography>
-      <p class="mt-1 text-sm text-muted">{{ t('settings.paymentTypes.subtitle') }}</p>
-    </template>
+      <p class="text-sm text-muted">{{ t('settings.paymentTypes.subtitle') }}</p>
+    </div>
+  </DefineHeaderText>
 
+  <DefineBody>
     <div class="flex flex-col gap-2">
       <!-- Loading skeletons -->
       <template v-if="isLoading">
@@ -152,7 +156,6 @@ const hostUI = {
           :key="i"
           class="flex items-center gap-3 rounded-lg border border-default bg-background p-3"
         >
-          <USkeleton class="size-4 shrink-0 rounded" />
           <USkeleton class="size-12 shrink-0 rounded-xl" />
           <div class="flex-1 space-y-2">
             <USkeleton class="h-4 w-1/3" />
@@ -162,90 +165,89 @@ const hostUI = {
         </div>
       </template>
 
-      <draggable
-        v-else
-        v-model="sortedList"
-        item-key="id"
-        handle=".drag-handle"
-        class="flex flex-col gap-2"
-        @end="onDragEnd"
-      >
-        <template #item="{ element: pt }">
-          <div
-            class="flex items-center gap-3 rounded-lg border border-default bg-background p-3 transition-colors hover:bg-elevated"
+      <template v-else>
+        <div
+          v-for="pt in list"
+          :key="pt.id"
+          class="flex items-center gap-3 rounded-lg border border-default bg-background p-3 transition-colors hover:bg-elevated"
+        >
+          <!-- Custom method: tile + name are clickable to edit -->
+          <button
+            v-if="pt.kind === 'custom'"
+            type="button"
+            class="flex min-w-0 flex-1 items-center gap-3 text-left"
+            @click="openEdit(pt)"
           >
-            <UIcon
-              name="i-lucide-grip-vertical"
-              class="drag-handle shrink-0 cursor-grab text-muted"
-            />
-
-            <!-- Custom method: tile + name are clickable to edit -->
-            <button
-              v-if="pt.kind === 'custom'"
-              type="button"
-              class="flex min-w-0 flex-1 items-center gap-3 text-left"
-              @click="openEdit(pt)"
+            <div
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-opacity"
+              :class="{ 'opacity-50': !pt.is_active }"
+              :style="{ backgroundColor: `${pt.color}1a` }"
             >
-              <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-opacity"
-                :class="{ 'opacity-50': !pt.is_active }"
-                :style="{ backgroundColor: `${pt.color}1a` }"
-              >
-                <UIcon
-                  name="i-lucide-circle-dollar-sign"
-                  class="size-5"
-                  :style="{ color: pt.color }"
-                />
-              </div>
-              <span
-                class="min-w-0 flex-1 truncate text-sm font-bold transition-opacity"
-                :class="{ 'opacity-50': !pt.is_active }"
-                >{{ pt.name }}</span
-              >
-            </button>
-
-            <!-- System method: neutral tile, fixed i18n name + subtitle -->
-            <div v-else class="flex min-w-0 flex-1 items-center gap-3">
-              <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-elevated transition-opacity"
-                :class="{ 'opacity-50': !pt.is_active }"
-              >
-                <UIcon :name="methodIcon(pt)" class="size-5 text-muted" />
-              </div>
-              <div
-                class="min-w-0 flex-1 transition-opacity"
-                :class="{ 'opacity-50': !pt.is_active }"
-              >
-                <p class="truncate text-sm font-bold">{{ methodName(pt) }}</p>
-                <p class="truncate text-xs text-muted">{{ methodSubtitle(pt) }}</p>
-              </div>
+              <UIcon
+                name="i-lucide-circle-dollar-sign"
+                class="size-5"
+                :style="{ color: pt.color }"
+              />
             </div>
+            <span
+              class="min-w-0 flex-1 truncate text-sm font-bold transition-opacity"
+              :class="{ 'opacity-50': !pt.is_active }"
+              >{{ pt.name }}</span
+            >
+          </button>
 
-            <UButton
-              v-if="pt.kind === 'custom'"
-              icon="i-lucide-trash-2"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              @click="openDelete(pt)"
-            />
-            <USwitch :model-value="pt.is_active" @update:model-value="onToggle(pt, $event)" />
+          <!-- System method: neutral tile, fixed i18n name + subtitle -->
+          <div v-else class="flex min-w-0 flex-1 items-center gap-3">
+            <div
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-elevated transition-opacity"
+              :class="{ 'opacity-50': !pt.is_active }"
+            >
+              <UIcon :name="methodIcon(pt)" class="size-5 text-muted" />
+            </div>
+            <div class="min-w-0 flex-1 transition-opacity" :class="{ 'opacity-50': !pt.is_active }">
+              <p class="truncate text-sm font-bold">{{ methodName(pt) }}</p>
+              <p class="truncate text-xs text-muted">{{ methodSubtitle(pt) }}</p>
+            </div>
           </div>
-        </template>
-      </draggable>
 
-      <UButton
-        v-if="!isLoading"
-        leading-icon="i-lucide-plus"
-        color="primary"
-        variant="link"
-        class="mt-1 self-start"
-        @click="openCreate"
-      >
-        {{ t('settings.paymentTypes.addCustomButton') }}
-      </UButton>
+          <UButton
+            v-if="pt.kind === 'custom'"
+            icon="i-lucide-trash-2"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :aria-label="t('settings.paymentTypes.deleteAction')"
+            @click="openDelete(pt)"
+          />
+          <USwitch :model-value="pt.is_active" @update:model-value="onToggle(pt, $event)" />
+        </div>
+      </template>
     </div>
+  </DefineBody>
+
+  <!-- Desktop: card surface with the add button in the header. -->
+  <UCard v-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <div class="flex items-start justify-between gap-3">
+        <ReuseHeaderText />
+        <UButton
+          v-if="!isLoading"
+          icon="i-lucide-plus"
+          color="primary"
+          square
+          :aria-label="t('settings.paymentTypes.addCustomButton')"
+          @click="openCreate"
+        />
+      </div>
+    </template>
+    <ReuseBody />
   </UCard>
+
+  <!-- Mobile: no card; the add button is registered into the push header. -->
+  <div v-else class="flex flex-col gap-4">
+    <ReuseHeaderText />
+    <ReuseBody />
+  </div>
 
   <PaymentTypeFormModal v-model="isFormOpen" :payment-type="editingPaymentType" />
 

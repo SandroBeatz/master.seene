@@ -73,12 +73,7 @@ const groups = computed(() => [
           {{ group.label }}
         </p>
         <UCard :ui="{ root: 'rounded-lg shadow-sm ring-0 divide-y-0', body: 'p-2' }">
-          <UNavigationMenu
-            orientation="vertical"
-            variant="pill"
-            :items="group.items"
-            :ui="navUI"
-          />
+          <UNavigationMenu orientation="vertical" variant="pill" :items="group.items" :ui="navUI" />
         </UCard>
       </div>
     </div>

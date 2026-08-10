@@ -28,7 +28,7 @@ const items = computed<NavigationMenuItem[]>(() => [
   {
     icon: 'i-lucide-plus',
     class:
-      'before:block before:bg-primary dark:before:bg-white [&_[data-slot=linkLeadingIcon]]:text-inverted! dark:[&_[data-slot=linkLeadingIcon]]:text-zinc-950!',
+      'before:block before:bg-primary hover:before:bg-primary/90! dark:before:bg-white dark:hover:before:bg-white/90! [&_[data-slot=linkLeadingIcon]]:text-inverted! dark:[&_[data-slot=linkLeadingIcon]]:text-zinc-950!',
     onSelect: () => {
       tap()
       emit('actions')

@@ -31,7 +31,11 @@ export function useCheckout(
   // Writable: reading sums the per-service amounts; writing redistributes the new
   // total across services proportionally to their current share (evenly if all zero).
   const total = computed<number>({
-    get: () => roundTo(serviceAmounts.value.reduce((sum, a) => sum + a, 0), decimals),
+    get: () =>
+      roundTo(
+        serviceAmounts.value.reduce((sum, a) => sum + a, 0),
+        decimals,
+      ),
     set: (newTotal) => distributeTotal(newTotal),
   })
 

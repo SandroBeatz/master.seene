@@ -28,7 +28,6 @@ export function useAppointmentPreview() {
   const mobile = overlay.create(MobileAppointmentSheetOverlay)
 
   return {
-    open: (props: { appointment: Appointment }) =>
-      (isMobile.value ? mobile : desktop).open(props),
+    open: (props: { appointment: Appointment }) => (isMobile.value ? mobile : desktop).open(props),
   }
 }

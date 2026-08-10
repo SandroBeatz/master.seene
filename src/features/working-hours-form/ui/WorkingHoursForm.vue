@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
+import { useIsMobile } from '@shared/lib/viewport'
 import { useSessionStore } from '@entities/session'
 import { useMasterProfileQuery, useUpdateMasterScheduleMutation } from '@entities/master'
 import type { MasterScheduleDayKey } from '@entities/master'
@@ -81,21 +83,29 @@ const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
 }
+
+const isMobile = useIsMobile()
+
+// Reused across the two layouts so the form markup isn't duplicated: desktop
+// wraps it in a UCard, mobile drops the card chrome (the push header already
+// provides a titled surface) and renders flush inside the page's p-4 gutter.
+const [DefineHeader, ReuseHeader] = createReusableTemplate()
+const [DefineBody, ReuseBody] = createReusableTemplate()
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
-      <div class="flex flex-col gap-1">
-        <Typography variant="h5" class="text-highlighted font-bold">
-          {{ t('settings.workingHours.title') }}
-        </Typography>
-        <Typography variant="caption" class="text-muted">
-          {{ t('settings.workingHours.subtitle') }}
-        </Typography>
-      </div>
-    </template>
+  <DefineHeader>
+    <div class="flex flex-col gap-1">
+      <Typography variant="h5" class="text-highlighted font-bold">
+        {{ t('settings.workingHours.title') }}
+      </Typography>
+      <Typography variant="caption" class="text-muted">
+        {{ t('settings.workingHours.subtitle') }}
+      </Typography>
+    </div>
+  </DefineHeader>
 
+  <DefineBody>
     <div class="divide-y divide-default">
       <WorkingHoursDay
         v-for="view in dayViews"
@@ -103,6 +113,7 @@ const hostUI = {
         :day-key="view.key"
         :day="view.day"
         :errors="view.errors"
+        :dirty="view.dirty"
         @toggle="setEnabled(view.key, $event)"
         @update:start="setStart(view.key, $event)"
         @update:end="setEnd(view.key, $event)"
@@ -114,5 +125,17 @@ const hostUI = {
     </div>
 
     <FormSaveBar :dirty="canSave" :saving="isSaving" @save="onSave" @discard="onDiscard" />
+  </DefineBody>
+
+  <!-- Desktop: card surface. Mobile: no card — flush content under the push header. -->
+  <UCard v-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <ReuseHeader />
+    </template>
+    <ReuseBody />
   </UCard>
+  <div v-else class="flex flex-col gap-4">
+    <ReuseHeader />
+    <ReuseBody />
+  </div>
 </template>

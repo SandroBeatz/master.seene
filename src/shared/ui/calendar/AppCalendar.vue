@@ -25,12 +25,7 @@ const weekStartsOn = computed<0 | 1>(() => (localeStore.current === 'en' ? 0 : 1
 </script>
 
 <template>
-  <UCalendar
-    :locale="locale"
-    :year-controls="false"
-    :week-starts-on="weekStartsOn"
-    v-bind="$attrs"
-  >
+  <UCalendar :locale="locale" :year-controls="false" :week-starts-on="weekStartsOn" v-bind="$attrs">
     <template v-for="(_, name) in $slots" #[name]="slotProps">
       <slot :name="name" v-bind="slotProps ?? {}" />
     </template>

@@ -22,6 +22,8 @@ export interface WorkingHoursDayView {
   key: MasterScheduleDayKey
   day: NormalizedScheduleDay
   errors: ScheduleDayError[]
+  /** True when this day differs from the last seeded (saved) value. */
+  dirty: boolean
 }
 
 export interface UseWorkingHours {
@@ -53,6 +55,8 @@ export interface UseWorkingHours {
 
 export function useWorkingHours(): UseWorkingHours {
   const state = ref<NormalizedSchedule>(normalizeSchedule(null))
+  // Baseline snapshot of the last seeded schedule, used for per-day dirtiness.
+  const initial = ref<NormalizedSchedule>(normalizeSchedule(null))
 
   const validation = computed(() => validateSchedule(state.value))
 
@@ -61,6 +65,7 @@ export function useWorkingHours(): UseWorkingHours {
       key,
       day: state.value.days[key],
       errors: validation.value.days[key],
+      dirty: JSON.stringify(state.value.days[key]) !== JSON.stringify(initial.value.days[key]),
     })),
   )
 
@@ -68,6 +73,8 @@ export function useWorkingHours(): UseWorkingHours {
 
   function seed(schedule: MasterSchedule | null | undefined): void {
     state.value = normalizeSchedule(schedule)
+    // Independent clone so edits to `state` don't mutate the baseline.
+    initial.value = JSON.parse(JSON.stringify(state.value)) as NormalizedSchedule
   }
 
   function setEnabled(key: MasterScheduleDayKey, enabled: boolean): void {

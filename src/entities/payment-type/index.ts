@@ -12,8 +12,4 @@ export {
   useSetPaymentTypeActiveMutation,
   useUpdatePaymentTypeMutation,
 } from './model/payment-type.queries'
-export {
-  ensureSystemPaymentTypes,
-  setPaymentTypeActive,
-  updatePaymentTypeSortOrders,
-} from './api/payment-type.api'
+export { ensureSystemPaymentTypes, setPaymentTypeActive } from './api/payment-type.api'

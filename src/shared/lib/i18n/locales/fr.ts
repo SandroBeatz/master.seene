@@ -36,6 +36,7 @@ export default {
     close: 'Fermer',
     confirm: 'Confirmer',
     ok: 'OK',
+    unsaved: 'Non enregistré',
     unsavedChanges: 'Modifications non enregistrées',
     discard: 'Annuler',
     saveChanges: 'Enregistrer',
@@ -701,6 +702,8 @@ export default {
       subtitle:
         'Votre disponibilité hebdomadaire. Les clients ne peuvent réserver que pendant ces heures.',
       dayOff: 'Jour de repos',
+      from: 'De',
+      to: 'À',
       break: 'Pause',
       addBreak: 'Ajouter une pause',
       copyToAll: 'Copier sur tous les jours',

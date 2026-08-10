@@ -7,6 +7,7 @@ import { useQuickCreate } from '@widgets/quick-create-action'
 import MobileTabBar from './MobileTabBar.vue'
 import MobilePushPage from './MobilePushPage.vue'
 import { provideMobilePushTitle } from '../model/push-title'
+import { provideMobilePushActions } from '../model/push-actions'
 import type { MobileTabBarExpose } from '../model/tab-bar'
 
 const { t } = useI18n()
@@ -14,6 +15,7 @@ const route = useRoute()
 const router = useRouter()
 const quickCreate = useQuickCreate()
 const pushTitle = provideMobilePushTitle()
+provideMobilePushActions()
 
 // The 4 tab-bar roots. Anything else in the dashboard tree (settings sub-pages,
 // and future nested screens) is a "pushed" screen: tab bar hides, back header
@@ -100,6 +102,6 @@ useSwipe(mainRef, {
       </RouterView>
     </main>
 
-    <MobileTabBar v-if="isRootScreen" ref="tabBar" @actions="quickCreate.openMenu()" />
+    <MobileTabBar v-if="isRootScreen" ref="tabBar" @actions="quickCreate.openMenu('drawer')" />
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { useMobilePushActionsList } from '../model/push-actions'
 
 defineProps<{
   title: string
@@ -8,6 +9,9 @@ defineProps<{
 
 const emit = defineEmits<{ back: [] }>()
 const { t } = useI18n()
+
+// Actions the active pushed page registered (e.g. a round "add" button).
+const actions = useMobilePushActionsList()
 </script>
 
 <template>
@@ -42,6 +46,16 @@ const { t } = useI18n()
 
       <div class="col-start-3 flex min-w-0 items-center justify-self-end gap-1">
         <slot name="actions" />
+        <!-- Actions registered by the active pushed page (see push-actions.ts). -->
+        <UButton
+          v-for="(action, i) in actions"
+          :key="i"
+          :icon="action.icon"
+          :color="action.color ?? 'primary'"
+          square
+          :aria-label="action.ariaLabel"
+          @click="action.onClick"
+        />
       </div>
     </div>
   </header>

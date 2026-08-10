@@ -11,7 +11,13 @@ vi.mock('@entities/analytics', async (importOriginal) => ({
   useAnalyticsQueryV2: () => ({
     data: {
       value: {
-        current: { earned: 0, appointments_count: 0, clients_served: 0, working_minutes: 0, avg_check: null },
+        current: {
+          earned: 0,
+          appointments_count: 0,
+          clients_served: 0,
+          working_minutes: 0,
+          avg_check: null,
+        },
       },
     },
     isPending: { value: false },

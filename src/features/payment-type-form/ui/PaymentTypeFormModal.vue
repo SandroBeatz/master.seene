@@ -2,6 +2,7 @@
 import Joi from 'joi'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import {
   useCreatePaymentTypeMutation,
@@ -10,6 +11,7 @@ import {
   type PaymentType,
 } from '@entities/payment-type'
 import { useSessionStore } from '@entities/session'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   modelValue: boolean
@@ -24,6 +26,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -33,6 +36,14 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 })
+
+function close() {
+  isOpen.value = false
+}
+
+// Shared so the form body isn't duplicated between the desktop modal and the
+// mobile drawer.
+const [DefineBody, ReuseBody] = createReusableTemplate()
 
 const COLOR_PALETTE = [
   '#f87171',
@@ -128,7 +139,80 @@ function submitForm() {
 </script>
 
 <template>
+  <DefineBody>
+    <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField :label="$t('settings.paymentTypes.form.name')" name="name" required>
+        <UInput
+          v-model="state.name"
+          :placeholder="$t('settings.paymentTypes.form.namePlaceholder')"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField :label="$t('settings.paymentTypes.form.color')" name="color">
+        <div class="flex items-center gap-4 pt-1">
+          <div
+            class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 transition-colors"
+            :style="{ backgroundColor: `${state.color}1a` }"
+            :aria-label="$t('settings.paymentTypes.form.preview')"
+          >
+            <UIcon
+              name="i-lucide-circle-dollar-sign"
+              class="size-5"
+              :style="{ color: state.color }"
+            />
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="c in COLOR_PALETTE"
+              :key="c"
+              type="button"
+              class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
+              :style="{
+                backgroundColor: c,
+                boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+              }"
+              @click="state.color = c"
+            />
+          </div>
+        </div>
+      </UFormField>
+    </UForm>
+  </DefineBody>
+
+  <!-- Mobile: bottom drawer with 50/50 actions. -->
+  <UDrawer
+    v-if="isMobile"
+    v-model:open="isOpen"
+    :title="
+      isEdit
+        ? $t('settings.paymentTypes.form.titleEdit')
+        : $t('settings.paymentTypes.form.titleCreate')
+    "
+    :ui="{ body: 'p-4', footer: 'p-4 border-t border-default' }"
+  >
+    <template #body>
+      <ReuseBody />
+    </template>
+    <template #footer>
+      <div class="flex w-full gap-2 pb-[calc(0.25rem+var(--safe-area-bottom))]">
+        <UButton color="neutral" variant="outline" size="lg" block @click="close">
+          {{ $t('settings.paymentTypes.form.cancel') }}
+        </UButton>
+        <UButton color="primary" size="lg" block :loading="isLoading" @click="submitForm">
+          {{
+            isEdit
+              ? $t('settings.paymentTypes.form.submitEdit')
+              : $t('settings.paymentTypes.form.submitCreate')
+          }}
+        </UButton>
+      </div>
+    </template>
+  </UDrawer>
+
+  <!-- Desktop: centered modal. -->
   <UModal
+    v-else
     v-model:open="isOpen"
     :title="
       isEdit
@@ -138,47 +222,9 @@ function submitForm() {
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>
-      <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-        <UFormField :label="$t('settings.paymentTypes.form.name')" name="name" required>
-          <UInput
-            v-model="state.name"
-            :placeholder="$t('settings.paymentTypes.form.namePlaceholder')"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField :label="$t('settings.paymentTypes.form.color')" name="color">
-          <div class="flex items-center gap-4 pt-1">
-            <div
-              class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 transition-colors"
-              :style="{ backgroundColor: `${state.color}1a` }"
-              :aria-label="$t('settings.paymentTypes.form.preview')"
-            >
-              <UIcon
-                name="i-lucide-circle-dollar-sign"
-                class="size-5"
-                :style="{ color: state.color }"
-              />
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="c in COLOR_PALETTE"
-                :key="c"
-                type="button"
-                class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
-                :style="{
-                  backgroundColor: c,
-                  boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
-                }"
-                @click="state.color = c"
-              />
-            </div>
-          </div>
-        </UFormField>
-      </UForm>
+      <ReuseBody />
     </template>
-
-    <template #footer="{ close }">
+    <template #footer>
       <UButton color="neutral" variant="outline" @click="close">
         {{ $t('settings.paymentTypes.form.cancel') }}
       </UButton>
