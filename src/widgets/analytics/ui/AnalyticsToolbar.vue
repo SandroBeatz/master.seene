@@ -3,6 +3,7 @@ import { computed, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarDate, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
 import type { AnalyticsPeriodKind, AnalyticsPeriodV2 } from '@entities/analytics'
+import { useFormats } from '@shared/lib/formats'
 import {
   canStepForward as canStepForwardFrom,
   currentPeriod,
@@ -25,6 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+const formats = useFormats()
 
 const tz = getLocalTimeZone()
 
@@ -105,7 +107,7 @@ function fmtMonth(d: CalendarDate): string {
 function fmtByKind(r: DateRange): string {
   switch (period.value.kind) {
     case 'day':
-      return fmtDay(r.start)
+      return formats.dateDay(r.start.toDate(tz))
     case 'month':
       return fmtMonth(r.start)
     case 'year':

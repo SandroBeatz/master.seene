@@ -42,8 +42,8 @@ export interface Formats {
   date(value: string | Date | null | undefined, overrideFormat?: string): string
   dateTime(value: string | Date | null | undefined, overrideFormat?: string): string
   /**
-   * Formats a date with a relative day for yesterday/today/tomorrow, otherwise
-   * with a weekday: `Today Jul 24`, `Mon, Jul 27`.
+   * Formats a date with its weekday and, for yesterday/today/tomorrow, a relative
+   * prefix: `Today Fri Jul 24`, `Mon Jul 27`.
    */
   dateDay(value: string | Date | null | undefined): string
   /** Same as `dateDay()`, including the year. */
@@ -207,6 +207,7 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
     if (!parsed) return PLACEHOLDER
 
     const dateOptions: Intl.DateTimeFormatOptions = {
+      weekday: 'short',
       day: 'numeric',
       month: 'short',
     }
@@ -222,15 +223,9 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
             ? 'formats.dateDay.tomorrow'
             : null
 
-    if (relativeKey) {
-      const formattedDate = new Intl.DateTimeFormat(locale(), dateOptions).format(parsed)
-      return `${i18n.global.t(relativeKey)} ${formattedDate}`
-    }
-
-    return new Intl.DateTimeFormat(locale(), {
-      weekday: 'short',
-      ...dateOptions,
-    }).format(parsed)
+    const formattedDate = new Intl.DateTimeFormat(locale(), dateOptions)
+      .format(parsed)
+    return relativeKey ? `${i18n.global.t(relativeKey)} ${formattedDate}` : formattedDate
   }
 
   function dateDay(value: string | Date | null | undefined): string {

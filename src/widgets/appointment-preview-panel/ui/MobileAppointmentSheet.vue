@@ -361,7 +361,7 @@ const canSave = computed(
       header: 'sr-only',
       body: 'flex min-h-0 flex-1 flex-col p-0',
       footer: 'shrink-0 border-t border-default px-4 py-3',
-      container: 'flex-1'
+      container: 'flex-1',
     }"
     @after:leave="emit('after:leave')"
   >
@@ -390,9 +390,7 @@ const canSave = computed(
         <span v-else class="size-8 shrink-0" aria-hidden="true" />
       </header>
 
-      <div
-        class="flex-1 space-y-5 overflow-y-auto pb-[calc(0.5rem+var(--safe-area-bottom))]"
-      >
+      <div class="flex-1 space-y-5 overflow-y-auto pb-[calc(0.5rem+var(--safe-area-bottom))]">
         <!-- Client -->
         <div class="flex items-center gap-3">
           <ClientAvatar
@@ -424,7 +422,7 @@ const canSave = computed(
           <div v-if="isEditing" class="shrink-0">
             <UButton
               color="neutral"
-              variant="soft"
+              variant="ghost"
               icon="i-lucide-pencil"
               square
               :aria-label="$t('appointments.preview.selectClient')"
@@ -434,7 +432,7 @@ const canSave = computed(
           <div v-else class="flex shrink-0 items-center gap-1">
             <UButton
               color="neutral"
-              variant="soft"
+              variant="ghost"
               icon="i-lucide-message-circle"
               square
               :aria-label="$t('appointments.preview.notifyClient')"
@@ -444,7 +442,7 @@ const canSave = computed(
               :href="phoneHref"
               :disabled="!phoneHref"
               color="neutral"
-              variant="soft"
+              variant="ghost"
               icon="i-lucide-phone"
               square
               :aria-label="$t('appointments.preview.callClient')"

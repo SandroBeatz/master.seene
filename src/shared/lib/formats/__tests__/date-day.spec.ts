@@ -27,20 +27,20 @@ describe('formats.dateDay', () => {
   it('uses relative labels for yesterday, today and tomorrow', () => {
     const formats = makeFormats('ru')
 
-    expect(formats.dateDay(new Date(2026, 6, 23, 18))).toBe('Вчера 23 июл.')
-    expect(formats.dateDay(new Date(2026, 6, 24, 9))).toBe('Сегодня 24 июл.')
-    expect(formats.dateDay(new Date(2026, 6, 25, 8))).toBe('Завтра 25 июл.')
+    expect(formats.dateDay(new Date(2026, 6, 23, 18))).toBe('Вчера чт 23 июл.')
+    expect(formats.dateDay(new Date(2026, 6, 24, 9))).toBe('Сегодня пт 24 июл.')
+    expect(formats.dateDay(new Date(2026, 6, 25, 8))).toBe('Завтра сб 25 июл.')
   })
 
   it('uses the weekday for other dates', () => {
     const formats = makeFormats('ru')
 
-    expect(formats.dateDay(new Date(2026, 6, 27))).toBe('пн, 27 июл.')
+    expect(formats.dateDay(new Date(2026, 6, 27))).toBe('пн 27 июл.')
   })
 
   it('localizes relative labels and date order', () => {
-    expect(makeFormats('en').dateDay(new Date(2026, 6, 24))).toBe('Today Jul 24')
-    expect(makeFormats('fr').dateDay(new Date(2026, 6, 24))).toBe("Aujourd'hui 24 juil.")
+    expect(makeFormats('en').dateDay(new Date(2026, 6, 24))).toBe('Today Fri Jul 24')
+    expect(makeFormats('fr').dateDay(new Date(2026, 6, 24))).toBe("Aujourd'hui ven. 24 juil.")
   })
 
   it('returns the placeholder for empty and invalid values', () => {
@@ -66,8 +66,8 @@ describe('formats.dateDayYear', () => {
   it('includes the year for relative and weekday dates', () => {
     const formats = makeFormats('ru')
 
-    expect(formats.dateDayYear(new Date(2026, 6, 24))).toBe('Сегодня 24 июл. 2026 г.')
-    expect(formats.dateDayYear(new Date(2026, 6, 27))).toBe('пн, 27 июл. 2026 г.')
+    expect(formats.dateDayYear(new Date(2026, 6, 24))).toBe('Сегодня пт 24 июл. 2026 г.')
+    expect(formats.dateDayYear(new Date(2026, 6, 27))).toBe('пн 27 июл. 2026 г.')
   })
 
   it('returns the placeholder for empty and invalid values', () => {
