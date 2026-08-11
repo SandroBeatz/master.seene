@@ -49,6 +49,8 @@ const actionsAppointment = ref<Appointment | null>(null)
 const isActionsOpen = ref(false)
 const editingAppointment = ref<Appointment | null>(null)
 const isEditOpen = ref(false)
+// Index of the centered mobile carousel slide — drives the colored blob behind it.
+const activeIndex = ref(0)
 
 // Three distinct jobs sharing one feed: pending requests the client is still
 // waiting on, pending requests whose slot has already passed (the master never
@@ -113,6 +115,28 @@ const actionsClientName = computed(() =>
 
 // Header badge: total count across both sections (sections show their own breakdown).
 const actionableCount = computed(() => appointments.value?.length ?? 0)
+
+// Mobile: the appointment under the active slide, used to tint the blob behind it.
+const activeAppointment = computed<Appointment | null>(
+  () => mobileAppointments.value[activeIndex.value] ?? mobileAppointments.value[0] ?? null,
+)
+
+// Soft color spot anchored to the left edge, tinted by the active card's service
+// colors (a gradient through them when there are several), falling back to the
+// status accent. A radial that fades to transparent so it never shows a hard cut.
+const blobStyle = computed<Record<string, string>>(() => {
+  const appt = activeAppointment.value
+  if (!appt) return { background: 'transparent' }
+  let colors = getServiceColors(appt)
+  if (colors.length === 0) {
+    colors = [appt.status === 'pending' ? 'var(--color-amber-500)' : 'var(--color-violet-500)']
+  }
+  const stops =
+    colors.length === 1
+      ? `${colors[0]} 0%`
+      : colors.map((c, i) => `${c} ${Math.round((i / (colors.length - 1)) * 45)}%`).join(', ')
+  return { background: `radial-gradient(45% 60% at 0% 50%, ${stops}, transparent 72%)` }
+})
 
 // On mobile, an empty state just wastes vertical space — hide the whole widget instead.
 const showWidget = computed(() => !isMobile.value || isPending.value || actionableCount.value > 0)
@@ -354,76 +378,35 @@ const cardUI = {
 </script>
 
 <template>
-  <UCard v-if="showWidget" :ui="hostUI">
-    <template #header>
-      <div class="flex items-center justify-between">
-        <Typography variant="h5" class="text-highlighted font-bold">{{
-          t('home.nextUp.title')
-        }}</Typography>
-        <UBadge
-          v-if="actionableCount > 0"
-          color="warning"
-          variant="soft"
-          size="sm"
-          class="rounded-full px-3 py-1"
-        >
-          {{ t('home.nextUp.needAction', { n: actionableCount }) }}
-        </UBadge>
-      </div>
-    </template>
-
-    <template v-if="isPending">
-      <div v-if="isMobile" class="overflow-hidden">
-        <div class="flex gap-2">
-          <USkeleton
-            v-for="i in 2"
-            :key="i"
-            class="h-72 w-[92%] shrink-0 rounded-md md:rounded-lg"
-          />
-        </div>
-      </div>
-
-      <div v-else class="space-y-2">
-        <div
-          v-for="i in 3"
-          :key="i"
-          class="flex items-center gap-4 rounded-md border border-default bg-default p-4 md:rounded-lg"
-        >
-          <USkeleton class="h-16 w-20 shrink-0 rounded-xl" />
-          <USkeleton class="size-10 shrink-0 rounded-full" />
-          <div class="flex-1 space-y-1.5">
-            <USkeleton class="h-4 w-36" />
-            <USkeleton class="h-3 w-48" />
-          </div>
-          <USkeleton class="h-4 w-12" />
-          <USkeleton class="h-8 w-20 rounded-lg" />
-        </div>
-      </div>
-    </template>
-
-    <UEmpty
-      v-else-if="!appointments?.length"
-      variant="naked"
-      icon="i-lucide-check-circle"
-      :title="t('home.nextUp.noAppointments')"
-      :ui="{ root: 'rounded-md border border-dashed border-default md:rounded-lg' }"
+  <!-- Mobile: card-free slider floating over a service-colored blob.
+       Pinned to the parent width (overflow-x-clip) so the slider can never push
+       the page into a horizontal scroll. -->
+  <div v-if="isMobile && showWidget" class="relative w-full min-w-0 overflow-x-clip">
+    <div
+      class="pointer-events-none absolute inset-y-2 left-0 w-3/4 opacity-40 transition-[background] duration-500 ease-out dark:opacity-30"
+      :style="blobStyle"
     />
 
+    <div v-if="isPending" class="relative flex gap-3">
+      <USkeleton v-for="i in 2" :key="i" class="h-72 w-[85%] shrink-0 rounded-md md:rounded-lg" />
+    </div>
+
     <UCarousel
-      v-else-if="isMobile"
+      v-else
       v-slot="{ item: appt }"
       :items="mobileAppointments"
       align="start"
       auto-height
       wheel-gestures
-      class="-mx-4 w-[calc(100%+2rem)] min-w-0 sm:-mx-6 sm:w-[calc(100%+3rem)]"
+      class="relative min-w-0"
       :ui="{
         container: 'ms-0 items-start transition-[height] duration-200',
         item:
           mobileAppointments.length > 1
-            ? 'flex basis-[92%] px-2 py-1'
-            : 'flex basis-full px-2 py-1',
+            ? 'flex basis-[85%] pe-3 py-1'
+            : 'flex basis-full py-1',
       }"
+      @select="activeIndex = $event"
     >
       <MobileNextUpCard
         :appointment="appt"
@@ -442,6 +425,51 @@ const cardUI = {
         @more="openActions(appt)"
       />
     </UCarousel>
+  </div>
+
+  <!-- Desktop: framed widget with grouped sections -->
+  <UCard v-else-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <div class="flex items-center justify-between">
+        <Typography variant="h5" class="text-highlighted font-bold">{{
+          t('home.nextUp.title')
+        }}</Typography>
+        <UBadge
+          v-if="actionableCount > 0"
+          color="warning"
+          variant="soft"
+          size="sm"
+          class="rounded-full px-3 py-1"
+        >
+          {{ t('home.nextUp.needAction', { n: actionableCount }) }}
+        </UBadge>
+      </div>
+    </template>
+
+    <div v-if="isPending" class="space-y-2">
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="flex items-center gap-4 rounded-md border border-default bg-default p-4 md:rounded-lg"
+      >
+        <USkeleton class="h-16 w-20 shrink-0 rounded-xl" />
+        <USkeleton class="size-10 shrink-0 rounded-full" />
+        <div class="flex-1 space-y-1.5">
+          <USkeleton class="h-4 w-36" />
+          <USkeleton class="h-3 w-48" />
+        </div>
+        <USkeleton class="h-4 w-12" />
+        <USkeleton class="h-8 w-20 rounded-lg" />
+      </div>
+    </div>
+
+    <UEmpty
+      v-else-if="!appointments?.length"
+      variant="naked"
+      icon="i-lucide-check-circle"
+      :title="t('home.nextUp.noAppointments')"
+      :ui="{ root: 'rounded-md border border-dashed border-default md:rounded-lg' }"
+    />
 
     <div v-else class="space-y-6">
       <section v-for="section in sections" :key="section.id" class="space-y-2">

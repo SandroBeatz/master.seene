@@ -40,7 +40,7 @@ function handleSelect(appointment: Appointment) {
 </script>
 
 <template>
-  <div class="min-w-0 max-w-full space-y-5 xl:sticky xl:top-6">
+  <div class="min-w-0 max-w-full space-y-5 xl:sticky xl:top-6 px-4">
     <MobileScheduleCard
       v-if="isMobile"
       v-model="selectedDate"

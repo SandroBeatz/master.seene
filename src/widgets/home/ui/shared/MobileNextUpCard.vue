@@ -41,8 +41,9 @@ const primaryIcon = computed(() =>
   isPending.value ? 'i-lucide-circle-check-big' : 'i-lucide-check-check',
 )
 
+// Glassy card so the colored blob behind the slider bleeds through.
 const cardUI = {
-  root: 'w-full rounded-md shadow-none ring-1 ring-default md:rounded-lg',
+  root: 'w-full rounded-md shadow-none ring-1 ring-white/50 dark:ring-white/10 bg-white/55 dark:bg-zinc-900/50 backdrop-blur-md md:rounded-lg',
   body: 'flex p-4 sm:p-4',
 }
 </script>
