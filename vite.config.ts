@@ -208,7 +208,7 @@ export default defineConfig({
         select: {
           slots: {
             base: 'w-full rounded-md',
-            content: 'rounded-md',
+            content: 'rounded-md z-[60]',
           },
           variants: {
             size: {
@@ -227,7 +227,7 @@ export default defineConfig({
         selectMenu: {
           slots: {
             base: 'w-full rounded-md',
-            content: 'rounded-md',
+            content: 'rounded-md z-[60]',
           },
           variants: {
             size: {
@@ -246,7 +246,7 @@ export default defineConfig({
         inputMenu: {
           slots: {
             base: 'rounded-md',
-            content: 'rounded-md',
+            content: 'rounded-md z-[60]',
           },
         },
 
@@ -330,22 +330,13 @@ export default defineConfig({
           },
         },
 
-        // Floating menus (select, dropdown, popover, tooltip) are teleported to the
-        // end of <body> with no z-index (`z-index: auto`), just like the overlays
-        // above. Once modal/slideover/drawer content is pinned to `z-50`, a menu
-        // opened *inside* one of those dialogs would paint behind it — `auto` always
-        // loses to a positive z-index regardless of DOM order. Pinning their content
-        // to `z-[60]` keeps these menus above dialog content (and its scrim).
-        select: {
-          slots: {
-            content: 'z-[60]',
-          },
-        },
-        selectMenu: {
-          slots: {
-            content: 'z-[60]',
-          },
-        },
+        // Floating menus (dropdown, popover, tooltip — plus select/selectMenu/
+        // inputMenu above) are teleported to the end of <body> with no z-index
+        // (`z-index: auto`), just like the overlays above. Once modal/slideover/
+        // drawer content is pinned to `z-50`, a menu opened *inside* one of those
+        // dialogs would paint behind it — `auto` always loses to a positive z-index
+        // regardless of DOM order. Pinning their content to `z-[60]` keeps these
+        // menus above dialog content (and its scrim).
         dropdownMenu: {
           slots: {
             content: 'z-[60]',
