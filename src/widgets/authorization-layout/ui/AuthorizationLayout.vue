@@ -6,8 +6,8 @@ import authBackground from '@shared/assets/auth-background.jpg'
   <UPage
     :ui="{ root: 'min-h-dvh', center: 'flex flex-col flex-1 h-full' }"
     :style="{
-      paddingTop: 'calc(env(safe-area-inset-top) + 3rem)',
-      paddingBottom: 'calc(env(safe-area-inset-bottom) + 3rem)',
+      paddingTop: 'calc(var(--safe-area-top) + 3rem)',
+      paddingBottom: 'calc(var(--safe-area-bottom) + 3rem)',
     }"
   >
     <div class="flex justify-center mb-12">

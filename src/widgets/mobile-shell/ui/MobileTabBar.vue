@@ -51,6 +51,6 @@ const tabBarUI = {
     ref="nav"
     :items="items"
     :ui="tabBarUI"
-    style="bottom: calc(env(safe-area-inset-bottom) + 0.75rem)"
+    style="bottom: calc(var(--safe-area-bottom) + 0.75rem)"
   />
 </template>

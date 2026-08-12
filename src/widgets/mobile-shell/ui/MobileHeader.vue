@@ -18,7 +18,7 @@ const actions = useMobilePushActionsList()
   <header
     class="mobile-push-header sticky top-0 z-30 shrink-0 px-3 pb-3"
     :class="{ 'mobile-push-header--scrolled': scrolled }"
-    style="padding-top: calc(env(safe-area-inset-top) + 0.5rem)"
+    style="padding-top: calc(var(--safe-area-top) + 0.5rem)"
   >
     <div
       class="relative z-10 grid h-11 grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center"

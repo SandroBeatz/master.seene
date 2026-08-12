@@ -29,10 +29,11 @@ const isRootScreen = computed(
 // its own — measure its real rendered height to pad the scroll area beneath it.
 const tabBar = ref<MobileTabBarExpose | null>(null)
 const { height: tabBarHeight } = useElementSize(computed(() => tabBar.value?.el ?? null))
+const mainPaddingTop = computed(() => (isRootScreen.value ? 'var(--safe-area-top)' : undefined))
 const mainPaddingBottom = computed(() =>
   isRootScreen.value
-    ? `calc(env(safe-area-inset-bottom) + 0.75rem + ${tabBarHeight.value}px + 4.3rem)`
-    : undefined,
+    ? `calc(var(--safe-area-bottom) + 0.75rem + ${tabBarHeight.value}px + 4.3rem)`
+    : 'var(--safe-area-bottom)',
 )
 
 const titleKeyByRouteName: Record<string, string> = {
@@ -92,7 +93,7 @@ useSwipe(mainRef, {
       ref="mainRef"
       class="flex min-h-0 flex-1 flex-col"
       :class="{ 'overflow-y-auto': isRootScreen, 'overflow-hidden': !isRootScreen }"
-      :style="{ paddingBottom: mainPaddingBottom }"
+      :style="{ paddingTop: mainPaddingTop, paddingBottom: mainPaddingBottom }"
     >
       <RouterView v-slot="{ Component }">
         <component :is="Component" v-if="isRootScreen" />

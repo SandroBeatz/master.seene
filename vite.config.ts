@@ -329,6 +329,38 @@ export default defineConfig({
             content: 'z-50',
           },
         },
+
+        // Floating menus (select, dropdown, popover, tooltip) are teleported to the
+        // end of <body> with no z-index (`z-index: auto`), just like the overlays
+        // above. Once modal/slideover/drawer content is pinned to `z-50`, a menu
+        // opened *inside* one of those dialogs would paint behind it — `auto` always
+        // loses to a positive z-index regardless of DOM order. Pinning their content
+        // to `z-[60]` keeps these menus above dialog content (and its scrim).
+        select: {
+          slots: {
+            content: 'z-[60]',
+          },
+        },
+        selectMenu: {
+          slots: {
+            content: 'z-[60]',
+          },
+        },
+        dropdownMenu: {
+          slots: {
+            content: 'z-[60]',
+          },
+        },
+        popover: {
+          slots: {
+            content: 'z-[60]',
+          },
+        },
+        tooltip: {
+          slots: {
+            content: 'z-[60]',
+          },
+        },
       },
     }),
     vue(),

@@ -11,10 +11,12 @@
 }
 
 :root {
-  --safe-area-top: env(safe-area-inset-top);
-  --safe-area-bottom: env(safe-area-inset-bottom);
-  --safe-area-left: env(safe-area-inset-left);
-  --safe-area-right: env(safe-area-inset-right);
+  /* Capacitor injects --safe-area-inset-* where native WebViews need a fix.
+     iOS/Safari use the env() fallback once viewport-fit=cover is enabled. */
+  --safe-area-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-area-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-area-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-area-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
   --ui-primary: var(--color-zinc-950);
   --app-canvas: #efede9;
   /*--ui-container: 112rem;*/
