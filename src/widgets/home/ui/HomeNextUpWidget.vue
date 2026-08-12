@@ -381,7 +381,7 @@ const cardUI = {
   <!-- Mobile: card-free slider floating over a service-colored blob.
        Pinned to the parent width (overflow-x-clip) so the slider can never push
        the page into a horizontal scroll. -->
-  <div v-if="isMobile && showWidget" class="relative w-full min-w-0 overflow-x-clip">
+  <div v-if="isMobile && showWidget" class="relative w-full min-w-0">
     <div
       class="pointer-events-none absolute inset-y-2 left-0 w-3/4 opacity-40 transition-[background] duration-500 ease-out dark:opacity-30"
       :style="blobStyle"
@@ -397,14 +397,12 @@ const cardUI = {
       :items="mobileAppointments"
       align="start"
       auto-height
+      class-names
       wheel-gestures
-      class="relative min-w-0"
+      class="relative"
       :ui="{
-        container: 'ms-0 items-start transition-[height] duration-200',
-        item:
-          mobileAppointments.length > 1
-            ? 'flex basis-[85%] pe-3 py-1'
-            : 'flex basis-full py-1',
+        container: 'px-4 transition-[height] duration-200',
+        item: `flex last:pr-4.5 ${mobileAppointments.length > 1 ? 'basis-[85%] transition-opacity opacity-100 [&:not(.is-snapped)]:opacity-70' : 'flex basis-full'}`,
       }"
       @select="activeIndex = $event"
     >
