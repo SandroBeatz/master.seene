@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { watchDebounced } from '@vueuse/core'
+import { useElementSize, watchDebounced } from '@vueuse/core'
 import { useSessionStore } from '@entities/session'
 import {
   isUsernameAvailable,
@@ -197,9 +197,11 @@ watchDebounced(
 
 const publicUrl = computed(() => bookingPageUrl(state.value.username || loadedUsername.value))
 
-// The static `https://host/` prefix shown inside the username input. Its length
-// drives the input's start padding so the typed value never overlaps the prefix.
+// Measure the complete prefix so the typed value never overlaps it, regardless
+// of the configured booking host or rendered font metrics.
 const usernamePrefix = `https://${PUBLIC_BOOKING_HOST}/`
+const usernamePrefixRef = ref<HTMLElement | null>(null)
+const { width: usernamePrefixWidth } = useElementSize(usernamePrefixRef)
 
 // --- Required-field validation ------------------------------------------------
 // Errors only surface once the form is dirty, so a freshly-loaded (or empty)
@@ -285,8 +287,9 @@ function openPage() {
 }
 
 const hostUI = {
-  root: 'rounded-xl shadow-panel ring-0 divide-y-0',
-  header: 'pb-0',
+  root: 'rounded-none bg-transparent shadow-none ring-0 divide-y-0 md:rounded-xl md:bg-default md:shadow-panel',
+  header: 'p-0 pb-0 sm:p-0 md:p-6 md:pb-0',
+  body: 'p-0 pt-6 sm:p-0 sm:pt-6 md:p-6',
 }
 </script>
 
@@ -294,7 +297,7 @@ const hostUI = {
   <UCard :ui="hostUI">
     <template #header>
       <div class="flex flex-col gap-1">
-        <Typography variant="h5" class="text-highlighted font-bold">
+        <Typography variant="h4" class="text-highlighted font-bold">
           {{ t('settings.profile.title') }}
         </Typography>
         <Typography variant="caption" class="text-muted">
@@ -412,15 +415,19 @@ const hostUI = {
         <UInput
           v-model="state.username"
           class="w-full"
-          :style="{ '--username-prefix-length': `${usernamePrefix.length * 0.695 + 2}ch` }"
+          :style="{ '--username-prefix-width': `${usernamePrefixWidth + 16}px` }"
           :ui="{
-            base: 'ps-(--username-prefix-length)',
+            base: 'ps-(--username-prefix-width)',
             leading: 'pointer-events-none',
           }"
         >
           <template #leading>
-            <UIcon name="i-lucide-globe" class="size-3.5 text-muted mr-1.5" />
-            <Typography variant="endnote" class="text-muted">{{ usernamePrefix }}</Typography>
+            <span ref="usernamePrefixRef" class="flex items-center gap-1.5">
+              <UIcon name="i-lucide-globe" class="size-3.5 text-muted" />
+              <Typography as="span" variant="body" class="text-muted">{{
+                usernamePrefix
+              }}</Typography>
+            </span>
           </template>
           <template #trailing>
             <span
@@ -449,10 +456,21 @@ const hostUI = {
 
       <!-- Public page actions -->
       <div class="flex flex-wrap items-center gap-2">
-        <UButton color="neutral" leading-icon="i-lucide-external-link" @click="openPage">
+        <UButton
+          color="neutral"
+          leading-icon="i-lucide-external-link"
+          class="w-full justify-center md:w-auto"
+          @click="openPage"
+        >
           {{ t('settings.profile.openPage') }}
         </UButton>
-        <UButton color="neutral" variant="outline" leading-icon="i-lucide-link" @click="copyLink">
+        <UButton
+          color="neutral"
+          variant="outline"
+          leading-icon="i-lucide-link"
+          class="w-full justify-center md:w-auto"
+          @click="copyLink"
+        >
           {{ t('settings.profile.copyLink') }}
         </UButton>
       </div>

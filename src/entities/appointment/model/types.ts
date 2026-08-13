@@ -6,6 +6,14 @@ export type AppointmentStatus =
   | 'no_show'
   | 'expired'
 
+/**
+ * Status as shown in the UI, extended with two states derived from the current
+ * time (never persisted): `ongoing` (now inside the appointment window) and
+ * `past` (a confirmed appointment whose end time has passed but was not marked
+ * completed). See `getEffectiveAppointmentStatus`.
+ */
+export type EffectiveAppointmentStatus = AppointmentStatus | 'ongoing' | 'past'
+
 /** Where the appointment originated. */
 export type AppointmentSource = 'manual' | 'online_booking'
 

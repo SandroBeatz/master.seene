@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Client } from '@entities/client'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   open: boolean
@@ -14,6 +15,8 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const isMobile = useIsMobile()
+
 const isOpen = computed({
   get: () => props.open,
   set: (val) => emit('update:open', val),
@@ -25,7 +28,12 @@ const clientName = computed(() =>
 </script>
 
 <template>
-  <UModal v-model:open="isOpen" :title="$t('clients.delete.title')" :ui="{ footer: 'justify-end' }">
+  <UModal
+    v-model:open="isOpen"
+    :title="$t('clients.delete.title')"
+    :fullscreen="isMobile"
+    :ui="{ footer: 'justify-end' }"
+  >
     <template #body>
       <p class="text-sm text-muted">
         {{ $t('clients.delete.message', { name: clientName }) }}

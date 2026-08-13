@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
+import { useIsMobile } from '@shared/lib/viewport'
 import { useSessionStore } from '@entities/session'
 import { useMasterPreferencesQuery, useUpdateMasterBookingSettingsMutation } from '@entities/master'
 import { useDirtyForm } from '@shared/lib/forms'
@@ -64,6 +66,12 @@ const noticeItems = computed(() =>
   })),
 )
 
+// Default status for new online bookings, as radio options.
+const statusItems = computed(() => [
+  { label: t('settings.booking.statusAutoConfirmed'), value: 'confirmed' },
+  { label: t('settings.booking.statusNeedsConfirmation'), value: 'pending' },
+])
+
 const enabled = computed(() => onlineEnabled.value)
 
 // Online booking saves instantly on toggle (optimistic), independent of the
@@ -108,44 +116,52 @@ const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
 }
+
+const isMobile = useIsMobile()
+
+// Reused across the two layouts so the form markup isn't duplicated: desktop
+// wraps it in a UCard, mobile drops the card chrome (the push header already
+// provides a titled surface) and renders flush inside the page's p-4 gutter.
+const [DefineHeader, ReuseHeader] = createReusableTemplate()
+const [DefineBody, ReuseBody] = createReusableTemplate()
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div class="flex flex-col gap-1">
-          <Typography variant="h5" class="text-highlighted font-bold">
-            {{ t('settings.booking.title') }}
-          </Typography>
-          <Typography variant="caption" class="text-muted">
-            {{ t('settings.booking.subtitle') }}
-          </Typography>
-        </div>
-
-        <USkeleton v-if="isPending" class="h-9 w-28 shrink-0 self-start rounded-full" />
-        <div
-          v-else
-          class="flex shrink-0 items-center gap-2.5 self-start rounded-full px-3 py-1.5 ring-1 transition-colors"
-          :class="enabled ? 'bg-success/10 ring-success/25' : 'bg-elevated ring-default'"
-        >
-          <span
-            class="text-sm font-medium whitespace-nowrap"
-            :class="enabled ? 'text-success' : 'text-muted'"
-          >
-            {{ enabled ? t('settings.booking.onlineOn') : t('settings.booking.onlineOff') }}
-          </span>
-          <USwitch
-            :model-value="onlineEnabled"
-            :loading="isTogglingOnline"
-            color="success"
-            :aria-label="t('settings.booking.onlineToggleAria')"
-            @update:model-value="onToggleOnline"
-          />
-        </div>
+  <DefineHeader>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex flex-col gap-1">
+        <Typography variant="h4" class="text-highlighted font-bold">
+          {{ t('settings.booking.title') }}
+        </Typography>
+        <Typography variant="caption" class="text-muted">
+          {{ t('settings.booking.subtitle') }}
+        </Typography>
       </div>
-    </template>
 
+      <USkeleton v-if="isPending" class="h-9 w-28 shrink-0 self-start rounded-full" />
+      <div
+        v-else
+        class="flex shrink-0 items-center gap-2.5 self-start rounded-full px-3 py-1.5 ring-1 transition-colors"
+        :class="enabled ? 'bg-success/10 ring-success/25' : 'bg-elevated ring-default'"
+      >
+        <span
+          class="text-sm font-medium whitespace-nowrap"
+          :class="enabled ? 'text-success' : 'text-muted'"
+        >
+          {{ enabled ? t('settings.booking.onlineOn') : t('settings.booking.onlineOff') }}
+        </span>
+        <USwitch
+          :model-value="onlineEnabled"
+          :loading="isTogglingOnline"
+          color="success"
+          :aria-label="t('settings.booking.onlineToggleAria')"
+          @update:model-value="onToggleOnline"
+        />
+      </div>
+    </div>
+  </DefineHeader>
+
+  <DefineBody>
     <!-- Loading skeletons -->
     <div v-if="isPending" class="divide-y divide-default">
       <div
@@ -175,24 +191,13 @@ const hostUI = {
             {{ t('settings.booking.defaultStatusDescription') }}
           </span>
         </div>
-        <UFieldGroup>
-          <UButton
-            :variant="state.defaultStatus === 'confirmed' ? 'solid' : 'outline'"
-            color="neutral"
-            :disabled="!enabled"
-            @click="state.defaultStatus = 'confirmed'"
-          >
-            {{ t('settings.booking.statusAutoConfirmed') }}
-          </UButton>
-          <UButton
-            :variant="state.defaultStatus === 'pending' ? 'solid' : 'outline'"
-            color="neutral"
-            :disabled="!enabled"
-            @click="state.defaultStatus = 'pending'"
-          >
-            {{ t('settings.booking.statusNeedsConfirmation') }}
-          </UButton>
-        </UFieldGroup>
+        <URadioGroup
+          v-model="state.defaultStatus"
+          :items="statusItems"
+          :disabled="!enabled"
+          :ui="{ fieldset: 'gap-2' }"
+          class="shrink-0"
+        />
       </div>
 
       <!-- Buffer between appointments -->
@@ -241,5 +246,17 @@ const hostUI = {
     </div>
 
     <FormSaveBar :dirty="isDirty" :saving="isSaving" @save="onSave" @discard="onDiscard" />
+  </DefineBody>
+
+  <!-- Desktop: card surface. Mobile: no card — flush content under the push header. -->
+  <UCard v-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <ReuseHeader />
+    </template>
+    <ReuseBody />
   </UCard>
+  <div v-else class="flex flex-col gap-4">
+    <ReuseHeader />
+    <ReuseBody />
+  </div>
 </template>

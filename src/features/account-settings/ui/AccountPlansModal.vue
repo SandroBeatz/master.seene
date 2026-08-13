@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useIsMobile } from '@shared/lib/viewport'
 
 defineOptions({ name: 'AccountPlansModal' })
 
 const open = defineModel<boolean>('open', { default: false })
 
+const isMobile = useIsMobile()
 const { t, tm, rt } = useI18n()
 const toast = useToast()
 
@@ -22,6 +24,7 @@ function onChoosePro() {
     v-model:open="open"
     :title="t('settings.account.plans.modalTitle')"
     :description="t('settings.account.plans.modalSubtitle')"
+    :fullscreen="isMobile"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>

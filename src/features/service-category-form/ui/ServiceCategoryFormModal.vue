@@ -2,6 +2,7 @@
 import Joi from 'joi'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import {
   useCreateServiceCategoryMutation,
@@ -9,6 +10,7 @@ import {
   type ServiceCategory,
 } from '@entities/service-category'
 import { useSessionStore } from '@entities/session'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   modelValue: boolean
@@ -23,6 +25,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -32,6 +35,14 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 })
+
+function close() {
+  isOpen.value = false
+}
+
+// Shared so the form body isn't duplicated between the desktop modal and the
+// mobile drawer.
+const [DefineBody, ReuseBody] = createReusableTemplate()
 
 interface FormState {
   name: string
@@ -93,7 +104,52 @@ function submitForm() {
 </script>
 
 <template>
+  <DefineBody>
+    <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField :label="$t('settings.serviceCategories.form.name')" name="name" required>
+        <UInput
+          v-model="state.name"
+          :placeholder="$t('settings.serviceCategories.form.namePlaceholder')"
+          autofocus
+          class="w-full"
+        />
+      </UFormField>
+    </UForm>
+  </DefineBody>
+
+  <!-- Mobile: bottom drawer with 50/50 actions. -->
+  <UDrawer
+    v-if="isMobile"
+    v-model:open="isOpen"
+    :title="
+      isEdit
+        ? $t('settings.serviceCategories.form.titleEdit')
+        : $t('settings.serviceCategories.form.titleCreate')
+    "
+    :ui="{ body: 'p-4', footer: 'p-4 border-t border-default' }"
+  >
+    <template #body>
+      <ReuseBody />
+    </template>
+    <template #footer>
+      <div class="flex w-full gap-2 pb-[calc(0.25rem+var(--safe-area-bottom))]">
+        <UButton color="neutral" variant="outline" size="lg" block @click="close">
+          {{ $t('settings.serviceCategories.form.cancel') }}
+        </UButton>
+        <UButton color="primary" size="lg" block :loading="isLoading" @click="submitForm">
+          {{
+            isEdit
+              ? $t('settings.serviceCategories.form.submitEdit')
+              : $t('settings.serviceCategories.form.submitCreate')
+          }}
+        </UButton>
+      </div>
+    </template>
+  </UDrawer>
+
+  <!-- Desktop: centered modal. -->
   <UModal
+    v-else
     v-model:open="isOpen"
     :title="
       isEdit
@@ -103,16 +159,7 @@ function submitForm() {
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>
-      <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-        <UFormField :label="$t('settings.serviceCategories.form.name')" name="name" required>
-          <UInput
-            v-model="state.name"
-            :placeholder="$t('settings.serviceCategories.form.namePlaceholder')"
-            autofocus
-            class="w-full"
-          />
-        </UFormField>
-      </UForm>
+      <ReuseBody />
     </template>
 
     <template #footer="{ close }">

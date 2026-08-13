@@ -51,7 +51,7 @@ const peakRange = computed(() => {
 </script>
 
 <template>
-  <UCard :ui="{ root: 'shadow-panel ring-0' }">
+  <UCard :ui="{ root: 'rounded-lg md:rounded-xl shadow-panel ring-0' }">
     <div class="space-y-4">
       <div>
         <p class="text-sm font-semibold">{{ t('analytics.busiest.title') }}</p>

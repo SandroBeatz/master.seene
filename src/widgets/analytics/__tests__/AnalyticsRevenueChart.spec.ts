@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
+import { createPinia, setActivePinia } from 'pinia'
 import type { ChartData } from 'chart.js'
 import type { RevenuePoint } from '@entities/analytics'
 import { formatsPlugin } from '@shared/lib/formats'
@@ -36,6 +37,9 @@ function mountWidget(over: { compare?: boolean; loading?: boolean } = {}) {
     },
   })
 
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
   return mount(AnalyticsRevenueChart, {
     props: {
       series: SERIES,
@@ -44,7 +48,7 @@ function mountWidget(over: { compare?: boolean; loading?: boolean } = {}) {
       compare: over.compare ?? false,
       loading: over.loading ?? false,
     },
-    global: { plugins: [i18n, formatsPlugin] },
+    global: { plugins: [pinia, i18n, formatsPlugin] },
   })
 }
 

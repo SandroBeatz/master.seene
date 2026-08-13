@@ -11,6 +11,12 @@
 }
 
 :root {
+  /* Capacitor injects --safe-area-inset-* where native WebViews need a fix.
+     iOS/Safari use the env() fallback once viewport-fit=cover is enabled. */
+  --safe-area-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-area-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-area-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-area-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
   --ui-primary: var(--color-zinc-950);
   --app-canvas: #efede9;
   /*--ui-container: 112rem;*/
@@ -146,7 +152,8 @@ html.dark {
   cursor: pointer;
 }
 
-.fc-slot-time-label {
+.fc .fc-timegrid-slot-lane::after {
+  content: attr(data-slot-time-label);
   position: absolute;
   left: 0.5rem;
   top: 50%;
@@ -160,7 +167,7 @@ html.dark {
   white-space: nowrap;
 }
 
-.fc .fc-timegrid-slot-lane:hover .fc-slot-time-label {
+.fc .fc-timegrid-slot-lane:hover::after {
   opacity: 1;
 }
 
@@ -179,7 +186,9 @@ html.dark {
   gap: 0.25rem;
 }
 
-.fc-week-day-header-weekday {
+.fc-week-day-header-weekday,
+.fc .fc-dayGridMonth-view .fc-col-header-cell-cushion,
+.fc .fc-timeGridDay-view .fc-col-header-cell-cushion {
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
@@ -200,7 +209,9 @@ html.dark {
   color: var(--color-zinc-700);
 }
 
-.dark .fc-week-day-header-weekday {
+.dark .fc-week-day-header-weekday,
+.dark .fc .fc-dayGridMonth-view .fc-col-header-cell-cushion,
+.dark .fc .fc-timeGridDay-view .fc-col-header-cell-cushion {
   color: var(--color-zinc-400);
 }
 
@@ -215,6 +226,27 @@ html.dark {
 .fc .fc-week-day-header-today .fc-week-day-header-number {
   background: var(--color-black);
   color: var(--color-white);
+}
+
+/* Mobile week view keeps the weekday and date on one compact line. */
+.calendar-widget-mobile .fc .fc-week-day-header .fc-col-header-cell-cushion {
+  padding: 0.125rem;
+}
+
+.calendar-widget-mobile .fc-week-day-header-content {
+  min-height: 1.75rem;
+  flex-direction: row;
+  gap: 0.25rem;
+}
+
+.calendar-widget-mobile .fc-week-day-header-weekday {
+  font-size: 0.6875rem;
+}
+
+.calendar-widget-mobile .fc-week-day-header-number {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.75rem;
 }
 
 /* FullCalendar — master schedule availability */
@@ -250,13 +282,14 @@ html.dark {
   cursor: default;
 }
 
-.fc .fc-timegrid-slot-lane.fc-schedule-break-slot:hover .fc-slot-time-label {
+.fc .fc-timegrid-slot-lane.fc-schedule-break-slot:hover::after {
   opacity: 0;
 }
 
 /* FullCalendar — event hover */
 .fc .fc-event {
   transition:
+    opacity 0.18s ease,
     filter 0.15s ease,
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -266,6 +299,100 @@ html.dark {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* FullCalendar — mobile long-press editing focus. */
+.calendar-event-editing .fc .fc-scrollgrid-section-header,
+.calendar-event-editing .fc .fc-timegrid-slots,
+.calendar-event-editing .fc .fc-timegrid-col-bg,
+.calendar-event-editing .fc .fc-timegrid-axis,
+.calendar-event-editing .fc .fc-timegrid-now-indicator-container {
+  opacity: 0.28;
+  filter: saturate(0.5);
+  transition:
+    opacity 0.18s ease,
+    filter 0.18s ease;
+}
+
+.calendar-event-editing
+  .fc
+  .fc-event:not(.calendar-event-editing-target):not(.fc-event-selected):not(.fc-event-dragging):not(
+    .fc-event-resizing
+  ),
+.calendar-event-editing .fc .fc-bg-event {
+  opacity: 0.18;
+  filter: grayscale(0.65);
+  transform: none;
+  box-shadow: none;
+}
+
+.calendar-event-editing
+  .fc
+  .fc-event:is(
+    .calendar-event-editing-target,
+    .fc-event-selected,
+    .fc-event-dragging,
+    .fc-event-resizing
+  ) {
+  z-index: 5;
+  opacity: 1;
+  filter: saturate(1.1);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 28%);
+}
+
+/* FullCalendar adds a dark selection overlay over the event itself. Keep the
+   mobile card's real service colour untouched after a click or touch. */
+.calendar-widget-mobile .fc .fc-event:is(.fc-event-selected, :focus)::after,
+.calendar-event-editing .fc .fc-event.fc-event-selected::after,
+.fc-event-dragging.fc-event-selected::after,
+.fc-event-resizing.fc-event-selected::after {
+  display: none;
+}
+
+.fc-event-dragging {
+  opacity: 1 !important;
+}
+
+.calendar-event-editing
+  .fc
+  .fc-event:is(.calendar-event-editing-target, .fc-event-selected):not(.fc-event-dragging):not(
+    .fc-event-resizing
+  ) {
+  transform: scale(1.015);
+}
+
+.calendar-event-editing .fc .fc-v-event.fc-event-selected .fc-event-resizer-end {
+  bottom: -0.375rem;
+  width: 2.25rem;
+  height: 0.75rem;
+  margin-left: -1.125rem;
+  border: 2px solid var(--ui-bg);
+  border-radius: 9999px;
+  background: var(--color-primary-500);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 24%);
+}
+
+/* Keep only the custom bottom grip. FullCalendar can render its own round
+   handle on the selected source event and on the drag mirror. */
+.calendar-event-editing
+  .fc
+  .fc-v-event.fc-event-selected
+  .fc-event-resizer:not(.fc-event-resizer-end),
+.fc-event-dragging .fc-event-resizer,
+.fc-event-resizing .fc-event-resizer {
+  display: none !important;
+}
+
+.calendar-event-editing .fc .fc-v-event.fc-event-selected .fc-event-resizer-end::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: white;
+  transform: translate(-50%, -50%);
 }
 
 /* FullCalendar — appointment events styled like the home ScheduleTimeline cards:
@@ -278,6 +405,138 @@ html.dark {
 
 .fc .fc-event.app-appointment-event .fc-event-main {
   padding: 0;
+}
+
+/* Mobile time-grid cards mirror the compact ScheduleTimeline appearance. */
+.calendar-widget-mobile .fc .calendar-mobile-appointment-event {
+  border-radius: 0.125rem;
+  color: var(--ui-text-highlighted) !important;
+}
+
+.calendar-widget-mobile .fc .calendar-mobile-appointment-event:hover {
+  border-width: 1px 1px 1px 4px;
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.calendar-widget-mobile
+  .fc
+  .calendar-mobile-appointment-event:is(:focus, .fc-event-selected):not(.fc-event-dragging):not(
+    .fc-event-resizing
+  ) {
+  outline: none;
+  filter: none;
+  transform: none;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 14%);
+}
+
+.calendar-mobile-appointment-card {
+  container-type: size;
+}
+
+.calendar-mobile-appointment-summary,
+.calendar-mobile-appointment-tiny-summary {
+  display: none;
+}
+
+@container (max-height: 4rem) {
+  .calendar-mobile-appointment-details {
+    display: none;
+  }
+
+  .calendar-mobile-appointment-summary {
+    display: block;
+  }
+}
+
+@container (max-height: 2.25rem) {
+  .calendar-mobile-appointment-summary {
+    display: none;
+  }
+
+  .calendar-mobile-appointment-tiny-summary {
+    display: block;
+  }
+}
+
+.calendar-widget-mobile .fc .fc-event.calendar-mobile-group-appointment-event,
+.calendar-widget-mobile .fc .fc-event.calendar-mobile-time-off-event {
+  border-width: 1px 1px 1px 4px;
+  border-color: var(--ui-border) !important;
+  background: var(--ui-bg-elevated) !important;
+  color: var(--ui-text-highlighted) !important;
+}
+
+.calendar-widget-mobile .fc .fc-event.calendar-mobile-time-off-event {
+  border-radius: 0.375rem;
+}
+
+.calendar-widget-mobile .fc .fc-event.calendar-mobile-time-off-event .fc-event-main {
+  padding: 0;
+}
+
+/* FullCalendar — month events as passive, time-ordered service-colour dots. */
+.fc .fc-dayGridMonth-view .fc-col-header-cell-cushion,
+.fc .fc-timeGridDay-view .fc-col-header-cell-cushion {
+  width: 100%;
+  padding: 0.5rem 0.25rem;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-day-frame {
+  aspect-ratio: 1;
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-day-number,
+.fc .fc-dayGridMonth-view .fc-daygrid-month-start {
+  padding: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-body-natural .fc-daygrid-day-events {
+  min-height: 0;
+  margin: 0;
+  line-height: 0;
+  padding: 0 0.125rem 0.125rem;
+}
+
+.fc .fc-dayGridMonth-view .fc-daygrid-event-harness:has(> .fc-daygrid-event.calendar-month-event) {
+  position: static !important;
+  display: inline-flex;
+  margin: 0.1875rem 0 0 0.1875rem !important;
+  vertical-align: top;
+  pointer-events: none;
+}
+
+.fc .fc-daygrid-day .fc-daygrid-event.calendar-month-event {
+  display: inline-flex;
+  width: 0.5rem;
+  height: 0.5rem;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0;
+  background-color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.app-month-event-marker {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
 }
 
 /* FullCalendar — round the grid itself (border follows the radius, not clipped) */
@@ -309,4 +568,11 @@ html.dark {
 .fc .fc-timegrid-allday .fc-daygrid-day-events {
   margin-bottom: 0.125rem;
   min-height: 0;
+}
+
+/* FullCalendar — hide the "invalid license key" watermark from the unlicensed
+   @fullcalendar/scrollgrid premium plugin. Remove this rule once a real
+   schedulerLicenseKey is configured (the message disappears on its own then). */
+.fc .fc-license-message {
+  display: none;
 }

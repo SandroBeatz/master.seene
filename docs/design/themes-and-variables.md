@@ -1,12 +1,12 @@
 ---
-version: 1.2
-date: 2026-06-15
+version: 1.3
+date: 2026-07-22
 category: design
 ---
 
 # Themes and Variables (@nuxt/ui v4)
 
-> Version 1.2 · 2026-06-15 · [Design](../)
+> Version 1.3 · 2026-07-22 · [Design](../)
 
 ## Overview
 
@@ -101,6 +101,32 @@ Use `shadow-panel` for top-level dashboard surfaces only. Nested cards use borde
 shadow. Put repeated Nuxt UI component structure in `vite.config.ts`; use the component `ui` prop
 for isolated layout or visual exceptions.
 
+### Nested card radius hierarchy
+
+Use progressively smaller radii for nested cards so the inner surfaces do not compete visually
+with their container. The responsive radius contract is:
+
+| Viewport        | Outer card   | Inner cards  |
+| --------------- | ------------ | ------------ |
+| Mobile (`< md`) | `rounded-lg` | `rounded-md` |
+| `md` and wider  | `rounded-xl` | `rounded-lg` |
+
+Apply the radius through the Nuxt UI `root` slot. A nested metric group such as
+`HomeOverviewWidget` should follow this pattern:
+
+```ts
+const hostUI = {
+  root: 'rounded-lg md:rounded-xl',
+}
+
+const cardUI = {
+  root: 'rounded-md md:rounded-lg',
+}
+```
+
+This rule applies to a top-level card that visually owns a set of smaller cards. It does not require
+every standalone `UCard` to use these exact classes.
+
 ### Global component overrides (`vite.config.ts`)
 
 The `ui({ ui: { … } })` block also holds per-component slot overrides applied app-wide. Example: the
@@ -117,7 +143,7 @@ drawer: { slots: { overlay: 'fixed inset-0 bg-black/60!' } },
 This covers every overlay at once — `UModal`, `USlideover`, `UDrawer`, and anything built on them
 (confirm/alert dialogs, the appointment preview, checkout, forms).
 
-> **Gotcha — the `!` is required.** App-config slot values are *merged* with the component default,
+> **Gotcha — the `!` is required.** App-config slot values are _merged_ with the component default,
 > not replaced. `tailwind-merge` does not treat the semantic `bg-elevated` utility as conflicting
 > with `bg-black`, so without the `!` important marker both classes survive and the default wins by
 > stylesheet order. Tailwind v4's important marker is the trailing `!` (`bg-black/60!`). Changes to
@@ -219,6 +245,7 @@ Used like standard breakpoints: `3xl:grid-cols-4`.
 
 - [Nuxt UI Components](../ui/nuxt-ui-components.md) — component library that consumes these design tokens via `color`, `variant`, and `size` props
 - [Global Overlays](../ui/overlays.md) — overlay components affected by the global backdrop scrim override
+- [Analytics & Home Dashboard](../architecture/analytics-and-home.md) — dashboard widgets that use nested metric cards
 
 ## File Structure
 
@@ -229,6 +256,9 @@ src/app/styles/
 └── base.css       # Browser reset and body application of semantic tokens
 
 vite.config.ts     # ui({ ui: { colors: {...} } }) — semantic color configuration
+
+src/widgets/home/ui/HomeOverviewWidget.vue
+                   # Reference nested metric-card composition
 ```
 
 Legacy Vue template variables (`--vt-c-*`, `--color-background`, etc.) are not used. Prefer

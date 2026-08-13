@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useMediaQuery } from '@shared/lib/media-query'
+import { useIsMobile } from '@shared/lib/viewport'
 import { Typography } from '@shared/ui'
 import AppointmentWizard from './AppointmentWizard.vue'
 import WizardStepper from './WizardStepper.vue'
@@ -16,7 +16,7 @@ const { t } = useI18n()
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{ close: []; 'after:leave': [] }>()
 
-const isMobile = useMediaQuery('(max-width: 640px)')
+const isMobile = useIsMobile()
 
 // The wizard owns its step machine and derived summaries; the modal renders the
 // chrome (header, stepper, footer) from the values it exposes.

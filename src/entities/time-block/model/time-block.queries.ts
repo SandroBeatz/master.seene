@@ -13,6 +13,10 @@ export interface TimeBlockDateRange {
   to?: string
 }
 
+function invalidateTimeBlockQueries(cache: ReturnType<typeof useQueryCache>, userId: string) {
+  return cache.invalidateQueries({ key: ['time-blocks', userId] })
+}
+
 export const useTimeBlocksQuery = (userId: Ref<string>, dateRange?: Ref<TimeBlockDateRange>) =>
   useQuery({
     key: () => [
@@ -28,7 +32,7 @@ export const useCreateTimeBlockMutation = (userId: Ref<string>) => {
   const cache = useQueryCache()
   return useMutation({
     mutation: (dto: CreateTimeBlockDto) => createTimeBlock(userId.value, dto),
-    onSettled: () => cache.invalidateQueries({ key: ['time-blocks', userId.value] }),
+    onSettled: () => invalidateTimeBlockQueries(cache, userId.value),
   })
 }
 
@@ -36,7 +40,7 @@ export const useUpdateTimeBlockMutation = (userId: Ref<string>) => {
   const cache = useQueryCache()
   return useMutation({
     mutation: (dto: UpdateTimeBlockDto) => updateTimeBlock(dto),
-    onSettled: () => cache.invalidateQueries({ key: ['time-blocks', userId.value] }),
+    onSettled: () => invalidateTimeBlockQueries(cache, userId.value),
   })
 }
 
@@ -44,6 +48,6 @@ export const useRemoveTimeBlockMutation = (userId: Ref<string>) => {
   const cache = useQueryCache()
   return useMutation({
     mutation: (id: string) => removeTimeBlock(id),
-    onSettled: () => cache.invalidateQueries({ key: ['time-blocks', userId.value] }),
+    onSettled: () => invalidateTimeBlockQueries(cache, userId.value),
   })
 }

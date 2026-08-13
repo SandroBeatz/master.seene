@@ -9,6 +9,18 @@ export default {
     settings: 'Paramètres',
     logout: 'Déconnexion',
     profile: 'Profil',
+    actions: 'Actions',
+  },
+  formats: {
+    duration: {
+      hoursShort: 'h',
+      minutesShort: 'min',
+    },
+    dateDay: {
+      yesterday: 'Hier',
+      today: "Aujourd'hui",
+      tomorrow: 'Demain',
+    },
   },
   common: {
     dashboardWelcome: "Voici ce qui se passe avec vos projets aujourd'hui.",
@@ -17,12 +29,14 @@ export default {
     or: 'ou',
     previous: 'Précédent',
     next: 'Suivant',
+    back: 'Retour',
     edit: 'Modifier',
     delete: 'Supprimer',
     cancel: 'Annuler',
     close: 'Fermer',
     confirm: 'Confirmer',
     ok: 'OK',
+    unsaved: 'Non enregistré',
     unsavedChanges: 'Modifications non enregistrées',
     discard: 'Annuler',
     saveChanges: 'Enregistrer',
@@ -70,17 +84,19 @@ export default {
     schedule: {
       title: 'Planning',
       subtitle: 'pour le {date} · {n} rendez-vous',
+      summary: '{date} · {n} rendez-vous',
       options: 'Options',
     },
     overview: {
       title: "Vue d'ensemble",
-      earnedToday: "Gagné aujourd'hui",
+      earnedToday: 'Gagné',
       appointments: 'Rendez-vous',
       workingHours: 'Heures de travail',
+      periodLabel: "Période de la vue d'ensemble",
       period: {
-        day: 'Jour',
-        week: 'Semaine',
-        month: 'Mois',
+        day: "Aujourd'hui",
+        week: 'Cette semaine',
+        month: 'Ce mois-ci',
       },
       subtext: {
         today: "aujourd'hui",
@@ -132,7 +148,9 @@ export default {
       title: 'Créer',
       description: 'Choisissez ce que vous voulez ajouter.',
       appointment: 'Nouveau rendez-vous',
+      appointmentDescription: 'Ajoutez un client à votre agenda',
       timeOff: 'Indisponibilité',
+      timeOffDescription: 'Réservez un moment de pause',
     },
     actions: {
       back: 'Retour',
@@ -239,7 +257,9 @@ export default {
       day: 'Jour',
     },
     allDay: 'Toute la journée',
-    dragError: "Impossible de mettre à jour l'heure de l'événement",
+    moveSuccess: 'Événement déplacé',
+    resizeSuccess: "Durée de l'événement mise à jour",
+    updateError: "Impossible de mettre à jour l'événement",
     event: {
       onlineHint: 'Réservé en ligne',
     },
@@ -251,6 +271,7 @@ export default {
   },
   services: {
     title: 'Services',
+    subtitle: 'Gérez les services que vous proposez à vos clients.',
     description:
       "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
     addService: 'Ajouter un service',
@@ -494,9 +515,14 @@ export default {
   },
   analytics: {
     title: 'Analytique',
-    description: 'Découvrez les performances de votre entreprise.',
     comingSoon: 'Analytique bientôt disponible',
+    options: {
+      title: 'Options',
+      compare: 'Comparer la période',
+      compareDescription: 'Comparer avec la période précédente',
+    },
     period: {
+      title: 'Période',
       today: "Aujourd'hui",
       day: 'Jour',
       week: 'Semaine',
@@ -514,7 +540,6 @@ export default {
       export: 'Exporter',
       exportComingSoon: "L'export arrive bientôt",
       apply: 'Appliquer',
-      vs: 'vs',
       prevPeriod: 'Période précédente',
       nextPeriod: 'Période suivante',
     },
@@ -559,11 +584,11 @@ export default {
     avgCheckInline: 'ticket moyen',
     deltaNew: 'nouveau',
     compareVs: {
-      yesterday: 'vs hier',
-      lastWeek: 'vs la semaine dernière',
-      lastMonth: 'vs le mois dernier',
-      lastYear: "vs l'année dernière",
-      prevPeriod: 'vs la période précédente',
+      yesterday: 'hier',
+      lastWeek: 'la semaine dernière',
+      lastMonth: 'le mois dernier',
+      lastYear: "l'année dernière",
+      prevPeriod: 'la période précédente',
     },
     topServicesTitle: 'Top services',
     topServicesSubtitle: 'Classés par revenu',
@@ -580,6 +605,7 @@ export default {
     nav: {
       groupGeneral: 'Général',
       groupSystem: 'Système',
+      groupWorkspace: 'Espace de travail',
       profile: 'Profil',
       contacts: 'Contacts et réseaux',
       workingHours: 'Heures de travail',
@@ -589,6 +615,14 @@ export default {
       notifications: 'Notifications',
       systemRegion: 'Système et région',
       account: 'Compte',
+      services: 'Services',
+      clients: 'Clients',
+      about: 'À propos',
+    },
+    about: {
+      title: 'À propos',
+      description: "Informations sur l'application et détails de version.",
+      version: 'Version',
     },
     profile: {
       title: 'Profil',
@@ -669,6 +703,8 @@ export default {
       subtitle:
         'Votre disponibilité hebdomadaire. Les clients ne peuvent réserver que pendant ces heures.',
       dayOff: 'Jour de repos',
+      from: 'De',
+      to: 'À',
       break: 'Pause',
       addBreak: 'Ajouter une pause',
       copyToAll: 'Copier sur tous les jours',
@@ -953,6 +989,7 @@ export default {
   },
   clients: {
     pageTitle: 'Clients',
+    subtitle: 'Gérez votre base de clients et leur historique de visites.',
     addButton: 'Ajouter un client',
     addFirstButton: 'Ajouter le premier client',
     searchPlaceholder: 'Nom ou téléphone',
@@ -1025,6 +1062,9 @@ export default {
       createdAt: 'Ajouté',
       noNotes: 'Aucune note',
       noEmail: '—',
+      moreActions: 'Plus d’actions',
+      actionsTitle: 'Actions',
+      notFoundTitle: 'Client introuvable',
     },
   },
   appointments: {
@@ -1035,6 +1075,8 @@ export default {
       cancelled: 'Annulé',
       no_show: 'Absent',
       expired: 'Expirée',
+      ongoing: 'En cours',
+      past: 'Heure dépassée',
     },
     form: {
       titleCreate: 'Nouveau rendez-vous',
@@ -1074,6 +1116,18 @@ export default {
     unknownClient: 'Client inconnu',
     preview: {
       title: 'Aperçu du rendez-vous',
+      actions: 'Actions',
+      notifyClient: 'Notifier le client',
+      notifyTitle: 'Notifier le client',
+      notifyComingSoon: 'Les notifications client arrivent bientôt.',
+      editTitle: 'Modifier le rendez-vous',
+      date: 'Date',
+      time: 'Heure',
+      paymentMethod: 'Moyen de paiement',
+      selectClient: 'Choisir un client',
+      selectServices: 'Choisir des services',
+      done: 'Terminé',
+      save: 'Enregistrer',
       client: 'Client',
       services: 'Services',
       duration: 'Durée',
@@ -1123,6 +1177,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Temps bloqué',
+    allDayLabel: 'Indisponibilité : Toute la journée',
     form: {
       titleCreate: 'Bloquer du temps',
       titleEdit: 'Modifier le temps bloqué',
@@ -1161,13 +1216,13 @@ export default {
   },
   checkout: {
     title: 'Terminer le rendez-vous',
+    client: 'Client',
     services: 'Services',
     total: 'Total',
     paymentMethod: 'Mode de paiement',
     noPaymentTypes:
       'Aucun mode de paiement configuré. Ajoutez-en un dans Paramètres → Modes de paiement.',
-    confirm: 'Confirmer le paiement',
-    cancel: 'Annuler',
+    confirm: 'Terminer le rendez-vous',
     paymentInfo: 'Paiement',
     paidAmount: 'Montant payé',
     paidVia: 'Mode de paiement',

@@ -31,9 +31,9 @@ describe('APPOINTMENT_ACTION_CONFIG', () => {
     expect(config.menu.map((a) => a.key)).toEqual(['edit', 'no_show', 'delete'])
   })
 
-  it('shows the paid tag and no footer actions once completed', () => {
+  it('shows no tags and no footer actions once completed', () => {
     const config = APPOINTMENT_ACTION_CONFIG.completed
-    expect(config.tags).toEqual(['paid'])
+    expect(config.tags).toEqual([])
     expect(config.primary).toBeUndefined()
     expect(config.secondary).toBeUndefined()
   })

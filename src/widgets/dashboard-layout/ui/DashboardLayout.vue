@@ -83,7 +83,14 @@ const notifications = ref([
 </script>
 
 <template>
-  <UDashboardGroup storage="local" storage-key="dashboard">
+  <UDashboardGroup
+    storage="local"
+    storage-key="dashboard"
+    :style="{
+      paddingTop: 'var(--safe-area-top)',
+      paddingBottom: 'var(--safe-area-bottom)',
+    }"
+  >
     <UDashboardSidebar
       collapsed
       :ui="{

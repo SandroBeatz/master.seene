@@ -11,6 +11,7 @@ import {
   minutesToTimeInput,
   type PartOfDay,
 } from '@shared/lib/scheduling'
+import { AppCalendar } from '@shared/ui'
 
 const props = defineProps<{
   /** Selected day, `YYYY-MM-DD`, or '' when none chosen yet. */
@@ -72,7 +73,10 @@ function markerClass(day: DateValue): string {
 
 // --- Slot groups (morning / afternoon / evening) ---
 const GROUP_META: Record<PartOfDay, { labelKey: string; icon: string }> = {
-  morning: { labelKey: 'quickCreate.appointment.dateTime.groups.morning', icon: 'i-lucide-sunrise' },
+  morning: {
+    labelKey: 'quickCreate.appointment.dateTime.groups.morning',
+    icon: 'i-lucide-sunrise',
+  },
   day: { labelKey: 'quickCreate.appointment.dateTime.groups.day', icon: 'i-lucide-sun' },
   evening: { labelKey: 'quickCreate.appointment.dateTime.groups.evening', icon: 'i-lucide-sunset' },
 }
@@ -110,9 +114,8 @@ function slotLabel(minutes: number): string {
 
 <template>
   <div class="space-y-4">
-    <UCalendar
+    <AppCalendar
       :model-value="calendarValue"
-      :year-controls="false"
       class="mx-auto"
       @update:model-value="onDateChange($event as CalendarDate)"
       @update:placeholder="emit('update:month', $event as CalendarDate)"
@@ -130,7 +133,7 @@ function slotLabel(minutes: number): string {
           />
         </span>
       </template>
-    </UCalendar>
+    </AppCalendar>
 
     <div class="flex items-center justify-center gap-4 text-xs text-muted">
       <span class="flex items-center gap-1.5">

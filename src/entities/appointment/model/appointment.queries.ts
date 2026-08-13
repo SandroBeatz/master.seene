@@ -24,6 +24,14 @@ export interface AppointmentDayCountsRange {
   timeZone: string
 }
 
+function invalidateAppointmentQueries(cache: ReturnType<typeof useQueryCache>, userId: string) {
+  return Promise.all([
+    cache.invalidateQueries({ key: ['appointments', userId] }),
+    cache.invalidateQueries({ key: ['appointments-actionable', userId] }),
+    cache.invalidateQueries({ key: ['appointment-day-counts', userId] }),
+  ])
+}
+
 export const useAppointmentsQuery = (userId: Ref<string>, dateRange?: Ref<AppointmentDateRange>) =>
   useQuery({
     key: () => [
@@ -39,11 +47,7 @@ export const useCreateAppointmentMutation = (userId: Ref<string>) => {
   const cache = useQueryCache()
   return useMutation({
     mutation: (dto: CreateAppointmentDto) => createAppointment(userId.value, dto),
-    onSettled: () => {
-      cache.invalidateQueries({ key: ['appointments', userId.value] })
-      cache.invalidateQueries({ key: ['appointments-actionable', userId.value] })
-      cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] })
-    },
+    onSettled: () => invalidateAppointmentQueries(cache, userId.value),
   })
 }
 
@@ -51,11 +55,7 @@ export const useUpdateAppointmentMutation = (userId: Ref<string>) => {
   const cache = useQueryCache()
   return useMutation({
     mutation: (dto: UpdateAppointmentDto) => updateAppointment(dto),
-    onSettled: () => {
-      cache.invalidateQueries({ key: ['appointments', userId.value] })
-      cache.invalidateQueries({ key: ['appointments-actionable', userId.value] })
-      cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] })
-    },
+    onSettled: () => invalidateAppointmentQueries(cache, userId.value),
   })
 }
 
@@ -63,11 +63,7 @@ export const useRemoveAppointmentMutation = (userId: Ref<string>) => {
   const cache = useQueryCache()
   return useMutation({
     mutation: (id: string) => removeAppointment(id),
-    onSettled: () => {
-      cache.invalidateQueries({ key: ['appointments', userId.value] })
-      cache.invalidateQueries({ key: ['appointments-actionable', userId.value] })
-      cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] })
-    },
+    onSettled: () => invalidateAppointmentQueries(cache, userId.value),
   })
 }
 

@@ -54,7 +54,7 @@ export async function removeAppointment(id: string): Promise<void> {
 export interface AppointmentDayCount {
   /** Calendar day in the master's timezone, formatted as 'YYYY-MM-DD'. */
   day: string
-  /** Number of non-cancelled appointments on that day. */
+  /** Number of schedule-visible appointments (pending/confirmed/completed) on that day. */
   cnt: number
 }
 

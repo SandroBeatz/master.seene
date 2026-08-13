@@ -148,7 +148,7 @@ function buildBreakBackgroundEvents(days: NormalizedScheduleDay[]): EventInput[]
       endTime: formatSlotTime(breakTime.endMinutes),
       display: 'background',
       classNames: ['fc-schedule-break'],
-      overlap: false,
+      overlap: true,
     })),
   )
 }

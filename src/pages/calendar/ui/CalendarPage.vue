@@ -10,6 +10,7 @@ import { TimeBlockFormDialog } from '@features/time-block-form'
 import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import {
   CalendarToolbar,
+  CalendarViewTabs,
   CalendarWidget,
   formatCalendarRangeTitle,
   useCalendarEvents,
@@ -18,18 +19,21 @@ import {
   type CalendarWidgetExpose,
 } from '@widgets/calendar'
 import { Page, Typography } from '@shared/ui'
+import { useIsMobile } from '@shared/lib/viewport'
+import { getCalendarDateTimeString, toUtcIsoFromCalendarDateString } from '@shared/lib/time-zone'
 
 const { t, locale } = useI18n()
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const preview = useAppointmentPreview()
 const quickCreate = useQuickCreate()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const unknownClientLabel = computed(() => t('appointments.unknownClient'))
 const timeBlockLabel = computed(() => t('timeBlocks.calendarTitle'))
 
-const { calendarEvents, onDatesSet, isPending, isEmpty } = useCalendarEvents(
+const { calendarEvents, onDatesSet, isPending } = useCalendarEvents(
   userId,
   unknownClientLabel,
   timeBlockLabel,
@@ -43,6 +47,24 @@ const masterSchedule = computed(() => masterPreferencesStore.preferences.profile
 const calendarTitle = computed(() =>
   formatCalendarRangeTitle(calendarRange.value, locale.value, masterPreferencesStore.timeZone),
 )
+
+// Whether the visible period (day/week/month) contains today. currentFrom/To are
+// UTC ISO (from toISOString), so lexicographic comparison is chronological.
+const isViewingCurrentPeriod = computed(() => {
+  const range = calendarRange.value
+  if (!range) return true
+
+  const timeZone = masterPreferencesStore.timeZone
+  const todayIso = toUtcIsoFromCalendarDateString(
+    getCalendarDateTimeString(new Date(), timeZone).slice(0, 10),
+    timeZone,
+  )
+  return todayIso >= range.currentFrom && todayIso < range.currentTo
+})
+
+// Desktop keeps "Today" always visible; on mobile it only shows when we've
+// navigated away from the current period.
+const showTodayButton = computed(() => !isMobile.value || !isViewingCurrentPeriod.value)
 
 watch(defaultCalendarView, (nextViewType, previousViewType) => {
   if (calendarViewType.value !== previousViewType) return
@@ -92,11 +114,12 @@ function onTimeBlockClick(timeBlock: TimeBlock) {
 }
 
 // Nuxt UI overrides
-const hostUI = {
-  root: 'flex flex-1 min-h-0 flex-col rounded-xl shadow-panel ring-0 divide-y-0',
+const isMonthView = computed(() => calendarViewType.value === 'dayGridMonth')
+const hostUI = computed(() => ({
+  root: `flex min-h-0 flex-col rounded-xl shadow-panel ring-0 divide-y-0 ${isMonthView.value ? 'flex-none' : 'flex-1'}`,
   header: 'pb-0',
-  body: 'flex flex-1 min-h-0 flex-col overflow-hidden',
-}
+  body: `flex min-h-0 flex-col overflow-hidden ${isMonthView.value ? 'flex-none' : 'flex-1'}`,
+}))
 </script>
 
 <template>
@@ -107,7 +130,14 @@ const hostUI = {
       </Typography>
     </template>
     <template #header-right>
-      <UTooltip :text="$t('calendar.create.open')">
+      <!-- Mobile: view toggle lives here (the create action is in the tab bar). -->
+      <CalendarViewTabs
+        v-if="isMobile"
+        :view-type="calendarViewType"
+        compact
+        @update:view-type="changeCalendarView"
+      />
+      <UTooltip v-else :text="$t('calendar.create.open')">
         <UButton
           size="xl"
           icon="i-lucide-plus"
@@ -125,15 +155,24 @@ const hostUI = {
         <CalendarToolbar
           :title="calendarTitle"
           :view-type="calendarViewType"
+          :hide-view-toggle="isMobile"
+          :show-today="showTodayButton"
           @previous="moveCalendarToPrevious"
           @next="moveCalendarToNext"
           @today="moveCalendarToToday"
           @update:view-type="changeCalendarView"
         />
       </template>
-      <div class="relative flex flex-1 flex-col min-h-0">
+      <!-- `isolate`: trap FullCalendar's internal z-indexes (events, sticky
+      headers) and the loading overlay in their own stacking context so they
+      can't paint above app overlays (preview slideover, quick-create). -->
+      <div
+        class="relative isolate flex min-h-0 flex-col"
+        :class="isMonthView ? 'flex-none' : 'flex-1'"
+      >
         <CalendarWidget
           ref="calendarRef"
+          :user-id="userId"
           :events="calendarEvents"
           :schedule="masterSchedule"
           :time-format="masterPreferencesStore.timeFormat"
@@ -150,34 +189,15 @@ const hostUI = {
         <!-- Loading overlay -->
         <div
           v-if="isPending"
-          class="absolute inset-0 z-10 flex flex-col gap-2 bg-default/70 p-4 backdrop-blur-sm"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-default/50"
           role="status"
           :aria-label="$t('calendar.loading')"
         >
-          <USkeleton v-for="i in 8" :key="i" class="h-10 w-full rounded-lg" />
-        </div>
-
-        <!-- Empty overlay: grid stays clickable, only the CTA card captures pointer events -->
-        <div
-          v-else-if="isEmpty"
-          class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4"
-        >
-          <UEmpty
-            variant="naked"
-            icon="i-lucide-calendar-plus"
-            :title="$t('calendar.empty.title')"
-            :description="$t('calendar.empty.description')"
-            class="pointer-events-auto rounded-xl bg-default/90 p-6 shadow-panel backdrop-blur-sm"
-          >
-            <UButton
-              leading-icon="i-lucide-plus"
-              color="primary"
-              class="mt-4"
-              @click="quickCreate.openAppointment()"
-            >
-              {{ $t('calendar.create.appointment') }}
-            </UButton>
-          </UEmpty>
+          <UIcon
+            name="i-lucide-loader-circle"
+            class="size-8 animate-spin text-primary"
+            aria-hidden="true"
+          />
         </div>
       </div>
     </UCard>

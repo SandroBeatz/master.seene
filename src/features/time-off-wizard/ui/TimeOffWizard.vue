@@ -21,6 +21,7 @@ import {
 } from '@shared/lib/scheduling'
 import { addDateInputDays, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
+import { AppCalendar } from '@shared/ui'
 import type { TimeOffPrefill } from '../model/types'
 
 const props = defineProps<{ prefill?: TimeOffPrefill }>()
@@ -181,7 +182,7 @@ const calendarValue = computed(() => inputToCalendarDate(state.date) ?? undefine
 
 <template>
   <div class="space-y-5">
-    <UCalendar
+    <AppCalendar
       :model-value="calendarValue"
       :min-value="minDate"
       class="mx-auto"

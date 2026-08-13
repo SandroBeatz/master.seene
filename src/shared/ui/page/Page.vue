@@ -42,7 +42,7 @@ const hasHeader = computed(
         <slot name="header-bottom" />
       </UContainer>
     </div>
-    <div :class="fill ? 'flex min-h-0 flex-1 flex-col pb-6 lg:pb-8' : 'pb-8 lg:pb-12'">
+    <div :class="fill ? 'flex min-h-0 flex-1 flex-col pb-4 lg:pb-6' : 'pb-8 lg:pb-12'">
       <UContainer :class="{ 'flex min-h-0 flex-1 flex-col': fill }">
         <template v-if="router">
           <div class="grid grid-cols-8 gap-6">

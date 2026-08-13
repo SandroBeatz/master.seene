@@ -175,6 +175,72 @@ describe('useCheckout', () => {
     expect(canSubmit.value).toBe(true)
   })
 
+  it('setting total redistributes service amounts proportionally', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200), makeService('svc-2', 800)],
+      [makePaymentType('pt-1', true)],
+    )
+    // 1200:800 == 60%:40% of 2000; doubling to 4000 keeps the ratio.
+    total.value = 4000
+    expect(serviceAmounts.value).toEqual([2400, 1600])
+    expect(total.value).toBe(4000)
+  })
+
+  it('redistribution absorbs rounding drift so parts always sum to the total', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment({ service_ids: ['svc-1', 'svc-2', 'svc-3'] }),
+      [makeService('svc-1', 100), makeService('svc-2', 100), makeService('svc-3', 100)],
+      [makePaymentType('pt-1', true)],
+    )
+    // 100 / 3 does not divide evenly — parts must still add up exactly.
+    total.value = 100
+    expect(serviceAmounts.value.reduce((s, a) => s + a, 0)).toBe(100)
+    expect(total.value).toBe(100)
+  })
+
+  it('splits evenly when all current amounts are zero', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 0), makeService('svc-2', 0)],
+      [makePaymentType('pt-1', true)],
+    )
+    total.value = 1000
+    expect(serviceAmounts.value).toEqual([500, 500])
+  })
+
+  it('rounds to two decimals when redistributing (default currency precision)', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 10), makeService('svc-2', 20)],
+      [makePaymentType('pt-1', true)],
+    )
+    total.value = 100
+    // 10:20 of 100 -> 33.33 : 66.67 (drift on the last), summing to exactly 100.
+    expect(serviceAmounts.value[0]).toBeCloseTo(33.33, 2)
+    expect(serviceAmounts.value.reduce((s, a) => s + a, 0)).toBe(100)
+  })
+
+  it('editing a single service amount keeps total as the sum', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200), makeService('svc-2', 800)],
+      [makePaymentType('pt-1', true)],
+    )
+    serviceAmounts.value[0] = 500
+    expect(total.value).toBe(1300)
+  })
+
+  it('setting total to zero zeroes out every service amount', () => {
+    const { serviceAmounts, total } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200), makeService('svc-2', 800)],
+      [makePaymentType('pt-1', true)],
+    )
+    total.value = 0
+    expect(serviceAmounts.value).toEqual([0, 0])
+  })
+
   it('buildPayload uses serviceAmounts as item prices and total as sale amount', () => {
     const services = [makeService('svc-1', 1200), makeService('svc-2', 800)]
     const { serviceAmounts, buildPayload } = useCheckout(makeAppointment(), services, [

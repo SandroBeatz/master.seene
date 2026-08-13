@@ -291,9 +291,6 @@ async function create() {
     minutesToTimeInput(state.slotMinutes),
     timeZone.value,
   )
-  // A booking on a day that has already passed is created as confirmed (it
-  // happened) — the master completes it via checkout, which records the sale.
-  const isPastDay = Boolean(state.date) && state.date < todayStr
   const dto: CreateAppointmentDto = {
     client_id: state.clientId,
     service_ids: [...state.serviceIds],
@@ -302,7 +299,7 @@ async function create() {
     price: effectivePrice.value,
     notes: state.notes || null,
     source: 'manual',
-    status: isPastDay ? 'confirmed' : 'pending',
+    status: 'confirmed',
   }
   try {
     await createMutation.mutateAsync(dto)

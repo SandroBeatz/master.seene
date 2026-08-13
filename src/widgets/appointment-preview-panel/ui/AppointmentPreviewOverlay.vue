@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   useUpdateAppointmentMutation,
@@ -39,7 +39,15 @@ const masterPreferencesStore = useMasterPreferencesStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
 // Local copy so status changes are reflected in the panel without a refetch.
+// The overlay instance is reused across opens (see `useAppointmentPreview`), so
+// re-sync whenever a different appointment is passed in.
 const current = ref<Appointment>(props.appointment)
+watch(
+  () => props.appointment,
+  (appointment) => {
+    if (appointment) current.value = appointment
+  },
+)
 const currentId = computed(() => current.value.id)
 
 const clientId = computed(() => current.value.client_id)
@@ -203,6 +211,7 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   <AppointmentCheckoutModal
     :open="isCheckoutOpen"
     :appointment="current"
+    :client="client"
     :services="selectedServices"
     :payment-types="paymentTypes ?? []"
     :loading="completeSaleMutation.isLoading.value"

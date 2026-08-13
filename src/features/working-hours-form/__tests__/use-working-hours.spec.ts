@@ -14,6 +14,18 @@ describe('useWorkingHours', () => {
     expect(wh.isValid.value).toBe(true)
   })
 
+  it('marks a day dirty only after it diverges from the seeded value', () => {
+    const wh = useWorkingHours()
+    wh.seed(null)
+
+    expect(wh.dayViews.value[0]?.dirty).toBe(false)
+
+    wh.setStart('monday', '08:00')
+    expect(wh.dayViews.value[0]?.dirty).toBe(true)
+    // A different, untouched day stays clean.
+    expect(wh.dayViews.value[1]?.dirty).toBe(false)
+  })
+
   it('adds a default 13:00–14:00 break when it fits the day', () => {
     const wh = useWorkingHours()
     wh.seed(null) // monday 10:00–19:00

@@ -1,12 +1,13 @@
+import {
+  semanticColorText,
+  optionsListIconClass,
+  type SemanticColor,
+  type OptionsListItem,
+  type OptionsListItemType,
+} from '../options-list/types'
+
 /** Semantic color names registered for Nuxt UI components. */
-export type DialogColor =
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'info'
-  | 'warning'
-  | 'error'
-  | 'neutral'
+export type DialogColor = SemanticColor
 
 export interface ConfirmDialogProps {
   /** Heading shown in the modal header. */
@@ -37,12 +38,21 @@ export interface AlertDialogProps {
 }
 
 /** Static color → text-utility map (kept explicit so Tailwind can detect the classes). */
-export const dialogColorText: Record<DialogColor, string> = {
-  primary: 'text-primary',
-  secondary: 'text-secondary',
-  success: 'text-success',
-  info: 'text-info',
-  warning: 'text-warning',
-  error: 'text-error',
-  neutral: 'text-highlighted',
+export const dialogColorText: Record<DialogColor, string> = semanticColorText
+
+/**
+ * The options list moved to `shared/ui/options-list`. These aliases keep the
+ * historical `OptionsDrawer*` names working for existing callers.
+ */
+export type OptionsDrawerItem = OptionsListItem
+export type OptionsDrawerItemType = OptionsListItemType
+export const optionsDrawerIconClass = optionsListIconClass
+
+export interface OptionsDrawerProps {
+  /** Heading shown in the drawer header. */
+  title?: string
+  /** The rows to render. */
+  items: OptionsDrawerItem[]
+  /** Close the drawer after a row is activated. Defaults to `true`. */
+  closeOnSelect?: boolean
 }

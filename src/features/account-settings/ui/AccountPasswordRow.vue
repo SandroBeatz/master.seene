@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
+import { useIsMobile } from '@shared/lib/viewport'
 
 defineOptions({ name: 'AccountPasswordRow' })
 
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const isOpen = ref(false)
 const isLoading = ref(false)
@@ -100,16 +103,49 @@ const formRef = ref<{ $el: HTMLFormElement } | null>(null)
 function submitForm() {
   formRef.value?.$el?.requestSubmit()
 }
+
+function close() {
+  isOpen.value = false
+}
+
+const [DefineBody, ReuseBody] = createReusableTemplate()
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+  <DefineBody>
+    <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField
+        :label="t('settings.account.password.currentPasswordLabel')"
+        name="currentPassword"
+        required
+      >
+        <UInput v-model="state.currentPassword" type="password" class="w-full" />
+      </UFormField>
+      <UFormField
+        :label="t('settings.account.password.newPasswordLabel')"
+        name="newPassword"
+        required
+      >
+        <UInput v-model="state.newPassword" type="password" class="w-full" />
+      </UFormField>
+      <UFormField
+        :label="t('settings.account.password.confirmPasswordLabel')"
+        name="confirmPassword"
+        required
+      >
+        <UInput v-model="state.confirmPassword" type="password" class="w-full" />
+      </UFormField>
+    </UForm>
+  </DefineBody>
+
+  <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
     <div class="flex flex-col gap-0.5">
       <span class="font-medium text-highlighted">{{ t('settings.account.password.label') }}</span>
       <span class="text-sm text-muted">{{ t('settings.account.password.description') }}</span>
     </div>
     <UButton
       class="shrink-0"
+      :block="isMobile"
       color="neutral"
       variant="outline"
       leading-icon="i-lucide-key-round"
@@ -118,35 +154,36 @@ function submitForm() {
       {{ t('settings.account.password.changeButton') }}
     </UButton>
 
+    <UDrawer
+      v-if="isMobile"
+      v-model:open="isOpen"
+      :title="t('settings.account.password.modalTitle')"
+      :ui="{ body: 'p-4', footer: 'p-4 border-t border-default' }"
+    >
+      <template #body>
+        <ReuseBody />
+      </template>
+
+      <template #footer>
+        <div class="flex w-full gap-2 pb-[calc(0.25rem+var(--safe-area-bottom))]">
+          <UButton color="neutral" variant="outline" size="lg" block @click="close">
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton color="primary" size="lg" block :loading="isLoading" @click="submitForm">
+            {{ t('settings.account.password.submit') }}
+          </UButton>
+        </div>
+      </template>
+    </UDrawer>
+
     <UModal
+      v-else
       v-model:open="isOpen"
       :title="t('settings.account.password.modalTitle')"
       :ui="{ footer: 'justify-end' }"
     >
       <template #body>
-        <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-          <UFormField
-            :label="t('settings.account.password.currentPasswordLabel')"
-            name="currentPassword"
-            required
-          >
-            <UInput v-model="state.currentPassword" type="password" class="w-full" />
-          </UFormField>
-          <UFormField
-            :label="t('settings.account.password.newPasswordLabel')"
-            name="newPassword"
-            required
-          >
-            <UInput v-model="state.newPassword" type="password" class="w-full" />
-          </UFormField>
-          <UFormField
-            :label="t('settings.account.password.confirmPasswordLabel')"
-            name="confirmPassword"
-            required
-          >
-            <UInput v-model="state.confirmPassword" type="password" class="w-full" />
-          </UFormField>
-        </UForm>
+        <ReuseBody />
       </template>
 
       <template #footer="{ close }">

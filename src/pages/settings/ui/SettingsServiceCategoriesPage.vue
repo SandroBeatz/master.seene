@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
+import { useIsMobile } from '@shared/lib/viewport'
+import { useMobilePushActions } from '@widgets/mobile-shell'
 import {
   useDeleteServiceCategoryMutation,
   useServiceCategoriesQuery,
@@ -16,7 +19,7 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: categories, isLoading } = useServiceCategoriesQuery(userId)
+const { data: categories, isPending } = useServiceCategoriesQuery(userId)
 const deleteMutation = useDeleteServiceCategoryMutation(userId)
 
 // --- Create / edit ---------------------------------------------------------
@@ -58,6 +61,32 @@ async function confirmDelete() {
   }
 }
 
+const isMobile = useIsMobile()
+
+// On mobile the add button lives in the push header — register it there rather
+// than rendering it in the page body. Cleared on unmount so it doesn't leak to
+// the next screen.
+const { setActions, clearActions } = useMobilePushActions()
+watchEffect(() => {
+  if (isMobile.value && !isPending.value) {
+    setActions([
+      {
+        icon: 'i-lucide-plus',
+        ariaLabel: t('settings.serviceCategories.addButton'),
+        onClick: openCreate,
+      },
+    ])
+  } else {
+    clearActions()
+  }
+})
+onUnmounted(clearActions)
+
+// Reused across the two layouts so the markup isn't duplicated: desktop wraps
+// it in a UCard, mobile drops the card and renders flush inside the p-4 gutter.
+const [DefineHeaderText, ReuseHeaderText] = createReusableTemplate()
+const [DefineBody, ReuseBody] = createReusableTemplate()
+
 const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
@@ -65,17 +94,19 @@ const hostUI = {
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
-      <Typography variant="h5" class="text-highlighted font-bold">
+  <DefineHeaderText>
+    <div class="flex flex-col gap-1">
+      <Typography variant="h4" class="text-highlighted font-bold">
         {{ t('settings.serviceCategories.title') }}
       </Typography>
-      <p class="mt-1 text-sm text-muted">{{ t('settings.serviceCategories.subtitle') }}</p>
-    </template>
+      <p class="text-sm text-muted">{{ t('settings.serviceCategories.subtitle') }}</p>
+    </div>
+  </DefineHeaderText>
 
+  <DefineBody>
     <div class="flex flex-col gap-2">
       <!-- Loading skeletons -->
-      <template v-if="isLoading">
+      <template v-if="isPending">
         <div
           v-for="i in 3"
           :key="i"
@@ -130,19 +161,32 @@ const hostUI = {
           />
         </div>
       </template>
-
-      <UButton
-        v-if="!isLoading"
-        leading-icon="i-lucide-plus"
-        color="primary"
-        variant="link"
-        class="mt-1 self-start"
-        @click="openCreate"
-      >
-        {{ t('settings.serviceCategories.addButton') }}
-      </UButton>
     </div>
+  </DefineBody>
+
+  <!-- Desktop: card surface with the add button in the header. -->
+  <UCard v-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <div class="flex items-start justify-between gap-3">
+        <ReuseHeaderText />
+        <UButton
+          v-if="!isPending"
+          icon="i-lucide-plus"
+          color="primary"
+          square
+          :aria-label="t('settings.serviceCategories.addButton')"
+          @click="openCreate"
+        />
+      </div>
+    </template>
+    <ReuseBody />
   </UCard>
+
+  <!-- Mobile: no card; the add button is registered into the push header. -->
+  <div v-else class="flex flex-col gap-4">
+    <ReuseHeaderText />
+    <ReuseBody />
+  </div>
 
   <ServiceCategoryFormModal v-model="isFormOpen" :category="editing" />
 

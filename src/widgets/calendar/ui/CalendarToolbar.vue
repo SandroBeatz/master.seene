@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { TabsItem } from '@nuxt/ui'
 import type { CalendarViewType } from '../model/calendar-controls'
+import CalendarViewTabs from './CalendarViewTabs.vue'
 
-const props = defineProps<{
-  title: string
-  viewType: CalendarViewType
-}>()
+const props = withDefaults(
+  defineProps<{
+    title: string
+    viewType: CalendarViewType
+    /** Mobile moves the day/week/month toggle up into the page header. */
+    hideViewToggle?: boolean
+    /** Hidden when already viewing the current period (mobile behaviour). */
+    showToday?: boolean
+  }>(),
+  {
+    showToday: true,
+  },
+)
 
 const emit = defineEmits<{
   previous: []
@@ -19,37 +28,11 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const calendarTitle = computed(() => props.title || t('calendar.title'))
-const viewOptions = computed<TabsItem[]>(() => [
-  {
-    value: 'dayGridMonth',
-    label: t('calendar.views.month'),
-    icon: 'i-lucide-calendar-days',
-  },
-  {
-    value: 'timeGridWeek',
-    label: t('calendar.views.week'),
-    icon: 'i-lucide-columns-3',
-  },
-  {
-    value: 'timeGridDay',
-    label: t('calendar.views.day'),
-    icon: 'i-lucide-calendar-1',
-  },
-])
-
-// Pill styling mirrors the home widgets (HomeOverviewWidget) for a unified look.
-const tabsUI = {
-  root: 'w-full sm:w-auto',
-  list: 'rounded-full bg-zinc-100 p-1 dark:bg-zinc-800',
-  indicator: 'rounded-full bg-default shadow-sm',
-  trigger:
-    'cursor-pointer rounded-full px-5 py-2 data-[state=active]:text-highlighted data-[state=inactive]:text-muted',
-}
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-    <div class="flex min-w-0 flex-wrap items-center gap-2.5">
+  <div class="flex flex-row items-center justify-between gap-2.5">
+    <div class="flex min-w-0 items-center gap-2.5">
       <UTooltip :text="$t('calendar.controls.previous')">
         <UButton
           icon="i-lucide-chevron-left"
@@ -75,25 +58,22 @@ const tabsUI = {
       </h2>
     </div>
 
-    <div class="flex shrink-0 items-center gap-2.5">
+    <div v-if="showToday || !hideViewToggle" class="flex shrink-0 items-center gap-2.5">
       <UButton
+        v-if="showToday"
         color="neutral"
         variant="soft"
+        size="sm"
         :aria-label="$t('calendar.controls.today')"
         @click="emit('today')"
       >
         {{ $t('calendar.controls.today') }}
       </UButton>
 
-      <UTabs
-        :model-value="viewType"
-        :items="viewOptions"
-        variant="pill"
-        color="neutral"
-        size="sm"
-        :content="false"
-        :ui="tabsUI"
-        @update:model-value="emit('update:viewType', $event as CalendarViewType)"
+      <CalendarViewTabs
+        v-if="!hideViewToggle"
+        :view-type="viewType"
+        @update:view-type="emit('update:viewType', $event)"
       />
     </div>
   </div>

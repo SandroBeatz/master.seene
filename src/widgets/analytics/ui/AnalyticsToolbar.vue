@@ -3,6 +3,7 @@ import { computed, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarDate, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
 import type { AnalyticsPeriodKind, AnalyticsPeriodV2 } from '@entities/analytics'
+import { useFormats } from '@shared/lib/formats'
 import {
   canStepForward as canStepForwardFrom,
   currentPeriod,
@@ -14,11 +15,18 @@ import {
   toCalendarDate,
   type DateRange,
 } from '../model/period-step'
+import { AppCalendar, Typography } from '@shared/ui'
 
 const period = defineModel<AnalyticsPeriodV2>({ required: true })
 const compare = defineModel<boolean>('compare', { default: false })
 
+const emit = defineEmits<{
+  /** The centre caption was tapped — the caller opens its granularity picker. */
+  pickPeriod: []
+}>()
+
 const { t, locale } = useI18n()
+const formats = useFormats()
 
 const tz = getLocalTimeZone()
 
@@ -95,11 +103,11 @@ function fmtMonth(d: CalendarDate): string {
   return new DateFormatter(locale.value, { month: 'long', year: 'numeric' }).format(d.toDate(tz))
 }
 
-const centerLabel = computed(() => {
-  const r = resolvedRange.value
+/** Formats a resolved range per granularity: month/year as a single label, week/custom as a range. */
+function fmtByKind(r: DateRange): string {
   switch (period.value.kind) {
     case 'day':
-      return fmtDay(r.start)
+      return formats.dateDay(r.start.toDate(tz))
     case 'month':
       return fmtMonth(r.start)
     case 'year':
@@ -107,12 +115,12 @@ const centerLabel = computed(() => {
     default: // week | custom → a date range
       return fmtRange(r)
   }
-})
+}
 
-/** When comparing, the caption of the preceding window: "vs 1 – 31 May". */
-const compareCaption = computed(
-  () => `${t('analytics.toolbar.vs')} ${fmtRange(previousRange(period.value))}`,
-)
+const centerLabel = computed(() => fmtByKind(resolvedRange.value))
+
+/** When comparing, the preceding window formatted like the centre caption (e.g. "May 2026"). */
+const compareCaption = computed(() => fmtByKind(previousRange(period.value)))
 
 // --- Custom range picker ----------------------------------------------------
 
@@ -152,9 +160,9 @@ function applyCustom() {
 
 <template>
   <div class="space-y-2">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <!-- Granularity + jump-to-current -->
-      <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center justify-center gap-3 md:justify-between">
+      <!-- Granularity + jump-to-current — hidden on mobile (picked via the page-header drawer) -->
+      <div class="hidden items-center gap-2 md:flex">
         <USelect
           :model-value="period.kind"
           :items="kindItems"
@@ -171,19 +179,24 @@ function applyCustom() {
         <UButton
           color="neutral"
           variant="ghost"
-          size="sm"
           icon="i-lucide-chevron-left"
           :aria-label="t('analytics.toolbar.prevPeriod')"
           @click="step(-1)"
         />
-        <span class="flex min-w-40 flex-col items-center text-center">
-          <span class="text-sm font-medium text-highlighted">{{ centerLabel }}</span>
-          <span v-if="compare" class="text-xs text-muted">{{ compareCaption }}</span>
-        </span>
+        <button
+          type="button"
+          class="flex min-w-40 cursor-pointer flex-col items-center rounded-md px-2 py-0.5 text-center transition-colors hover:bg-elevated"
+          :aria-label="t('analytics.period.title')"
+          @click="emit('pickPeriod')"
+        >
+          <Typography class="font-medium text-highlighted">{{ centerLabel }}</Typography>
+          <Typography v-if="compare" variant="footnote" class="text-muted">{{
+            compareCaption
+          }}</Typography>
+        </button>
         <UButton
           color="neutral"
           variant="ghost"
-          size="sm"
           icon="i-lucide-chevron-right"
           :disabled="!canStepForward"
           :aria-label="t('analytics.toolbar.nextPeriod')"
@@ -191,8 +204,9 @@ function applyCustom() {
         />
       </div>
 
-      <!-- Compare (Export button hidden until export is implemented — see task 1iwu) -->
-      <div class="flex items-center gap-3">
+      <!-- Compare — hidden on mobile (moved to the page-header options drawer).
+           Export button hidden until export is implemented — see task 1iwu. -->
+      <div class="hidden items-center gap-3 md:flex">
         <USwitch v-model="compare" :label="t('analytics.toolbar.compare')" />
       </div>
     </div>
@@ -200,7 +214,7 @@ function applyCustom() {
     <!-- Custom range picker -->
     <UModal v-model:open="open" :title="t('analytics.period.custom')">
       <template #body>
-        <UCalendar v-model="draft" range :max-value="maxDate" />
+        <AppCalendar v-model="draft" range :max-value="maxDate" />
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">

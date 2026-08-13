@@ -4,6 +4,7 @@ import { useAppointmentsQuery } from '@entities/appointment'
 import { useClientsQuery } from '@entities/client'
 import { useServicesQuery } from '@entities/service'
 import { useTimeBlocksQuery } from '@entities/time-block'
+import { useNowMinute } from '@shared/lib/now'
 import { buildCalendarEvents } from './calendar-events'
 
 export function useCalendarEvents(
@@ -19,9 +20,8 @@ export function useCalendarEvents(
   const { data: clients } = useClientsQuery(userId)
   const { data: services } = useServicesQuery(userId)
 
-  // Empty == no real appointments in the visible range (time-blocks and the
-  // background schedule don't count as "scheduled work").
-  const isEmpty = computed(() => (appointments.value?.length ?? 0) === 0)
+  // Ticks each minute so effective status icons (ongoing → past) stay current.
+  const now = useNowMinute()
 
   const calendarEvents = computed(() =>
     buildCalendarEvents({
@@ -32,6 +32,7 @@ export function useCalendarEvents(
       unknownClientLabel: unknownClientLabel.value,
       timeBlockLabel: timeBlockLabel.value,
       timeZone: timeZone.value,
+      now: now.value,
     }),
   )
 
@@ -44,7 +45,6 @@ export function useCalendarEvents(
     dateRange,
     onDatesSet,
     isPending,
-    isEmpty,
   }
 }
 

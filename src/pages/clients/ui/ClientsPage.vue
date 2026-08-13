@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { createReusableTemplate } from '@vueuse/core'
 import {
   useClientsQuery,
   useRemoveClientMutation,
@@ -12,12 +14,16 @@ import { useSessionStore } from '@entities/session'
 import { ClientFormDialog } from '@features/client-form'
 import { ClientDeleteConfirm } from '@features/client-delete'
 import { ClientDetailsPanel } from '@widgets/client-details-panel'
-import { Page } from '@shared/ui'
+import { useMobilePushActions } from '@widgets/mobile-shell'
+import { Page, Typography } from '@shared/ui'
+import { useIsMobile } from '@shared/lib/viewport'
 import ClientCard from './ClientCard.vue'
 
 const { t } = useI18n()
 const toast = useToast()
+const router = useRouter()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -72,12 +78,19 @@ watch(query, (val) => {
   }, 200)
 })
 
+function clientName(c: Client): string {
+  return [c.first_name, c.last_name].filter(Boolean).join(' ')
+}
+
 const filtered = computed(() => {
   const list = clients.value ?? []
   const q = debouncedQuery.value.trim().toLowerCase()
-  if (!q) return list
-  return list.filter((c) =>
-    [c.first_name, c.last_name, c.phone].join(' ').toLowerCase().includes(q),
+  const scoped = q
+    ? list.filter((c) => [c.first_name, c.last_name, c.phone].join(' ').toLowerCase().includes(q))
+    : list
+  // Alphabetical by full name (case-insensitive, locale-aware).
+  return [...scoped].sort((a, b) =>
+    clientName(a).localeCompare(clientName(b), undefined, { sensitivity: 'base' }),
   )
 })
 
@@ -89,6 +102,12 @@ const slideoverOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
 
 function openDetails(client: Client) {
+  // Mobile: push to a full-screen detail route (back-header flow) instead of
+  // the desktop slideover — see settings-clients-detail in the router.
+  if (isMobile.value) {
+    router.push({ name: 'settings-clients-detail', params: { id: client.id } })
+    return
+  }
   selectedClient.value = client
   slideoverOpen.value = true
 }
@@ -103,6 +122,29 @@ function openCreate() {
   editingClient.value = null
   formOpen.value = true
 }
+
+// On mobile the add button lives in the push header — register it there rather
+// than rendering it in the page body. Cleared on unmount so it doesn't leak to
+// the next screen.
+const { setActions, clearActions } = useMobilePushActions()
+watchEffect(() => {
+  if (isMobile.value && !isPending.value) {
+    setActions([
+      {
+        icon: 'i-lucide-plus',
+        ariaLabel: t('clients.addButton'),
+        onClick: openCreate,
+      },
+    ])
+  } else {
+    clearActions()
+  }
+})
+onUnmounted(clearActions)
+
+// Shared body (search + list) so it isn't duplicated between the desktop Page
+// wrapper and the mobile card-free layout.
+const [DefineBody, ReuseBody] = createReusableTemplate()
 
 function openEdit(client?: Client) {
   const c = client ?? selectedClient.value
@@ -141,13 +183,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <Page :title="$t('clients.pageTitle')">
-    <template #header-right>
-      <UButton leading-icon="i-lucide-user-plus" color="neutral" @click="openCreate">
-        {{ $t('clients.addButton') }}
-      </UButton>
-    </template>
-
+  <DefineBody>
     <!-- Search -->
     <div class="mb-4">
       <UInput
@@ -213,7 +249,28 @@ async function confirmDelete() {
         />
       </section>
     </div>
+  </DefineBody>
+
+  <!-- Desktop: standard page with the add button in the header. -->
+  <Page v-if="!isMobile" :title="$t('clients.pageTitle')">
+    <template #header-right>
+      <UButton leading-icon="i-lucide-user-plus" color="neutral" @click="openCreate">
+        {{ $t('clients.addButton') }}
+      </UButton>
+    </template>
+    <ReuseBody />
   </Page>
+
+  <!-- Mobile: card-free layout; the add button is registered into the push header. -->
+  <div v-else class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <Typography variant="h4" class="text-highlighted font-bold">
+        {{ t('clients.pageTitle') }}
+      </Typography>
+      <p class="text-sm text-muted">{{ t('clients.subtitle') }}</p>
+    </div>
+    <ReuseBody />
+  </div>
 
   <!-- Details slideover -->
   <USlideover v-model:open="slideoverOpen" side="right">

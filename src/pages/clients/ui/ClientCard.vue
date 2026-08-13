@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ClientAvatar, type Client } from '@entities/client'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   client: Client
   lastVisit: string | null
 }>()
+
+const isMobile = useIsMobile()
 
 const emit = defineEmits<{
   select: []
@@ -13,8 +16,8 @@ const emit = defineEmits<{
   toggleFavorite: []
 }>()
 
-const fullName = computed(
-  () => [props.client.first_name, props.client.last_name].filter(Boolean).join(' '),
+const fullName = computed(() =>
+  [props.client.first_name, props.client.last_name].filter(Boolean).join(' '),
 )
 
 const isOnline = computed(() => props.client.source !== 'manual')
@@ -48,18 +51,26 @@ const lastVisitLabel = computed(() => {
       <div class="flex items-start justify-between gap-2">
         <p class="truncate font-semibold text-highlighted">{{ fullName }}</p>
 
-        <div class="-mt-1 -mr-1 flex shrink-0 items-center" @click.stop>
+        <div
+          class="-mr-1 flex shrink-0 items-center"
+          :class="isMobile ? '-my-2.5' : '-mt-1'"
+          @click.stop
+        >
           <UButton
             :icon="client.is_favorite ? 'i-heroicons-star-solid' : 'i-lucide-star'"
             :color="client.is_favorite ? 'warning' : 'neutral'"
             variant="ghost"
-            size="sm"
+            :size="isMobile ? 'xl' : 'sm'"
+            :ui="isMobile ? { leadingIcon: 'size-6' } : undefined"
             :aria-label="
-              client.is_favorite ? $t('clients.card.removeFavorite') : $t('clients.card.addFavorite')
+              client.is_favorite
+                ? $t('clients.card.removeFavorite')
+                : $t('clients.card.addFavorite')
             "
             @click="emit('toggleFavorite')"
           />
           <UButton
+            v-if="!isMobile"
             icon="i-lucide-pencil"
             color="neutral"
             variant="ghost"
@@ -84,6 +95,7 @@ const lastVisitLabel = computed(() => {
         </span>
 
         <UBadge
+          v-if="!isMobile"
           :color="isOnline ? 'primary' : 'neutral'"
           variant="soft"
           size="sm"

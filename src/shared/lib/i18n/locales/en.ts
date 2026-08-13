@@ -9,6 +9,18 @@ export default {
     settings: 'Settings',
     logout: 'Logout',
     profile: 'Profile',
+    actions: 'Actions',
+  },
+  formats: {
+    duration: {
+      hoursShort: 'h',
+      minutesShort: 'min',
+    },
+    dateDay: {
+      yesterday: 'Yesterday',
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+    },
   },
   common: {
     dashboardWelcome:
@@ -18,12 +30,14 @@ export default {
     or: 'or',
     previous: 'Previous',
     next: 'Next',
+    back: 'Back',
     edit: 'Edit',
     delete: 'Delete',
     cancel: 'Cancel',
     close: 'Close',
     confirm: 'Confirm',
     ok: 'OK',
+    unsaved: 'Unsaved',
     unsavedChanges: 'Unsaved changes',
     discard: 'Discard',
     saveChanges: 'Save changes',
@@ -70,17 +84,19 @@ export default {
     schedule: {
       title: 'Schedule',
       subtitle: 'for {date} · {n} appointments',
+      summary: '{date} · {n} appointments',
       options: 'Options',
     },
     overview: {
       title: 'Overview',
-      earnedToday: 'Earned today',
+      earnedToday: 'Earned',
       appointments: 'Appointments',
       workingHours: 'Working hours',
+      periodLabel: 'Overview period',
       period: {
-        day: 'Day',
-        week: 'Week',
-        month: 'Month',
+        day: 'Today',
+        week: 'This week',
+        month: 'This month',
       },
       subtext: {
         today: 'today',
@@ -132,7 +148,9 @@ export default {
       title: 'Create',
       description: 'Choose what to add.',
       appointment: 'New appointment',
+      appointmentDescription: 'Book a client into your schedule',
       timeOff: 'Time off',
+      timeOffDescription: 'Set aside time for a break',
     },
     actions: {
       back: 'Back',
@@ -239,7 +257,9 @@ export default {
       day: 'Day',
     },
     allDay: 'All day',
-    dragError: 'Failed to update calendar event time',
+    moveSuccess: 'Event moved',
+    resizeSuccess: 'Event duration updated',
+    updateError: 'Failed to update calendar event',
     event: {
       onlineHint: 'Booked online',
     },
@@ -251,6 +271,7 @@ export default {
   },
   services: {
     title: 'Services',
+    subtitle: 'Manage the services you offer to your clients.',
     description:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
     addService: 'Add service',
@@ -490,9 +511,14 @@ export default {
   },
   analytics: {
     title: 'Analytics',
-    description: 'See how your business is performing.',
     comingSoon: 'Analytics coming soon',
+    options: {
+      title: 'Options',
+      compare: 'Compare period',
+      compareDescription: 'Compare with the previous time period',
+    },
     period: {
+      title: 'Period',
       today: 'Today',
       day: 'Day',
       week: 'Week',
@@ -510,7 +536,6 @@ export default {
       export: 'Export',
       exportComingSoon: 'Export is coming soon',
       apply: 'Apply',
-      vs: 'vs',
       prevPeriod: 'Previous period',
       nextPeriod: 'Next period',
     },
@@ -555,11 +580,11 @@ export default {
     avgCheckInline: 'avg check',
     deltaNew: 'new',
     compareVs: {
-      yesterday: 'vs yesterday',
-      lastWeek: 'vs last week',
-      lastMonth: 'vs last month',
-      lastYear: 'vs last year',
-      prevPeriod: 'vs previous period',
+      yesterday: 'yesterday',
+      lastWeek: 'last week',
+      lastMonth: 'last month',
+      lastYear: 'last year',
+      prevPeriod: 'previous period',
     },
     topServicesTitle: 'Top services',
     topServicesSubtitle: 'Ranked by revenue',
@@ -576,6 +601,7 @@ export default {
     nav: {
       groupGeneral: 'General',
       groupSystem: 'System',
+      groupWorkspace: 'Workspace',
       profile: 'Profile',
       contacts: 'Contacts & social',
       workingHours: 'Working hours',
@@ -585,6 +611,14 @@ export default {
       notifications: 'Notifications',
       systemRegion: 'System & region',
       account: 'Account',
+      services: 'Services',
+      clients: 'Clients',
+      about: 'About',
+    },
+    about: {
+      title: 'About',
+      description: 'App information and version details.',
+      version: 'Version',
     },
     profile: {
       title: 'Profile',
@@ -662,6 +696,8 @@ export default {
       title: 'Working hours',
       subtitle: 'Your weekly availability. Clients can only book inside these hours.',
       dayOff: 'Day off',
+      from: 'From',
+      to: 'To',
       break: 'Break',
       addBreak: 'Add break',
       copyToAll: 'Copy to all days',
@@ -944,6 +980,7 @@ export default {
   },
   clients: {
     pageTitle: 'Clients',
+    subtitle: 'Manage your client base and their visit history.',
     addButton: 'Add client',
     addFirstButton: 'Add first client',
     searchPlaceholder: 'Name or phone',
@@ -1016,6 +1053,9 @@ export default {
       createdAt: 'Added',
       noNotes: 'No notes',
       noEmail: '—',
+      moreActions: 'More actions',
+      actionsTitle: 'Actions',
+      notFoundTitle: 'Client not found',
     },
   },
   appointments: {
@@ -1026,6 +1066,8 @@ export default {
       cancelled: 'Cancelled',
       no_show: 'No-show',
       expired: 'Expired',
+      ongoing: 'In progress',
+      past: 'Time passed',
     },
     form: {
       titleCreate: 'New appointment',
@@ -1065,6 +1107,18 @@ export default {
     unknownClient: 'Unknown client',
     preview: {
       title: 'Appointment preview',
+      actions: 'Actions',
+      notifyClient: 'Notify client',
+      notifyTitle: 'Notify client',
+      notifyComingSoon: 'Client notifications are coming soon.',
+      editTitle: 'Edit appointment',
+      date: 'Date',
+      time: 'Time',
+      paymentMethod: 'Payment method',
+      selectClient: 'Select client',
+      selectServices: 'Select services',
+      done: 'Done',
+      save: 'Save',
       client: 'Client',
       services: 'Services',
       duration: 'Duration',
@@ -1114,6 +1168,7 @@ export default {
   },
   timeBlocks: {
     calendarTitle: 'Blocked time',
+    allDayLabel: 'Time off: All day',
     form: {
       titleCreate: 'Block time',
       titleEdit: 'Edit blocked time',
@@ -1152,12 +1207,12 @@ export default {
   },
   checkout: {
     title: 'Complete appointment',
+    client: 'Client',
     services: 'Services',
     total: 'Total',
     paymentMethod: 'Payment method',
     noPaymentTypes: 'No payment methods configured. Add one in Settings → Payment methods.',
-    confirm: 'Confirm payment',
-    cancel: 'Cancel',
+    confirm: 'Complete appointment',
     paymentInfo: 'Payment',
     paidAmount: 'Amount paid',
     paidVia: 'Payment method',

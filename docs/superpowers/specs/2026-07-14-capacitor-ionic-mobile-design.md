@@ -1,7 +1,14 @@
 # Дизайн: мобильная версия на Capacitor + Ionic (монорепо)
 
+> ⚠️ **SUPERSEDED (2026-07-16).** Этот подход (Ionic + монорепо + отдельный mobile-UI)
+> **отменён**. Решено переиспользовать текущий Nuxt UI и сделать одно адаптивное
+> приложение, завёрнутое в Capacitor. Актуальная архитектура и план:
+> [`docs/architecture/mobile-version.md`](../../architecture/mobile-version.md) и
+> [`docs/architecture/mobile-implementation-plan.md`](../../architecture/mobile-implementation-plan.md).
+> Документ сохранён для истории.
+
 - **Дата:** 2026-07-14
-- **Статус:** План / дизайн (реализация НЕ начата)
+- **Статус:** ОТМЕНЁН / superseded (см. `docs/architecture/mobile-version.md`)
 - **Область:** архитектура разделения desktop / mobile, обёртка в Capacitor, нативная навигация через Ionic
 
 ---

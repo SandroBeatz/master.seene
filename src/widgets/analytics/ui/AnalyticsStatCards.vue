@@ -3,6 +3,7 @@ import type { AnalyticsResultV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
 import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
+import { AnimatedNumber, Typography } from '@shared/ui'
 import { deltaPct, workingHoursLabel } from '../lib/stat-format'
 
 const props = defineProps<{
@@ -25,8 +26,14 @@ interface Card {
   value: string | number
   current: number
   previous: number
+  /** Comparison-period value, formatted like `value` — shown under the label when comparing. */
+  previousDisplay: string
   secondary?: string
+  /** 'earned' animates through AnimatedNumber; the rest render `value` as plain text. */
+  money?: boolean
 }
+
+const priceParts = computed(() => formats.priceParts())
 
 const cards = computed<Card[]>(() => {
   const cur = props.data?.current
@@ -38,12 +45,14 @@ const cards = computed<Card[]>(() => {
       icon: 'i-lucide-banknote',
       iconClass: 'text-green-600 dark:text-green-400',
       iconBgClass: 'bg-green-100 dark:bg-green-900/30',
-      value: formats.price(cur?.earned ?? 0),
+      value: cur?.earned ?? 0,
       current: cur?.earned ?? 0,
       previous: prev?.earned ?? 0,
+      previousDisplay: formats.price(prev?.earned ?? 0),
       secondary: `${t('analytics.avgCheckInline')} ${
         cur?.avg_check != null ? formats.price(cur.avg_check) : '—'
       }`,
+      money: true,
     },
     {
       key: 'clients',
@@ -54,6 +63,7 @@ const cards = computed<Card[]>(() => {
       value: cur?.clients_served ?? 0,
       current: cur?.clients_served ?? 0,
       previous: prev?.clients_served ?? 0,
+      previousDisplay: String(prev?.clients_served ?? 0),
     },
     {
       key: 'hours',
@@ -64,6 +74,7 @@ const cards = computed<Card[]>(() => {
       value: workingHoursLabel(cur?.working_minutes ?? 0, t),
       current: cur?.working_minutes ?? 0,
       previous: prev?.working_minutes ?? 0,
+      previousDisplay: workingHoursLabel(prev?.working_minutes ?? 0, t),
     },
     {
       key: 'appointments',
@@ -74,6 +85,7 @@ const cards = computed<Card[]>(() => {
       value: cur?.appointments_count ?? 0,
       current: cur?.appointments_count ?? 0,
       previous: prev?.appointments_count ?? 0,
+      previousDisplay: String(prev?.appointments_count ?? 0),
     },
   ]
 })
@@ -81,14 +93,18 @@ const cards = computed<Card[]>(() => {
 
 <template>
   <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <UCard v-for="card in cards" :key="card.key" :ui="{ root: 'shadow-panel ring-0' }">
+    <UCard
+      v-for="card in cards"
+      :key="card.key"
+      :ui="{ root: 'rounded-lg md:rounded-xl shadow-panel ring-0' }"
+    >
       <div class="space-y-3">
         <div class="flex items-start justify-between gap-2">
           <div
-            class="flex size-11 shrink-0 items-center justify-center rounded-lg"
+            class="flex size-8 md:size-11 shrink-0 items-center justify-center rounded-sm"
             :class="card.iconBgClass"
           >
-            <UIcon :name="card.icon" class="size-5" :class="card.iconClass" />
+            <UIcon :name="card.icon" class="size-4 md:size-5" :class="card.iconClass" />
           </div>
           <template v-if="compare && data && !loading">
             <UBadge
@@ -116,11 +132,25 @@ const cards = computed<Card[]>(() => {
           <USkeleton class="h-4 w-20" />
         </div>
         <div v-else class="space-y-0.5">
-          <p class="text-2xl font-semibold">{{ card.value }}</p>
-          <p class="text-sm font-medium">{{ card.label }}</p>
-          <p v-if="compare || card.secondary" class="text-xs text-muted">
-            {{ compare ? compareLabel : card.secondary }}
-          </p>
+          <Typography variant="h3" class="font-semibold">
+            <AnimatedNumber
+              v-if="card.money"
+              :value="card.current"
+              :format="priceParts.format"
+              :prefix="priceParts.prefix"
+              :suffix="priceParts.suffix"
+            />
+            <template v-else>{{ card.value }}</template>
+          </Typography>
+
+          <Typography variant="caption" class="font-medium">{{ card.label }}</Typography>
+          <Typography v-if="compare" variant="footnote" class="text-muted">
+            {{ compareLabel }}:
+            <span class="font-medium text-default">{{ card.previousDisplay }}</span>
+          </Typography>
+          <Typography v-else-if="card.secondary" variant="footnote" class="text-muted">{{
+            card.secondary
+          }}</Typography>
         </div>
       </div>
     </UCard>

@@ -12,6 +12,14 @@ export async function completeSale(dto: CompleteSaleDto): Promise<string> {
   return data as string
 }
 
+export async function updateSale(
+  id: string,
+  patch: { payment_type_id?: string; amount?: number },
+): Promise<void> {
+  const { error } = await supabase.from('sale').update(patch).eq('id', id)
+  if (error) throw error
+}
+
 export async function getSaleByAppointmentId(
   appointmentId: string,
 ): Promise<(Sale & { items: SaleItem[] }) | null> {
