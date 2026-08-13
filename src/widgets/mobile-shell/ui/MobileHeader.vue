@@ -51,7 +51,9 @@ const actions = useMobilePushActionsList()
           v-for="(action, i) in actions"
           :key="i"
           :icon="action.icon"
-          :color="action.color ?? 'primary'"
+          :color="action.color ?? 'neutral'"
+          variant="ghost"
+          size="lg"
           square
           :aria-label="action.ariaLabel"
           @click="action.onClick"

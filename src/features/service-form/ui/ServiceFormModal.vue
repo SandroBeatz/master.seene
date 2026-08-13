@@ -2,6 +2,7 @@
 import Joi from 'joi'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import {
   useCreateServiceMutation,
@@ -25,6 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [boolean]
   success: []
+  delete: [Service]
 }>()
 
 const { t } = useI18n()
@@ -42,6 +44,23 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 })
+
+function close() {
+  isOpen.value = false
+}
+
+// Deletion is owned by the parent (it runs the confirm dialog + mutation); the
+// drawer just closes and hands the service back.
+function onDelete() {
+  if (!props.service) return
+  const service = props.service
+  isOpen.value = false
+  emit('delete', service)
+}
+
+// Shared so the form body isn't duplicated between the desktop modal and the
+// mobile drawer.
+const [DefineBody, ReuseBody] = createReusableTemplate()
 
 const COLOR_PALETTE = [
   '#f87171',
@@ -227,117 +246,154 @@ async function confirmCreateCategory() {
 </script>
 
 <template>
-  <UModal
+  <DefineBody>
+    <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField :label="$t('services.form.name')" name="name" required>
+        <UInput
+          v-model="state.name"
+          :placeholder="$t('services.form.namePlaceholder')"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField :label="$t('services.form.description')" name="description">
+        <UTextarea
+          v-model="state.description"
+          :placeholder="$t('services.form.descriptionPlaceholder')"
+          :rows="3"
+          class="w-full"
+        />
+      </UFormField>
+
+      <div class="grid grid-cols-2 gap-4">
+        <UFormField :label="$t('services.form.duration')" name="duration" required>
+          <USelect
+            v-model="state.duration"
+            :items="durationItems"
+            value-key="value"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField :label="$t('services.form.price')" name="price" required>
+          <PriceInput
+            v-model="state.price"
+            :placeholder="$t('services.form.pricePlaceholder')"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
+
+      <UFormField :label="$t('services.form.category')" name="category_id">
+        <div class="space-y-2">
+          <div class="flex items-center gap-2">
+            <USelect
+              v-model="state.category_id"
+              :items="categoryItems"
+              value-key="value"
+              class="w-full flex-1"
+            />
+            <UButton
+              icon="i-lucide-plus"
+              color="neutral"
+              variant="subtle"
+              :aria-label="$t('services.form.categoryAdd')"
+              @click="startCreateCategory"
+            />
+          </div>
+
+          <div v-if="isAddingCategory" class="flex items-center gap-2">
+            <UInput
+              v-model="newCategoryName"
+              :placeholder="$t('services.form.categoryNamePlaceholder')"
+              autofocus
+              class="w-full flex-1"
+              @keydown.enter.prevent="confirmCreateCategory"
+            />
+            <UButton
+              icon="i-lucide-check"
+              color="primary"
+              :loading="isCreatingCategory"
+              :aria-label="$t('services.form.categoryCreateConfirm')"
+              @click="confirmCreateCategory"
+            />
+            <UButton
+              icon="i-lucide-x"
+              color="neutral"
+              variant="ghost"
+              :aria-label="$t('services.form.cancel')"
+              @click="cancelCreateCategory"
+            />
+          </div>
+        </div>
+      </UFormField>
+
+      <UFormField :label="$t('services.form.color')" name="color">
+        <div class="flex flex-wrap gap-2 pt-1">
+          <button
+            v-for="c in COLOR_PALETTE"
+            :key="c"
+            type="button"
+            class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
+            :style="{
+              backgroundColor: c,
+              boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
+            }"
+            @click="state.color = c"
+          />
+        </div>
+      </UFormField>
+
+      <UFormField name="is_active">
+        <div class="flex items-center gap-3">
+          <USwitch v-model="state.is_active" />
+          <span class="text-sm">{{ $t('services.form.isActive') }}</span>
+        </div>
+      </UFormField>
+    </UForm>
+  </DefineBody>
+
+  <!-- Mobile: bottom drawer with 50/50 actions. -->
+  <UDrawer
+    v-if="isMobile"
     v-model:open="isOpen"
     :title="isEdit ? $t('services.form.editTitle') : $t('services.form.createTitle')"
-    :fullscreen="isMobile"
+    :ui="{ body: 'p-4', footer: 'p-4 border-t border-default' }"
+  >
+    <template #body>
+      <ReuseBody />
+    </template>
+    <template #footer>
+      <div class="flex w-full items-center gap-2 pb-[calc(0.25rem+var(--safe-area-bottom))]">
+        <UButton
+          v-if="isEdit"
+          icon="i-lucide-trash-2"
+          color="error"
+          variant="soft"
+          size="lg"
+          square
+          :aria-label="$t('services.deleteAction')"
+          @click="onDelete"
+        />
+        <UButton color="neutral" variant="outline" size="lg" block @click="close">
+          {{ $t('services.form.cancel') }}
+        </UButton>
+        <UButton color="primary" size="lg" block :loading="isLoading" @click="submitForm">
+          {{ $t('services.form.save') }}
+        </UButton>
+      </div>
+    </template>
+  </UDrawer>
+
+  <!-- Desktop: centered modal. -->
+  <UModal
+    v-else
+    v-model:open="isOpen"
+    :title="isEdit ? $t('services.form.editTitle') : $t('services.form.createTitle')"
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>
-      <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-        <UFormField :label="$t('services.form.name')" name="name" required>
-          <UInput
-            v-model="state.name"
-            :placeholder="$t('services.form.namePlaceholder')"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField :label="$t('services.form.description')" name="description">
-          <UTextarea
-            v-model="state.description"
-            :placeholder="$t('services.form.descriptionPlaceholder')"
-            :rows="3"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField :label="$t('services.form.duration')" name="duration" required>
-            <USelect
-              v-model="state.duration"
-              :items="durationItems"
-              value-key="value"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField :label="$t('services.form.price')" name="price" required>
-            <PriceInput
-              v-model="state.price"
-              :placeholder="$t('services.form.pricePlaceholder')"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-
-        <UFormField :label="$t('services.form.category')" name="category_id">
-          <div class="space-y-2">
-            <div class="flex items-center gap-2">
-              <USelect
-                v-model="state.category_id"
-                :items="categoryItems"
-                value-key="value"
-                class="w-full flex-1"
-              />
-              <UButton
-                icon="i-lucide-plus"
-                color="neutral"
-                variant="subtle"
-                :aria-label="$t('services.form.categoryAdd')"
-                @click="startCreateCategory"
-              />
-            </div>
-
-            <div v-if="isAddingCategory" class="flex items-center gap-2">
-              <UInput
-                v-model="newCategoryName"
-                :placeholder="$t('services.form.categoryNamePlaceholder')"
-                autofocus
-                class="w-full flex-1"
-                @keydown.enter.prevent="confirmCreateCategory"
-              />
-              <UButton
-                icon="i-lucide-check"
-                color="primary"
-                :loading="isCreatingCategory"
-                :aria-label="$t('services.form.categoryCreateConfirm')"
-                @click="confirmCreateCategory"
-              />
-              <UButton
-                icon="i-lucide-x"
-                color="neutral"
-                variant="ghost"
-                :aria-label="$t('services.form.cancel')"
-                @click="cancelCreateCategory"
-              />
-            </div>
-          </div>
-        </UFormField>
-
-        <UFormField :label="$t('services.form.color')" name="color">
-          <div class="flex flex-wrap gap-2 pt-1">
-            <button
-              v-for="c in COLOR_PALETTE"
-              :key="c"
-              type="button"
-              class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none"
-              :style="{
-                backgroundColor: c,
-                boxShadow: state.color === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : 'none',
-              }"
-              @click="state.color = c"
-            />
-          </div>
-        </UFormField>
-
-        <UFormField name="is_active">
-          <div class="flex items-center gap-3">
-            <USwitch v-model="state.is_active" />
-            <span class="text-sm">{{ $t('services.form.isActive') }}</span>
-          </div>
-        </UFormField>
-      </UForm>
+      <ReuseBody />
     </template>
 
     <template #footer="{ close }">

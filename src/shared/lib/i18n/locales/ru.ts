@@ -268,6 +268,7 @@ export default {
   },
   services: {
     title: 'Услуги',
+    subtitle: 'Управляйте услугами, которые вы предлагаете клиентам.',
     description: 'С возвращением на ваш дашборд. Вот что происходит с вашими проектами сегодня.',
     addService: 'Добавить услугу',
     addFirstService: 'Добавить первую услугу',
@@ -975,6 +976,7 @@ export default {
   },
   clients: {
     pageTitle: 'Клиенты',
+    subtitle: 'Управляйте базой клиентов и историей их визитов.',
     addButton: 'Добавить клиента',
     addFirstButton: 'Добавить первого клиента',
     searchPlaceholder: 'Имя или телефон',

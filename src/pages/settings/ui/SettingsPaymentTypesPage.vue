@@ -22,7 +22,7 @@ const sessionStore = useSessionStore()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-const { data: paymentTypes, isLoading } = usePaymentTypesQuery(userId)
+const { data: paymentTypes, isPending } = usePaymentTypesQuery(userId)
 const deleteMutation = useDeletePaymentTypeMutation(userId)
 const setActiveMutation = useSetPaymentTypeActiveMutation(userId)
 
@@ -112,7 +112,7 @@ const isMobile = useIsMobile()
 // the next screen.
 const { setActions, clearActions } = useMobilePushActions()
 watchEffect(() => {
-  if (isMobile.value && !isLoading.value) {
+  if (isMobile.value && !isPending.value) {
     setActions([
       {
         icon: 'i-lucide-plus',
@@ -140,7 +140,7 @@ const hostUI = {
 <template>
   <DefineHeaderText>
     <div class="flex flex-col gap-1">
-      <Typography variant="h5" class="text-highlighted font-bold">
+      <Typography variant="h4" class="text-highlighted font-bold">
         {{ t('settings.paymentTypes.title') }}
       </Typography>
       <p class="text-sm text-muted">{{ t('settings.paymentTypes.subtitle') }}</p>
@@ -150,7 +150,7 @@ const hostUI = {
   <DefineBody>
     <div class="flex flex-col gap-2">
       <!-- Loading skeletons -->
-      <template v-if="isLoading">
+      <template v-if="isPending">
         <div
           v-for="i in 3"
           :key="i"
@@ -231,7 +231,7 @@ const hostUI = {
       <div class="flex items-start justify-between gap-3">
         <ReuseHeaderText />
         <UButton
-          v-if="!isLoading"
+          v-if="!isPending"
           icon="i-lucide-plus"
           color="primary"
           square

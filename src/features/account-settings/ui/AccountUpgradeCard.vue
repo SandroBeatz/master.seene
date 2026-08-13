@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useIsMobile } from '@shared/lib/viewport'
 import AccountPlansModal from './AccountPlansModal.vue'
 
 defineOptions({ name: 'AccountUpgradeCard' })
 
 const { t } = useI18n()
+const isMobile = useIsMobile()
 
 const plansOpen = ref(false)
 </script>
@@ -17,7 +19,7 @@ const plansOpen = ref(false)
       class="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-amber-500/20 blur-3xl"
     />
 
-    <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div class="flex flex-col gap-2">
         <UBadge
           class="w-fit bg-white/10 text-amber-300 ring-1 ring-white/15"
@@ -35,6 +37,7 @@ const plansOpen = ref(false)
 
       <UButton
         class="shrink-0 rounded-full"
+        :block="isMobile"
         color="primary"
         trailing-icon="i-lucide-arrow-up-right"
         @click="plansOpen = true"

@@ -297,7 +297,7 @@ const hostUI = {
   <UCard :ui="hostUI">
     <template #header>
       <div class="flex flex-col gap-1">
-        <Typography variant="h5" class="text-highlighted font-bold">
+        <Typography variant="h4" class="text-highlighted font-bold">
           {{ t('settings.profile.title') }}
         </Typography>
         <Typography variant="caption" class="text-muted">

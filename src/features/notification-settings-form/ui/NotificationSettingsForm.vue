@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import { useSessionStore } from '@entities/session'
 import {
   CLIENT_REMINDER_OFFSET_VALUES,
@@ -8,6 +9,7 @@ import {
   useUpdateMasterNotificationSettingsMutation,
 } from '@entities/master'
 import { useDirtyForm } from '@shared/lib/forms'
+import { useIsMobile } from '@shared/lib/viewport'
 import { FormSaveBar, Typography } from '@shared/ui'
 import { useNotificationSettings } from '../model/use-notification-settings'
 
@@ -16,6 +18,7 @@ defineOptions({ name: 'NotificationSettingsForm' })
 const { t } = useI18n()
 const toast = useToast()
 const sessionStore = useSessionStore()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -89,27 +92,30 @@ const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
 }
+
+const [DefineHeader, ReuseHeader] = createReusableTemplate()
+const [DefineBody, ReuseBody] = createReusableTemplate()
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
-      <div class="flex flex-col gap-1">
-        <Typography variant="h5" class="text-highlighted font-bold">
-          {{ t('settings.notifications.title') }}
-        </Typography>
-        <Typography variant="caption" class="text-muted">
-          {{ t('settings.notifications.subtitle') }}
-        </Typography>
-      </div>
-    </template>
+  <DefineHeader>
+    <div class="flex flex-col gap-1">
+      <Typography variant="h4" class="text-highlighted font-bold">
+        {{ t('settings.notifications.title') }}
+      </Typography>
+      <Typography variant="caption" class="text-muted">
+        {{ t('settings.notifications.subtitle') }}
+      </Typography>
+    </div>
+  </DefineHeader>
 
+  <DefineBody>
     <!-- Loading skeletons -->
     <div v-if="isPending" class="divide-y divide-default">
       <div
         v-for="i in 4"
         :key="i"
-        class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+        class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between"
       >
         <div class="flex flex-col gap-1.5">
           <USkeleton class="h-4 w-40" />
@@ -126,7 +132,7 @@ const hostUI = {
       </p>
       <div class="divide-y divide-default">
         <!-- WhatsApp reminders -->
-        <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-0.5">
             <span class="font-medium text-highlighted">
               {{ t('settings.notifications.whatsappTitle') }}
@@ -155,6 +161,11 @@ const hostUI = {
               :key="item.value"
               :model-value="state.clientReminderOffsets.includes(item.value)"
               :label="item.label"
+              color="neutral"
+              :ui="{
+                base: 'ring-default data-[state=checked]:ring-accent!',
+                indicator: 'bg-accent! text-zinc-950!',
+              }"
               :disabled="!state.clientWhatsappEnabled"
               @update:model-value="
                 (checked: boolean | 'indeterminate') => toggleOffset(item.value, checked === true)
@@ -170,7 +181,7 @@ const hostUI = {
       </p>
       <div class="divide-y divide-default">
         <!-- New booking -->
-        <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-0.5">
             <span class="font-medium text-highlighted">
               {{ t('settings.notifications.alertNewBookingTitle') }}
@@ -186,7 +197,7 @@ const hostUI = {
         </div>
 
         <!-- Awaiting confirmation -->
-        <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-0.5">
             <span class="font-medium text-highlighted">
               {{ t('settings.notifications.alertAwaitingTitle') }}
@@ -202,7 +213,7 @@ const hostUI = {
         </div>
 
         <!-- Cancellations -->
-        <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-0.5">
             <span class="font-medium text-highlighted">
               {{ t('settings.notifications.alertCancellationTitle') }}
@@ -218,7 +229,7 @@ const hostUI = {
         </div>
 
         <!-- Upcoming appointment heads-up -->
-        <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
           <div class="flex flex-col gap-0.5">
             <span class="font-medium text-highlighted">
               {{ t('settings.notifications.alertUpcomingTitle') }}
@@ -245,5 +256,17 @@ const hostUI = {
     </template>
 
     <FormSaveBar :dirty="isDirty" :saving="isSaving" @save="onSave" @discard="onDiscard" />
+  </DefineBody>
+
+  <UCard v-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <ReuseHeader />
+    </template>
+    <ReuseBody />
   </UCard>
+
+  <div v-else class="flex flex-col gap-4">
+    <ReuseHeader />
+    <ReuseBody />
+  </div>
 </template>

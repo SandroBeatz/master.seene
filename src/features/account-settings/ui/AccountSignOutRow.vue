@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from '@shared/ui'
 import { supabase } from '@shared/lib/supabase'
+import { useIsMobile } from '@shared/lib/viewport'
 
 defineOptions({ name: 'AccountSignOutRow' })
 
 const { t } = useI18n()
 const router = useRouter()
 const confirm = useConfirm()
+const isMobile = useIsMobile()
 
 const isLoading = ref(false)
 
@@ -33,13 +35,14 @@ async function onSignOut() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
     <div class="flex flex-col gap-0.5">
       <span class="font-medium text-highlighted">{{ t('settings.account.signOut.label') }}</span>
       <span class="text-sm text-muted">{{ t('settings.account.signOut.description') }}</span>
     </div>
     <UButton
       class="shrink-0"
+      :block="isMobile"
       color="neutral"
       variant="outline"
       leading-icon="i-lucide-log-out"

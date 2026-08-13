@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import Joi from 'joi'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSessionStore } from '@entities/session'
@@ -68,10 +69,29 @@ const formRef = ref<{ $el: HTMLFormElement } | null>(null)
 function submitForm() {
   formRef.value?.$el?.requestSubmit()
 }
+
+function close() {
+  isOpen.value = false
+}
+
+const [DefineBody, ReuseBody] = createReusableTemplate()
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+  <DefineBody>
+    <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField :label="t('settings.account.email.newEmailLabel')" name="email" required>
+        <UInput
+          v-model="state.email"
+          type="email"
+          :placeholder="t('settings.account.email.newEmailPlaceholder')"
+          class="w-full"
+        />
+      </UFormField>
+    </UForm>
+  </DefineBody>
+
+  <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
     <div class="flex flex-col gap-0.5">
       <span class="font-medium text-highlighted">{{ t('settings.account.email.label') }}</span>
       <span class="text-sm text-muted">{{
@@ -80,6 +100,7 @@ function submitForm() {
     </div>
     <UButton
       class="shrink-0"
+      :block="isMobile"
       color="neutral"
       variant="outline"
       leading-icon="i-lucide-mail"
@@ -88,24 +109,38 @@ function submitForm() {
       {{ t('settings.account.email.changeButton') }}
     </UButton>
 
-    <UModal
+    <UDrawer
+      v-if="isMobile"
       v-model:open="isOpen"
       :title="t('settings.account.email.modalTitle')"
       :description="t('settings.account.email.modalDescription')"
-      :fullscreen="isMobile"
+      :ui="{ body: 'p-4', footer: 'p-4 border-t border-default' }"
+    >
+      <template #body>
+        <ReuseBody />
+      </template>
+
+      <template #footer>
+        <div class="flex w-full gap-2 pb-[calc(0.25rem+var(--safe-area-bottom))]">
+          <UButton color="neutral" variant="outline" size="lg" block @click="close">
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton color="primary" size="lg" block :loading="isLoading" @click="submitForm">
+            {{ t('settings.account.email.submit') }}
+          </UButton>
+        </div>
+      </template>
+    </UDrawer>
+
+    <UModal
+      v-else
+      v-model:open="isOpen"
+      :title="t('settings.account.email.modalTitle')"
+      :description="t('settings.account.email.modalDescription')"
       :ui="{ footer: 'justify-end' }"
     >
       <template #body>
-        <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-          <UFormField :label="t('settings.account.email.newEmailLabel')" name="email" required>
-            <UInput
-              v-model="state.email"
-              type="email"
-              :placeholder="t('settings.account.email.newEmailPlaceholder')"
-              class="w-full"
-            />
-          </UFormField>
-        </UForm>
+        <ReuseBody />
       </template>
 
       <template #footer="{ close }">

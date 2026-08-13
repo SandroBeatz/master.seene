@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useColorMode } from '@vueuse/core'
+import { createReusableTemplate, useColorMode } from '@vueuse/core'
 import { useSessionStore } from '@entities/session'
 import {
   useMasterPreferencesQuery,
@@ -15,6 +15,7 @@ import { useFormats } from '@shared/lib/formats'
 import { CURRENCIES } from '@shared/config/currencies'
 import { DATE_FORMATS } from '@shared/config/date-formats'
 import { useDirtyForm } from '@shared/lib/forms'
+import { useIsMobile } from '@shared/lib/viewport'
 import { FormSaveBar, Typography } from '@shared/ui'
 import { useSystemSettings } from '../model/use-system-settings'
 
@@ -27,6 +28,7 @@ const masterPreferencesStore = useMasterPreferencesStore()
 const localeStore = useLocaleStore()
 const { store: themePreference } = useColorMode()
 const formats = useFormats()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
@@ -143,9 +145,8 @@ const timeZoneItems = computed(() => {
   return baseTimeZoneItems
 })
 
-// Live preview of how prices and dates will look with the current selection.
+// Live preview of how prices will look with the selected currency.
 const pricePreview = computed(() => formats.price(1234.56, state.value.currency))
-const datePreview = computed(() => formats.date(new Date(), state.value.dateFormat))
 
 async function onSave() {
   if (!isDirty.value) return
@@ -183,27 +184,30 @@ const hostUI = {
   root: 'rounded-xl shadow-panel ring-0 divide-y-0',
   header: 'pb-0',
 }
+
+const [DefineHeader, ReuseHeader] = createReusableTemplate()
+const [DefineBody, ReuseBody] = createReusableTemplate()
 </script>
 
 <template>
-  <UCard :ui="hostUI">
-    <template #header>
-      <div class="flex flex-col gap-1">
-        <Typography variant="h5" class="text-highlighted font-bold">
-          {{ t('settings.systemRegion.title') }}
-        </Typography>
-        <Typography variant="caption" class="text-muted">
-          {{ t('settings.systemRegion.subtitle') }}
-        </Typography>
-      </div>
-    </template>
+  <DefineHeader>
+    <div class="flex flex-col gap-1">
+      <Typography variant="h4" class="text-highlighted font-bold">
+        {{ t('settings.systemRegion.title') }}
+      </Typography>
+      <Typography variant="caption" class="text-muted">
+        {{ t('settings.systemRegion.subtitle') }}
+      </Typography>
+    </div>
+  </DefineHeader>
 
+  <DefineBody>
     <!-- Loading skeletons -->
     <div v-if="isPending" class="divide-y divide-default">
       <div
         v-for="i in 6"
         :key="i"
-        class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+        class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between"
       >
         <div class="flex flex-col gap-1.5">
           <USkeleton class="h-4 w-40" />
@@ -215,7 +219,7 @@ const hostUI = {
 
     <div v-else class="divide-y divide-default">
       <!-- Interface language -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.language')
@@ -233,17 +237,20 @@ const hostUI = {
       </div>
 
       <!-- Theme -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{ t('settings.systemRegion.theme') }}</span>
           <span class="text-sm text-muted">{{ t('settings.systemRegion.themeDescription') }}</span>
         </div>
-        <UFieldGroup>
+        <UFieldGroup class="w-full md:w-auto">
           <UButton
             v-for="theme in themes"
             :key="theme.value"
+            class="h-20 flex-1 flex-col items-center justify-center gap-2 rounded-none px-3 first:rounded-s-lg last:rounded-e-lg md:min-w-24"
             :variant="state.theme === theme.value ? 'solid' : 'outline'"
             :leading-icon="theme.icon"
+            :aria-pressed="state.theme === theme.value"
+            :ui="{ leadingIcon: 'size-6' }"
             color="neutral"
             @click="state.theme = theme.value"
           >
@@ -253,7 +260,7 @@ const hostUI = {
       </div>
 
       <!-- Currency -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.currency')
@@ -262,16 +269,21 @@ const hostUI = {
             t('settings.systemRegion.currencyDescription')
           }}</span>
         </div>
-        <USelectMenu
-          v-model="state.currency"
-          :items="currencyItems"
-          value-key="value"
-          class="w-56 shrink-0"
-        />
+        <div class="flex w-full items-center gap-4 md:w-auto">
+          <USelectMenu
+            v-model="state.currency"
+            :items="currencyItems"
+            value-key="value"
+            class="min-w-0 flex-1 md:w-56 md:flex-none"
+          />
+          <UBadge color="neutral" variant="subtle" size="lg" class="shrink-0">
+            {{ pricePreview }}
+          </UBadge>
+        </div>
       </div>
 
       <!-- Time format -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.timeFormat')
@@ -299,7 +311,7 @@ const hostUI = {
       </div>
 
       <!-- Date format -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.dateFormat')
@@ -317,7 +329,7 @@ const hostUI = {
       </div>
 
       <!-- Time zone -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.timeZone')
@@ -335,7 +347,7 @@ const hostUI = {
       </div>
 
       <!-- First day of week -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.firstDay')
@@ -363,7 +375,7 @@ const hostUI = {
       </div>
 
       <!-- Default calendar view -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.calendarView')
@@ -398,7 +410,7 @@ const hostUI = {
       </div>
 
       <!-- Time slot granularity -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-col gap-0.5">
           <span class="font-medium text-highlighted">{{
             t('settings.systemRegion.slotStep')
@@ -414,19 +426,20 @@ const hostUI = {
           class="w-56 shrink-0"
         />
       </div>
-
-      <!-- Number / date preview -->
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-col gap-0.5">
-          <span class="font-medium text-highlighted">{{ t('settings.systemRegion.preview') }}</span>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <UBadge color="neutral" variant="subtle" size="lg">{{ pricePreview }}</UBadge>
-          <UBadge color="neutral" variant="subtle" size="lg">{{ datePreview }}</UBadge>
-        </div>
-      </div>
     </div>
 
     <FormSaveBar :dirty="isDirty" :saving="isSaving" @save="onSave" @discard="onDiscard" />
+  </DefineBody>
+
+  <UCard v-if="!isMobile" :ui="hostUI">
+    <template #header>
+      <ReuseHeader />
+    </template>
+    <ReuseBody />
   </UCard>
+
+  <div v-else class="flex flex-col gap-4">
+    <ReuseHeader />
+    <ReuseBody />
+  </div>
 </template>

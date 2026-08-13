@@ -130,7 +130,7 @@ const [DefineBody, ReuseBody] = createReusableTemplate()
   <DefineHeader>
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div class="flex flex-col gap-1">
-        <Typography variant="h5" class="text-highlighted font-bold">
+        <Typography variant="h4" class="text-highlighted font-bold">
           {{ t('settings.booking.title') }}
         </Typography>
         <Typography variant="caption" class="text-muted">

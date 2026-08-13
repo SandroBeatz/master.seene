@@ -2,6 +2,7 @@
 import Joi from 'joi'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { createReusableTemplate } from '@vueuse/core'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import {
   useCreateClientMutation,
@@ -40,6 +41,14 @@ const isOpen = computed({
 })
 
 const isEdit = computed(() => props.mode === 'edit')
+
+function close() {
+  isOpen.value = false
+}
+
+// Shared so the form body isn't duplicated between the desktop modal and the
+// mobile drawer.
+const [DefineBody, ReuseBody] = createReusableTemplate()
 
 interface FormState {
   firstName: string
@@ -174,75 +183,106 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
 </script>
 
 <template>
-  <UModal
+  <DefineBody>
+    <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField :label="$t('clients.form.avatarLabel')" name="avatar">
+        <div class="flex items-center gap-3">
+          <ClientAvatar
+            :first-name="state.firstName"
+            :last-name="state.lastName"
+            :emoji="emoji"
+            size="xl"
+          />
+          <UButton
+            color="neutral"
+            variant="soft"
+            leading-icon="i-lucide-smile"
+            @click="emojiPickerOpen = true"
+          >
+            {{ $t('clients.form.chooseEmoji') }}
+          </UButton>
+          <UButton
+            v-if="emoji"
+            color="neutral"
+            variant="ghost"
+            leading-icon="i-lucide-x"
+            @click="emoji = null"
+          >
+            {{ $t('clients.form.removeEmoji') }}
+          </UButton>
+        </div>
+      </UFormField>
+
+      <div class="grid grid-cols-2 gap-3">
+        <UFormField :label="$t('clients.form.firstNameLabel')" name="firstName" required>
+          <UInput v-model="state.firstName" class="w-full" />
+        </UFormField>
+        <UFormField :label="$t('clients.form.lastNameLabel')" name="lastName">
+          <UInput v-model="state.lastName" class="w-full" />
+        </UFormField>
+      </div>
+
+      <UFormField :label="$t('clients.form.phoneLabel')" name="phone" required>
+        <vue-tel-input
+          v-model="phone"
+          mode="international"
+          :input-options="{
+            placeholder: $t('clients.form.phonePlaceholder'),
+            showDialCode: true,
+          }"
+          @validate="onPhoneValidate"
+        />
+      </UFormField>
+
+      <UFormField :label="$t('clients.form.emailLabel')" name="email">
+        <UInput v-model="state.email" type="email" class="w-full" />
+      </UFormField>
+
+      <UFormField :label="$t('clients.form.birthdayLabel')" name="birthday">
+        <UInput v-model="state.birthday" type="date" class="w-full" />
+      </UFormField>
+
+      <UFormField :label="$t('clients.form.notesLabel')" name="notes">
+        <UTextarea v-model="state.notes" :rows="3" class="w-full" />
+      </UFormField>
+    </UForm>
+
+    <!-- Kept inside the body so, on mobile, its drawer is a descendant of this
+    form's drawer and `nested` can resolve the parent DrawerRoot context. -->
+    <EmojiPickerModal v-model:open="emojiPickerOpen" :nested="isMobile" @select="onEmojiSelect" />
+  </DefineBody>
+
+  <!-- Mobile: bottom drawer with 50/50 actions. -->
+  <UDrawer
+    v-if="isMobile"
     v-model:open="isOpen"
     :title="isEdit ? $t('clients.form.titleEdit') : $t('clients.form.titleCreate')"
-    :fullscreen="isMobile"
+    :ui="{ body: 'p-4', footer: 'p-4 border-t border-default' }"
+  >
+    <template #body>
+      <ReuseBody />
+    </template>
+    <template #footer>
+      <div class="flex w-full gap-2 pb-[calc(0.25rem+var(--safe-area-bottom))]">
+        <UButton color="neutral" variant="outline" size="lg" block @click="close">
+          {{ $t('clients.form.cancel') }}
+        </UButton>
+        <UButton color="primary" size="lg" block :loading="isLoading" @click="submitForm">
+          {{ isEdit ? $t('clients.form.submitEdit') : $t('clients.form.submitCreate') }}
+        </UButton>
+      </div>
+    </template>
+  </UDrawer>
+
+  <!-- Desktop: centered modal. -->
+  <UModal
+    v-else
+    v-model:open="isOpen"
+    :title="isEdit ? $t('clients.form.titleEdit') : $t('clients.form.titleCreate')"
     :ui="{ footer: 'justify-end' }"
   >
     <template #body>
-      <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-        <UFormField :label="$t('clients.form.avatarLabel')" name="avatar">
-          <div class="flex items-center gap-3">
-            <ClientAvatar
-              :first-name="state.firstName"
-              :last-name="state.lastName"
-              :emoji="emoji"
-              size="xl"
-            />
-            <UButton
-              color="neutral"
-              variant="soft"
-              leading-icon="i-lucide-smile"
-              @click="emojiPickerOpen = true"
-            >
-              {{ $t('clients.form.chooseEmoji') }}
-            </UButton>
-            <UButton
-              v-if="emoji"
-              color="neutral"
-              variant="ghost"
-              leading-icon="i-lucide-x"
-              @click="emoji = null"
-            >
-              {{ $t('clients.form.removeEmoji') }}
-            </UButton>
-          </div>
-        </UFormField>
-
-        <div class="grid grid-cols-2 gap-3">
-          <UFormField :label="$t('clients.form.firstNameLabel')" name="firstName" required>
-            <UInput v-model="state.firstName" class="w-full" />
-          </UFormField>
-          <UFormField :label="$t('clients.form.lastNameLabel')" name="lastName">
-            <UInput v-model="state.lastName" class="w-full" />
-          </UFormField>
-        </div>
-
-        <UFormField :label="$t('clients.form.phoneLabel')" name="phone" required>
-          <vue-tel-input
-            v-model="phone"
-            mode="international"
-            :input-options="{
-              placeholder: $t('clients.form.phonePlaceholder'),
-              showDialCode: true,
-            }"
-            @validate="onPhoneValidate"
-          />
-        </UFormField>
-
-        <UFormField :label="$t('clients.form.emailLabel')" name="email">
-          <UInput v-model="state.email" type="email" class="w-full" />
-        </UFormField>
-
-        <UFormField :label="$t('clients.form.birthdayLabel')" name="birthday">
-          <UInput v-model="state.birthday" type="date" class="w-full" />
-        </UFormField>
-
-        <UFormField :label="$t('clients.form.notesLabel')" name="notes">
-          <UTextarea v-model="state.notes" :rows="3" class="w-full" />
-        </UFormField>
-      </UForm>
+      <ReuseBody />
     </template>
 
     <template #footer="{ close }">
@@ -254,6 +294,4 @@ async function onSubmit(event: FormSubmitEvent<FormState>) {
       </UButton>
     </template>
   </UModal>
-
-  <EmojiPickerModal v-model:open="emojiPickerOpen" @select="onEmojiSelect" />
 </template>

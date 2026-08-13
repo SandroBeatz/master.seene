@@ -5,7 +5,7 @@ export interface MobilePushAction {
   icon: string
   ariaLabel: string
   onClick: () => void
-  /** Nuxt UI button color; defaults to `primary`. */
+  /** Nuxt UI button color; defaults to `neutral`. */
   color?: string
 }
 

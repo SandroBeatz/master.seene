@@ -271,6 +271,7 @@ export default {
   },
   services: {
     title: 'Services',
+    subtitle: 'Manage the services you offer to your clients.',
     description:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
     addService: 'Add service',
@@ -979,6 +980,7 @@ export default {
   },
   clients: {
     pageTitle: 'Clients',
+    subtitle: 'Manage your client base and their visit history.',
     addButton: 'Add client',
     addFirstButton: 'Add first client',
     searchPlaceholder: 'Name or phone',

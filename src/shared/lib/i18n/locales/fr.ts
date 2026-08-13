@@ -271,6 +271,7 @@ export default {
   },
   services: {
     title: 'Services',
+    subtitle: 'Gérez les services que vous proposez à vos clients.',
     description:
       "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
     addService: 'Ajouter un service',
@@ -988,6 +989,7 @@ export default {
   },
   clients: {
     pageTitle: 'Clients',
+    subtitle: 'Gérez votre base de clients et leur historique de visites.',
     addButton: 'Ajouter un client',
     addFirstButton: 'Ajouter le premier client',
     searchPlaceholder: 'Nom ou téléphone',

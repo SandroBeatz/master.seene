@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   useDeleteServiceMutation,
@@ -10,8 +10,9 @@ import {
 import { useServiceCategoriesQuery } from '@entities/service-category'
 import { useSessionStore } from '@entities/session'
 import { ServiceFormModal } from '@features/service-form'
+import { useMobilePushActions } from '@widgets/mobile-shell'
 import { useFormats } from '@shared/lib/formats'
-import { Page } from '@shared/ui'
+import { Page, Typography } from '@shared/ui'
 import { useIsMobile } from '@shared/lib/viewport'
 
 const { t } = useI18n()
@@ -79,6 +80,25 @@ function openEdit(service: Service) {
   isFormOpen.value = true
 }
 
+// On mobile the add button lives in the push header — register it there rather
+// than rendering it in the page body. Cleared on unmount so it doesn't leak to
+// the next screen.
+const { setActions, clearActions } = useMobilePushActions()
+watchEffect(() => {
+  if (isMobile.value && !isPending.value) {
+    setActions([
+      {
+        icon: 'i-lucide-plus',
+        ariaLabel: t('services.addService'),
+        onClick: openCreate,
+      },
+    ])
+  } else {
+    clearActions()
+  }
+})
+onUnmounted(clearActions)
+
 // Inline active toggle
 const updatingId = ref<string | null>(null)
 
@@ -128,7 +148,7 @@ function formatDuration(minutes: number): string {
 </script>
 
 <template>
-  <Page :title="$t('services.title')" :description="summary">
+  <Page v-if="!isMobile" :title="$t('services.title')" :description="summary">
     <template #header-right>
       <UButton leading-icon="i-lucide-plus" color="neutral" @click="openCreate">
         {{ $t('services.addService') }}
@@ -271,8 +291,120 @@ function formatDuration(minutes: number): string {
     </template>
   </Page>
 
+  <!-- Mobile: compact, card-free list. The add button is registered into the
+  push header (see useMobilePushActions above); tap a row to edit. -->
+  <div v-else class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <Typography variant="h4" class="text-highlighted font-bold">
+        {{ t('services.title') }}
+      </Typography>
+      <p class="text-sm text-muted">{{ t('services.subtitle') }}</p>
+    </div>
+
+    <UAlert
+      v-if="error"
+      color="error"
+      variant="soft"
+      :title="$t('services.loadError')"
+      :description="(error as Error).message"
+      leading-icon="i-lucide-alert-circle"
+    />
+
+    <div v-else class="flex flex-col gap-2">
+      <!-- Loading skeletons (only the very first load, never on refetch) -->
+      <template v-if="isPending">
+        <div
+          v-for="i in 4"
+          :key="i"
+          class="flex items-center gap-3 rounded-lg border border-default bg-background p-3"
+        >
+          <USkeleton class="size-9 shrink-0 rounded-lg" />
+          <div class="flex-1 space-y-2">
+            <USkeleton class="h-4 w-1/3" />
+            <USkeleton class="h-3 w-1/4" />
+          </div>
+        </div>
+      </template>
+
+      <!-- Empty -->
+      <p
+        v-else-if="!services?.length"
+        class="rounded-lg border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
+      >
+        {{ $t('services.emptyTitle') }}
+      </p>
+
+      <!-- List -->
+      <template v-else>
+        <!-- Category filters -->
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <UButton
+            v-for="chip in categoryChips"
+            :key="chip.id"
+            color="neutral"
+            :variant="activeCategory === chip.id ? 'solid' : 'soft'"
+            size="sm"
+            class="shrink-0 rounded-full"
+            @click="activeCategory = chip.id"
+          >
+            {{ chip.label }}
+            <span
+              class="ml-1 tabular-nums"
+              :class="activeCategory === chip.id ? 'opacity-70' : 'text-dimmed'"
+            >
+              {{ chip.count }}
+            </span>
+          </UButton>
+        </div>
+
+        <div
+          v-for="service in filteredServices"
+          :key="service.id"
+          class="relative flex items-center gap-2 overflow-hidden rounded-lg border border-default bg-background p-3 pl-5 transition-colors hover:bg-elevated"
+          :class="{ 'opacity-55': !service.is_active }"
+        >
+          <!-- Color accent: a half-circle flush against the card's start edge. -->
+          <span
+            class="absolute inset-y-0 left-0 my-auto h-8 w-2.5 rounded-r-sm"
+            :style="{ backgroundColor: service.color }"
+          />
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center text-left"
+            @click="openEdit(service)"
+          >
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-bold">{{ service.name }}</span>
+              <span class="block truncate text-xs text-muted">
+                <template v-if="service.category?.name">{{ service.category.name }} · </template
+                >{{ formatDuration(service.duration) }} · {{ f.price(service.price) }}
+              </span>
+            </span>
+          </button>
+
+          <UButton
+            icon="i-lucide-pencil"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :aria-label="$t('common.edit')"
+            @click="openEdit(service)"
+          />
+          <UButton
+            icon="i-lucide-trash-2"
+            color="error"
+            variant="ghost"
+            size="sm"
+            :aria-label="$t('common.delete')"
+            @click="openDelete(service)"
+          />
+        </div>
+      </template>
+    </div>
+  </div>
+
   <!-- Create / Edit modal -->
-  <ServiceFormModal v-model="isFormOpen" :service="editingService" />
+  <ServiceFormModal v-model="isFormOpen" :service="editingService" @delete="openDelete" />
 
   <!-- Delete confirm modal -->
   <UModal
