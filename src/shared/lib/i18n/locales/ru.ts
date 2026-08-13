@@ -1049,6 +1049,9 @@ export default {
       createdAt: 'Добавлен',
       noNotes: 'Нет заметок',
       noEmail: '—',
+      moreActions: 'Действия',
+      actionsTitle: 'Действия',
+      notFoundTitle: 'Клиент не найден',
     },
   },
   appointments: {

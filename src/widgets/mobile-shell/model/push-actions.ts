@@ -10,6 +10,9 @@ export interface MobilePushAction {
 }
 
 const PUSH_ACTIONS_KEY: InjectionKey<Ref<MobilePushAction[]>> = Symbol('mobile-push-actions')
+// Tracks which page instance last registered actions, so a screen that unmounts
+// after the next one has already registered can't wipe the newcomer's actions.
+const PUSH_ACTIONS_OWNER_KEY: InjectionKey<Ref<symbol | null>> = Symbol('mobile-push-actions-owner')
 
 /**
  * Provided once at the shell level so both the header (which renders the
@@ -19,7 +22,9 @@ const PUSH_ACTIONS_KEY: InjectionKey<Ref<MobilePushAction[]>> = Symbol('mobile-p
  */
 export function provideMobilePushActions() {
   const actions = ref<MobilePushAction[]>([])
+  const owner = ref<symbol | null>(null)
   provide(PUSH_ACTIONS_KEY, actions)
+  provide(PUSH_ACTIONS_OWNER_KEY, owner)
   return actions
 }
 
@@ -31,12 +36,24 @@ export function useMobilePushActionsList(): Ref<MobilePushAction[]> {
 /** Page-side: register/clear the header actions for the current screen. */
 export function useMobilePushActions() {
   const actions = inject(PUSH_ACTIONS_KEY, null)
+  const owner = inject(PUSH_ACTIONS_OWNER_KEY, null)
+  // Stable identity for this page instance (one call site per page setup).
+  const id = Symbol('mobile-push-actions-instance')
   return {
     setActions: (list: MobilePushAction[]) => {
-      if (actions) actions.value = list
+      if (!actions) return
+      actions.value = list
+      if (owner) owner.value = id
     },
     clearActions: () => {
-      if (actions) actions.value = []
+      if (!actions) return
+      // Only clear if we're still the active owner. When navigating between two
+      // screens that both register actions (e.g. clients list → client detail),
+      // mount/unmount order isn't guaranteed: without this guard the outgoing
+      // screen's unmount could clobber the actions the incoming screen just set.
+      if (owner && owner.value !== id) return
+      actions.value = []
+      if (owner) owner.value = null
     },
   }
 }

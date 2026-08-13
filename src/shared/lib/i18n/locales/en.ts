@@ -1053,6 +1053,9 @@ export default {
       createdAt: 'Added',
       noNotes: 'No notes',
       noEmail: '—',
+      moreActions: 'More actions',
+      actionsTitle: 'Actions',
+      notFoundTitle: 'Client not found',
     },
   },
   appointments: {

@@ -12,6 +12,7 @@ import { useServicesQuery, type Service } from '@entities/service'
 import { useSessionStore } from '@entities/session'
 import { useFormats } from '@shared/lib/formats'
 import { useNowMinute } from '@shared/lib/now'
+import { useIsMobile } from '@shared/lib/viewport'
 
 const props = defineProps<{
   client: Client
@@ -28,6 +29,7 @@ const { t } = useI18n()
 const formats = useFormats()
 const sessionStore = useSessionStore()
 const now = useNowMinute()
+const isMobile = useIsMobile()
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const clientId = computed(() => props.client.id)
@@ -43,16 +45,11 @@ const sourceLabel = computed(() =>
   props.client.source === 'manual' ? t('clients.source.manual') : t('clients.source.online'),
 )
 
-const formattedCreatedAt = computed(() =>
-  new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
-    new Date(props.client.created_at),
-  ),
-)
+const formattedCreatedAt = computed(() => formats.date(props.client.created_at))
 
 const lastVisitLabel = computed(() => {
   const date = lastVisitDate(appointments.value ?? [])
-  if (!date) return null
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(date))
+  return date ? formats.date(date) : null
 })
 
 const whatsappHref = computed(() => {
@@ -83,8 +80,12 @@ function statusView(appointment: Appointment) {
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col">
-    <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
+  <div
+    :class="
+      isMobile ? 'flex flex-col' : 'flex h-full min-h-0 flex-col overflow-y-auto p-4'
+    "
+  >
+    <div class="flex flex-col gap-6">
       <!-- Header -->
       <div class="flex items-start gap-3">
         <ClientAvatar
@@ -103,7 +104,22 @@ function statusView(appointment: Appointment) {
             <template v-else>{{ $t('clients.card.noVisits') }}</template>
           </p>
         </div>
+        <!-- Mobile: prominent favorite toggle (back + more-actions live in the
+        push header). Desktop slideover: close button. -->
         <UButton
+          v-if="isMobile"
+          square
+          size="xl"
+          :color="client.is_favorite ? 'warning' : 'neutral'"
+          variant="soft"
+          :icon="client.is_favorite ? 'i-heroicons-star-solid' : 'i-lucide-star'"
+          :aria-label="
+            client.is_favorite ? $t('clients.card.removeFavorite') : $t('clients.card.addFavorite')
+          "
+          @click="emit('toggleFavorite')"
+        />
+        <UButton
+          v-else
           icon="i-lucide-x"
           color="neutral"
           variant="ghost"
@@ -115,35 +131,45 @@ function statusView(appointment: Appointment) {
 
       <!-- Actions -->
       <div class="flex flex-wrap gap-2">
-        <UButton
-          color="neutral"
-          variant="soft"
-          leading-icon="i-lucide-pencil"
-          @click="emit('edit')"
-        >
-          {{ $t('clients.details.editButton') }}
-        </UButton>
-        <UButton
-          color="error"
-          variant="soft"
-          leading-icon="i-lucide-trash-2"
-          @click="emit('delete')"
-        >
-          {{ $t('clients.details.deleteButton') }}
-        </UButton>
-        <UButton
-          square
-          :color="client.is_favorite ? 'warning' : 'neutral'"
-          variant="soft"
-          :icon="client.is_favorite ? 'i-heroicons-star-solid' : 'i-lucide-star'"
-          :aria-label="
-            client.is_favorite ? $t('clients.card.removeFavorite') : $t('clients.card.addFavorite')
-          "
-          @click="emit('toggleFavorite')"
-        />
+        <!-- Desktop only: edit/delete/favorite inline. On mobile, favorite moves
+        to the header and edit/delete into the push-header actions drawer. -->
+        <template v-if="!isMobile">
+          <UButton
+            color="neutral"
+            variant="soft"
+            leading-icon="i-lucide-pencil"
+            @click="emit('edit')"
+          >
+            {{ $t('clients.details.editButton') }}
+          </UButton>
+          <UButton
+            color="error"
+            variant="soft"
+            leading-icon="i-lucide-trash-2"
+            @click="emit('delete')"
+          >
+            {{ $t('clients.details.deleteButton') }}
+          </UButton>
+          <UButton
+            square
+            :color="client.is_favorite ? 'warning' : 'neutral'"
+            variant="soft"
+            :icon="client.is_favorite ? 'i-heroicons-star-solid' : 'i-lucide-star'"
+            :aria-label="
+              client.is_favorite
+                ? $t('clients.card.removeFavorite')
+                : $t('clients.card.addFavorite')
+            "
+            @click="emit('toggleFavorite')"
+          />
+        </template>
+        <!-- WhatsApp: full-width labelled CTA on mobile, square icon on desktop.
+        Opens wa.me for the client's number. -->
         <UButton
           v-if="whatsappHref"
-          square
+          :block="isMobile"
+          :size="isMobile ? 'lg' : 'md'"
+          :square="!isMobile"
           color="neutral"
           variant="soft"
           :to="whatsappHref"
@@ -151,19 +177,22 @@ function statusView(appointment: Appointment) {
           rel="noopener noreferrer"
           :aria-label="$t('clients.details.whatsapp')"
         >
-          <svg
-            class="size-4 shrink-0"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 360 362"
-          >
-            <path
-              fill="#25D366"
-              fill-rule="evenodd"
-              d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <template #leading>
+            <svg
+              class="size-4 shrink-0"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 360 362"
+            >
+              <path
+                fill="#25D366"
+                fill-rule="evenodd"
+                d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </template>
+          <template v-if="isMobile">{{ $t('clients.details.whatsapp') }}</template>
         </UButton>
       </div>
 
