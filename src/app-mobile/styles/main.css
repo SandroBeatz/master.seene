@@ -1,0 +1,20 @@
+/*
+ * Mobile (Ionic) build stylesheet. Isolated from the desktop entry
+ * (src/app/styles/main.css) — this bundle has NO Nuxt UI, so there are no
+ * Tailwind ↔ Nuxt UI conflicts here.
+ *
+ * Tailwind stays (per decision): Ionic ships the components with their own
+ * shadow-DOM styling, Tailwind handles layout/spacing utilities inside them.
+ * The Ionic core CSS itself is imported from main.ts (JS side, the documented
+ * Ionic pattern).
+ */
+@import 'tailwindcss';
+
+:root {
+  /* Capacitor safe-area insets — mirrors the desktop entry so native chrome
+     (notch, home indicator) is handled consistently. */
+  --safe-area-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-area-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-area-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-area-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}
