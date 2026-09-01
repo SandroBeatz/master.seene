@@ -4,8 +4,6 @@ import {
   IonPage,
   IonHeader,
   IonToolbar,
-  IonButtons,
-  IonBackButton,
   IonTitle,
   IonContent,
   IonSearchbar,
@@ -57,10 +55,6 @@ const filtered = computed(() => {
   <ion-page>
     <ion-header>
       <ion-toolbar>
-        <ion-buttons slot="start">
-          <!-- Native back + swipe-to-go-back to home. -->
-          <ion-back-button default-href="/home" />
-        </ion-buttons>
         <ion-title>{{ $t('clients.pageTitle') }}</ion-title>
       </ion-toolbar>
       <ion-toolbar>
@@ -79,7 +73,13 @@ const filtered = computed(() => {
       </div>
 
       <ion-list v-else>
-        <ion-item v-for="c in filtered" :key="c.id" button detail :router-link="`/clients/${c.id}`">
+        <ion-item
+          v-for="c in filtered"
+          :key="c.id"
+          button
+          detail
+          :router-link="`/tabs/clients/${c.id}`"
+        >
           <ion-avatar
             slot="start"
             class="flex items-center justify-center bg-gray-100 text-sm font-semibold text-gray-700"

@@ -10,6 +10,27 @@ export default {
     logout: 'Déconnexion',
     profile: 'Profil',
     actions: 'Actions',
+    menu: 'Menu',
+    account: 'Compte',
+  },
+  appearance: {
+    title: 'Apparence',
+    theme: {
+      label: 'Thème',
+      light: 'Clair',
+      dark: 'Sombre',
+      system: 'Système',
+    },
+    color: {
+      label: 'Couleur d’accentuation',
+    },
+    colors: {
+      amber: 'Ambre',
+      blue: 'Bleu',
+      emerald: 'Émeraude',
+      violet: 'Violet',
+      rose: 'Rose',
+    },
   },
   formats: {
     duration: {
@@ -360,6 +381,7 @@ export default {
       signIn: 'Se connecter',
       successTitle: 'Compte créé avec succès',
       errorTitle: "Échec de l'inscription",
+      checkEmail: 'Vérifiez votre e-mail pour confirmer votre compte.',
     },
     validation: {
       emailRequired: "L'adresse e-mail est requise",
@@ -379,6 +401,12 @@ export default {
     },
   },
   onboarding: {
+    mobilePlaceholder: {
+      title: 'Presque terminé',
+      description:
+        'Terminez la configuration de votre profil dans l’application de bureau pour utiliser Seene sur mobile.',
+      signOut: 'Se déconnecter',
+    },
     step1: {
       title: 'Choisissez vos spécialisations',
       subtitle:

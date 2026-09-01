@@ -50,7 +50,7 @@ function initials(c: Client): string {
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/clients" />
+          <ion-back-button default-href="/tabs/clients" />
         </ion-buttons>
         <ion-title>{{ fullName }}</ion-title>
       </ion-toolbar>

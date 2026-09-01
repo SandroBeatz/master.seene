@@ -15,12 +15,17 @@ import '@ionic/vue/css/text-transformation.css'
 import '@ionic/vue/css/flex-utils.css'
 import '@ionic/vue/css/display.css'
 
+/* Class-based dark palette: dark styles apply when `.ion-palette-dark` is on
+   <html>. The appearance store toggles that class (see @shared/lib/appearance). */
+import '@ionic/vue/css/palettes/dark.class.css'
+
 /* Tailwind + safe-area vars. Imported last so light-DOM utilities win. */
 import './styles/main.css'
 
 import AppMobile from './AppMobile.vue'
 import router from './router'
 import { installCore } from '@shared/lib/app-core'
+import { useAppearanceStore } from '@shared/lib/appearance'
 
 const app = createApp(AppMobile)
 
@@ -32,6 +37,10 @@ installCore(app)
 // router outlet renders are available.
 app.use(IonicVue)
 app.use(router)
+
+// Apply the persisted theme + primary color before mount (pinia is active after
+// installCore) so the first painted frame already matches the user's choice.
+useAppearanceStore().init()
 
 router.isReady().then(() => {
   app.mount('#app')

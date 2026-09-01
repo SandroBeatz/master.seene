@@ -10,6 +10,27 @@ export default {
     logout: 'Logout',
     profile: 'Profile',
     actions: 'Actions',
+    menu: 'Menu',
+    account: 'Account',
+  },
+  appearance: {
+    title: 'Appearance',
+    theme: {
+      label: 'Theme',
+      light: 'Light',
+      dark: 'Dark',
+      system: 'System',
+    },
+    color: {
+      label: 'Accent color',
+    },
+    colors: {
+      amber: 'Amber',
+      blue: 'Blue',
+      emerald: 'Emerald',
+      violet: 'Violet',
+      rose: 'Rose',
+    },
   },
   formats: {
     duration: {
@@ -359,6 +380,7 @@ export default {
       signIn: 'Sign in',
       successTitle: 'Account created successfully',
       errorTitle: 'Registration failed',
+      checkEmail: 'Check your email to confirm your account.',
     },
     validation: {
       emailRequired: 'Email is required',
@@ -378,6 +400,12 @@ export default {
     },
   },
   onboarding: {
+    mobilePlaceholder: {
+      title: 'Almost there',
+      description:
+        'Finish setting up your profile in the desktop app to start using Seene on mobile.',
+      signOut: 'Sign out',
+    },
     step1: {
       title: 'Choose your specializations',
       subtitle: 'Select the services you offer. You can change this later.',

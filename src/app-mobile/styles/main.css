@@ -10,6 +10,12 @@
  */
 @import 'tailwindcss';
 
+/* Drive Tailwind's `dark:` variant off Ionic's class-based dark palette instead
+   of the default `prefers-color-scheme`, so custom utilities in mobile pages
+   flip together with the Ionic components when the appearance store toggles the
+   theme. */
+@custom-variant dark (&:where(.ion-palette-dark, .ion-palette-dark *));
+
 :root {
   /* Capacitor safe-area insets — mirrors the desktop entry so native chrome
      (notch, home indicator) is handled consistently. */

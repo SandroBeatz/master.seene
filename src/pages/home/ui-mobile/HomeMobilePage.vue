@@ -1,18 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonList,
-  IonItem,
-  IonIcon,
-  IonLabel,
-} from '@ionic/vue'
-import { people } from 'ionicons/icons'
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/vue'
 import { useSessionStore } from '@entities/session'
 
 const { t } = useI18n()
@@ -39,15 +28,6 @@ const firstName = computed(() => sessionStore.profile?.first_name ?? '')
         <h1 class="text-2xl font-bold">{{ greeting }}</h1>
         <p v-if="firstName" class="mt-1 text-base text-gray-500">{{ firstName }}</p>
       </div>
-
-      <!-- Tapping this item performs a native forward push into the clients
-           list (ion-router-outlet animates it). -->
-      <ion-list inset>
-        <ion-item button detail router-link="/clients">
-          <ion-icon slot="start" :icon="people" aria-hidden="true" />
-          <ion-label>{{ $t('nav.clients') }}</ion-label>
-        </ion-item>
-      </ion-list>
     </ion-content>
   </ion-page>
 </template>

@@ -10,6 +10,27 @@ export default {
     logout: 'Выйти',
     profile: 'Профиль',
     actions: 'Действия',
+    menu: 'Меню',
+    account: 'Аккаунт',
+  },
+  appearance: {
+    title: 'Оформление',
+    theme: {
+      label: 'Тема',
+      light: 'Светлая',
+      dark: 'Тёмная',
+      system: 'Системная',
+    },
+    color: {
+      label: 'Акцентный цвет',
+    },
+    colors: {
+      amber: 'Янтарный',
+      blue: 'Синий',
+      emerald: 'Изумрудный',
+      violet: 'Фиолетовый',
+      rose: 'Розовый',
+    },
   },
   formats: {
     duration: {
@@ -355,6 +376,7 @@ export default {
       signIn: 'Войти',
       successTitle: 'Аккаунт успешно создан',
       errorTitle: 'Ошибка регистрации',
+      checkEmail: 'Проверьте почту, чтобы подтвердить аккаунт.',
     },
     validation: {
       emailRequired: 'Введите email',
@@ -374,6 +396,12 @@ export default {
     },
   },
   onboarding: {
+    mobilePlaceholder: {
+      title: 'Почти готово',
+      description:
+        'Завершите настройку профиля в десктоп-приложении, чтобы пользоваться Seene на телефоне.',
+      signOut: 'Выйти',
+    },
     step1: {
       title: 'Выберите специализации',
       subtitle: 'Выберите услуги, которые вы предоставляете. Это можно изменить позже.',
