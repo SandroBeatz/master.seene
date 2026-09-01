@@ -26,8 +26,40 @@ export default defineConfig(() => {
 
   if (isMobile) {
     return {
-      plugins: [tailwindcss(), vue(), vueDevTools()],
+      plugins: [
+        tailwindcss(),
+        vue(),
+        vueDevTools(),
+        // Emit the mobile entry as index.html so Capacitor (which loads
+        // index.html from webDir) and the native WebView find it. Source stays
+        // mobile.html for a clean dev URL alongside the desktop index.html.
+        {
+          name: 'mobile-html-as-index',
+          enforce: 'post',
+          generateBundle(_options, bundle) {
+            const html = bundle['mobile.html']
+            if (html && html.type === 'asset') {
+              html.fileName = 'index.html'
+            }
+          },
+          // Dev only: the desktop index.html (src/main.ts → @nuxt/ui) also lives
+          // in the project root and would fail to resolve under this Nuxt-UI-less
+          // mobile config. Redirect the root to mobile.html so the desktop entry
+          // is never loaded on the mobile dev server.
+          configureServer(server) {
+            server.middlewares.use((req, res, next) => {
+              if (req.url === '/' || req.url === '/index.html') {
+                res.writeHead(302, { Location: '/mobile.html' })
+                res.end()
+                return
+              }
+              next()
+            })
+          },
+        },
+      ],
       resolve: { alias: aliases },
+      server: { open: '/mobile.html' },
       build: {
         outDir: 'dist-mobile',
         rollupOptions: {
