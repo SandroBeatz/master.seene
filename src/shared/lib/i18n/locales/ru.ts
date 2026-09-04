@@ -1057,6 +1057,9 @@ export default {
       errorTitle: 'Не удалось сохранить клиента',
       successCreate: 'Клиент добавлен',
       successEdit: 'Клиент обновлён',
+      firstNameRequired: 'Укажите имя',
+      phoneRequired: 'Введите корректный номер телефона',
+      emailInvalid: 'Некорректный email',
     },
     delete: {
       title: 'Удалить клиента',

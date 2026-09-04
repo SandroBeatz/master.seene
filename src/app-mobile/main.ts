@@ -1,5 +1,7 @@
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
+import VueTelInput from 'vue-tel-input'
+import 'vue-tel-input/vue-tel-input.css'
 
 /* Required Ionic core styles (documented order). */
 import '@ionic/vue/css/core.css'
@@ -25,6 +27,9 @@ import './styles/main.css'
 import AppMobile from './AppMobile.vue'
 import router from './router'
 import { installCore } from '@shared/lib/app-core'
+import { formatsPlugin } from '@shared/lib/formats'
+import { i18n } from '@shared/lib/i18n'
+import { useMasterPreferencesStore } from '@entities/master'
 import { useAppearanceStore } from '@shared/lib/appearance'
 
 const app = createApp(AppMobile)
@@ -37,6 +42,19 @@ installCore(app)
 // router outlet renders are available.
 app.use(IonicVue)
 app.use(router)
+
+// Phone field used by the client form — same international input the desktop
+// bundle registers, so mobile create/edit reuses one validated phone control.
+app.use(VueTelInput)
+
+// Localized date/price/duration formatting driven by the master's preferences —
+// same wiring as the desktop root so useFormats() works in mobile screens.
+app.use(formatsPlugin, {
+  getTimeFormat: () => useMasterPreferencesStore().timeFormat,
+  getCurrency: () => useMasterPreferencesStore().currency,
+  getDateFormat: () => useMasterPreferencesStore().dateFormat,
+  getLocale: () => i18n.global.locale.value,
+})
 
 // Apply the persisted theme + primary color before mount (pinia is active after
 // installCore) so the first painted frame already matches the user's choice.

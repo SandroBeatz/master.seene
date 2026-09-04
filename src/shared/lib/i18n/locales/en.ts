@@ -1061,6 +1061,9 @@ export default {
       errorTitle: 'Failed to save client',
       successCreate: 'Client added',
       successEdit: 'Client updated',
+      firstNameRequired: 'First name is required',
+      phoneRequired: 'Enter a valid phone number',
+      emailInvalid: 'Invalid email',
     },
     delete: {
       title: 'Delete client',

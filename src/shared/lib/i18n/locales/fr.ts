@@ -1070,6 +1070,9 @@ export default {
       errorTitle: "Échec de l'enregistrement du client",
       successCreate: 'Client ajouté',
       successEdit: 'Client mis à jour',
+      firstNameRequired: 'Le prénom est requis',
+      phoneRequired: 'Entrez un numéro de téléphone valide',
+      emailInvalid: 'E-mail invalide',
     },
     delete: {
       title: 'Supprimer le client',
