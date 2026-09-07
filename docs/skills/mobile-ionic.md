@@ -1,7 +1,7 @@
 ---
 spec_version: 1.0
 date: 2026-09-04
-status: ready
+status: built
 skill_slug: mobile-ionic
 skill_name: Mobile Ionic App
 targets: [claude-code, codex, universal]
@@ -9,7 +9,7 @@ targets: [claude-code, codex, universal]
 
 # Mobile Ionic App — Skill Specification
 
-> Spec v1.0 · 2026-09-04 · status: ready · [Skills index](./README.md)
+> Spec v1.0 · 2026-09-04 · status: built · [Skills index](./README.md)
 
 ## 1. Purpose
 
@@ -141,7 +141,7 @@ Any agent, given only this spec, can perform the workflow: create Ionic `.vue` f
 
 | Tool        | Location                            | Built from spec v | Date |
 |-------------|-------------------------------------|-------------------|------|
-| claude-code | .claude/skills/mobile-ionic/        | —                 | —    |
+| claude-code | .claude/skills/mobile-ionic/        | 1.0               | 2026-09-07 |
 | codex       | AGENTS.md#mobile-ionic              | —                 | —    |
 
 ## 11. Changelog

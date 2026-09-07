@@ -308,10 +308,14 @@ export default {
     filterAll: 'Tous',
     durationHours: '{n} h',
     toggleAvailabilityAria: 'Basculer la disponibilité',
+    reorder: 'Réorganiser',
+    reorderDone: 'Terminé',
     deleteConfirmTitle: 'Supprimer le service',
     deleteConfirmBody:
       'Supprimer le service «\u00a0{name}\u00a0»\u00a0? Cette action est irréversible.',
     deleteAction: 'Supprimer',
+    deleteSuccess: 'Service supprimé',
+    deleteError: 'Échec de la suppression du service',
     form: {
       createTitle: 'Ajouter un service',
       editTitle: 'Modifier le service',
@@ -332,6 +336,7 @@ export default {
       isActive: 'Actif',
       minutesLabel: '{n} min',
       save: 'Enregistrer',
+      saveSuccess: 'Service enregistré',
       cancel: 'Annuler',
       errorTitle: "Échec de l'enregistrement du service",
     },

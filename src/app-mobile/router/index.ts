@@ -92,6 +92,11 @@ const routes: RouteRecordRaw[] = [
     name: 'settings-account',
     component: async () => (await import('@pages/settings/index.mobile')).SettingsAccountPage,
   },
+  {
+    path: '/services',
+    name: 'settings-services',
+    component: async () => (await import('@pages/services/index.mobile')).ServicesMobilePage,
+  },
 ]
 
 const router = createRouter({

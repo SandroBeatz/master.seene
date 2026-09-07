@@ -18,7 +18,6 @@ import {
   timeOutline,
   calendarNumberOutline,
   cardOutline,
-  pricetagsOutline,
   gridOutline,
   peopleOutline,
   notificationsOutline,
@@ -62,18 +61,13 @@ const groups = computed<SettingsGroup[]>(() => [
       { key: 'workingHours', label: t('settings.nav.workingHours'), icon: timeOutline },
       { key: 'booking', label: t('settings.nav.booking'), icon: calendarNumberOutline },
       { key: 'paymentMethods', label: t('settings.nav.paymentMethods'), icon: cardOutline },
-      {
-        key: 'serviceCategories',
-        label: t('settings.nav.serviceCategories'),
-        icon: pricetagsOutline,
-      },
     ],
   },
   {
     key: 'workspace',
     label: t('settings.nav.groupWorkspace'),
     items: [
-      { key: 'services', label: t('settings.nav.services'), icon: gridOutline },
+      { key: 'services', label: t('settings.nav.services'), icon: gridOutline, to: '/services' },
       { key: 'clients', label: t('settings.nav.clients'), icon: peopleOutline },
     ],
   },
