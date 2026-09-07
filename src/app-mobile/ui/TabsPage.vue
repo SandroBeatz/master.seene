@@ -13,7 +13,7 @@ import {
   calendarOutline,
   peopleOutline,
   statsChartOutline,
-  menuOutline,
+  settingsOutline,
 } from 'ionicons/icons'
 
 // The mobile app shell: a persistent bottom tab bar wrapping the per-tab
@@ -47,9 +47,9 @@ import {
           <ion-label>{{ $t('nav.analytics') }}</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="menu" href="/tabs/menu">
-          <ion-icon :icon="menuOutline" aria-hidden="true" />
-          <ion-label>{{ $t('nav.menu') }}</ion-label>
+        <ion-tab-button tab="settings" href="/tabs/settings">
+          <ion-icon :icon="settingsOutline" aria-hidden="true" />
+          <ion-label>{{ $t('nav.settings') }}</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>

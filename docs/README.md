@@ -33,6 +33,7 @@ Each file in `skills/` (except this index) is a **spec**: a versioned, host-neut
 | [FSD Architecture Guard](./skills/fsd.md) | 1.0 | built | claude-code |
 | [i18n Text Guard](./skills/i18n.md) | 1.0 | built | claude-code |
 | [Nuxt UI Component Expert](./skills/nuxt-ui.md) | 1.0 | built | claude-code |
+| [Mobile Ionic App](./skills/mobile-ionic.md) | 1.0 | ready | — |
 
 ## For AI: materializing a skill from a spec
 

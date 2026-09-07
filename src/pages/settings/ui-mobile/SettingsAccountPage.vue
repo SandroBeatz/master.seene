@@ -68,7 +68,7 @@ async function onSignOut() {
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/menu" />
+          <ion-back-button default-href="/tabs/settings" />
         </ion-buttons>
         <ion-title>{{ $t('nav.account') }}</ion-title>
       </ion-toolbar>

@@ -63,6 +63,8 @@ export default {
     discard: 'Discard',
     saveChanges: 'Save changes',
     saving: 'Saving…',
+    done: 'Done',
+    search: 'Search',
     unsavedChangesConfirm: 'You have unsaved changes. Leave without saving?',
     validation: {
       required: 'This field is required',
@@ -915,6 +917,8 @@ export default {
       themeSystem: 'System',
       themeLight: 'Light',
       themeDark: 'Dark',
+      accentColor: 'Accent color',
+      accentColorDescription: 'The highlight color used across the app.',
       currency: 'Currency',
       currencyDescription: 'Used to display prices across the app.',
       timeFormat: 'Time format',

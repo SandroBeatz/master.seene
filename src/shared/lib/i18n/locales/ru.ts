@@ -62,6 +62,8 @@ export default {
     discard: 'Отменить',
     saveChanges: 'Сохранить',
     saving: 'Сохранение…',
+    done: 'Готово',
+    search: 'Поиск',
     unsavedChangesConfirm: 'У вас есть несохранённые изменения. Уйти без сохранения?',
     validation: {
       required: 'Это поле обязательно',
@@ -911,6 +913,8 @@ export default {
       themeSystem: 'Системная',
       themeLight: 'Светлая',
       themeDark: 'Тёмная',
+      accentColor: 'Акцентный цвет',
+      accentColorDescription: 'Основной цвет выделения в приложении.',
       currency: 'Валюта',
       currencyDescription: 'Используется для отображения цен в приложении.',
       timeFormat: 'Формат времени',

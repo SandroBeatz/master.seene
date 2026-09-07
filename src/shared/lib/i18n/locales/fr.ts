@@ -62,6 +62,8 @@ export default {
     discard: 'Annuler',
     saveChanges: 'Enregistrer',
     saving: 'Enregistrement…',
+    done: 'Terminé',
+    search: 'Rechercher',
     unsavedChangesConfirm:
       'Vous avez des modifications non enregistrées. Quitter sans enregistrer ?',
     validation: {
@@ -924,6 +926,8 @@ export default {
       themeSystem: 'Système',
       themeLight: 'Clair',
       themeDark: 'Sombre',
+      accentColor: "Couleur d'accentuation",
+      accentColorDescription: "La couleur de mise en avant utilisée dans l'application.",
       currency: 'Devise',
       currencyDescription: "Utilisée pour afficher les prix dans l'application.",
       timeFormat: "Format de l'heure",
