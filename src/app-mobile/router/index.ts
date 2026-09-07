@@ -34,9 +34,8 @@ const routes: RouteRecordRaw[] = [
     component: async () =>
       (await import('@pages/onboarding/index.mobile')).OnboardingPlaceholderMobilePage,
   },
-  // The tab shell owns the five main destinations. Nesting the pages as children
-  // of `/tabs` gives each tab its own navigation stack (e.g. clients → detail,
-  // menu → account stay inside their tab) with the tab bar always visible.
+  // The tab shell owns the five main destinations. Nesting them as children of
+  // `/tabs` gives the persistent bottom tab bar under the top-level screens.
   {
     path: '/tabs/',
     component: TabsPage,
@@ -58,11 +57,6 @@ const routes: RouteRecordRaw[] = [
         component: async () => (await import('@pages/clients/index.mobile')).ClientsMobilePage,
       },
       {
-        path: 'clients/:id',
-        name: 'client-detail',
-        component: async () => (await import('@pages/clients/index.mobile')).ClientDetailMobilePage,
-      },
-      {
         path: 'analytics',
         name: 'analytics',
         component: async () => (await import('@pages/analytics/index.mobile')).AnalyticsMobilePage,
@@ -72,23 +66,31 @@ const routes: RouteRecordRaw[] = [
         name: 'settings',
         component: async () => (await import('@pages/settings/index.mobile')).SettingsMobilePage,
       },
-      {
-        path: 'settings/profile',
-        name: 'settings-profile',
-        component: async () => (await import('@pages/settings/index.mobile')).SettingsProfilePage,
-      },
-      {
-        path: 'settings/system-region',
-        name: 'settings-system-region',
-        component: async () =>
-          (await import('@pages/settings/index.mobile')).SettingsSystemRegionPage,
-      },
-      {
-        path: 'settings/account',
-        name: 'settings-account',
-        component: async () => (await import('@pages/settings/index.mobile')).SettingsAccountPage,
-      },
     ],
+  },
+  // Detail / sub-pages live OUTSIDE the tab shell so they push onto the root
+  // outlet and cover the bottom tab bar (a tab bar is noise on a drill-down
+  // screen). Their `ion-back-button` default-href points back into the owning
+  // tab, so back-navigation still lands on the right tab stack.
+  {
+    path: '/clients/:id',
+    name: 'client-detail',
+    component: async () => (await import('@pages/clients/index.mobile')).ClientDetailMobilePage,
+  },
+  {
+    path: '/settings/profile',
+    name: 'settings-profile',
+    component: async () => (await import('@pages/settings/index.mobile')).SettingsProfilePage,
+  },
+  {
+    path: '/settings/system-region',
+    name: 'settings-system-region',
+    component: async () => (await import('@pages/settings/index.mobile')).SettingsSystemRegionPage,
+  },
+  {
+    path: '/settings/account',
+    name: 'settings-account',
+    component: async () => (await import('@pages/settings/index.mobile')).SettingsAccountPage,
   },
 ]
 

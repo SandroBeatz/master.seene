@@ -85,7 +85,7 @@ const favorites = computed(() => filtered.value.filter((c) => c.is_favorite))
 const others = computed(() => filtered.value.filter((c) => !c.is_favorite))
 
 function goToClient(c: Client) {
-  ionRouter.push(`/tabs/clients/${c.id}`)
+  ionRouter.push(`/clients/${c.id}`)
 }
 
 function onToggleFavorite(c: Client) {

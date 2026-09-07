@@ -619,6 +619,9 @@ export default {
       last8Weeks: 'последние 8 недель',
     },
     serviceAppointments: '{count} записей',
+    loadError: 'Не удалось загрузить аналитику',
+    retry: 'Повторить',
+    noData: 'Нет данных за этот период',
   },
   settings: {
     title: 'Настройки',

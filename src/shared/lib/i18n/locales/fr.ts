@@ -628,6 +628,9 @@ export default {
       last8Weeks: '8 dernières semaines',
     },
     serviceAppointments: '{count} rendez-vous',
+    loadError: 'Impossible de charger les statistiques',
+    retry: 'Réessayer',
+    noData: 'Aucune donnée pour cette période',
   },
   settings: {
     title: 'Paramètres',

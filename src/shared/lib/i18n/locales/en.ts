@@ -624,6 +624,9 @@ export default {
       last8Weeks: 'last 8 weeks',
     },
     serviceAppointments: '{count} appointments',
+    loadError: 'Couldn’t load analytics',
+    retry: 'Try again',
+    noData: 'No data for this period',
   },
   settings: {
     title: 'Settings',
