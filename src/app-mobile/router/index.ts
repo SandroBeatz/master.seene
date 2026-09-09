@@ -97,6 +97,11 @@ const routes: RouteRecordRaw[] = [
     name: 'settings-services',
     component: async () => (await import('@pages/services/index.mobile')).ServicesMobilePage,
   },
+  {
+    path: '/settings/payment-types',
+    name: 'settings-payment-types',
+    component: async () => (await import('@pages/settings/index.mobile')).SettingsPaymentTypesPage,
+  },
 ]
 
 const router = createRouter({

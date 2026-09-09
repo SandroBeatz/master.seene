@@ -60,7 +60,6 @@ const groups = computed<SettingsGroup[]>(() => [
       { key: 'contacts', label: t('settings.nav.contacts'), icon: atOutline },
       { key: 'workingHours', label: t('settings.nav.workingHours'), icon: timeOutline },
       { key: 'booking', label: t('settings.nav.booking'), icon: calendarNumberOutline },
-      { key: 'paymentMethods', label: t('settings.nav.paymentMethods'), icon: cardOutline },
     ],
   },
   {
@@ -68,6 +67,12 @@ const groups = computed<SettingsGroup[]>(() => [
     label: t('settings.nav.groupWorkspace'),
     items: [
       { key: 'services', label: t('settings.nav.services'), icon: gridOutline, to: '/services' },
+      {
+        key: 'paymentMethods',
+        label: t('settings.nav.paymentMethods'),
+        icon: cardOutline,
+        to: '/settings/payment-types',
+      },
       { key: 'clients', label: t('settings.nav.clients'), icon: peopleOutline },
     ],
   },

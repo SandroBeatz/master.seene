@@ -7,3 +7,4 @@ export { default as SettingsMobilePage } from './ui-mobile/SettingsMobilePage.vu
 export { default as SettingsProfilePage } from './ui-mobile/SettingsProfilePage.vue'
 export { default as SettingsSystemRegionPage } from './ui-mobile/SettingsSystemRegionPage.vue'
 export { default as SettingsAccountPage } from './ui-mobile/SettingsAccountPage.vue'
+export { default as SettingsPaymentTypesPage } from './ui-mobile/SettingsPaymentTypesPage.vue'
