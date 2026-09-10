@@ -12,28 +12,32 @@ import {
   IonTitle,
   IonContent,
   IonFooter,
-  IonList,
-  IonListHeader,
   IonItem,
   IonInput,
   IonTextarea,
   IonLabel,
   IonNote,
-  IonChip,
   IonIcon,
   IonAvatar,
   IonSpinner,
+  isPlatform,
+  actionSheetController,
   toastController,
+  type ActionSheetButton,
 } from '@ionic/vue'
 import {
   personOutline,
   checkmark,
-  cloudUploadOutline,
-  trashOutline,
-  openOutline,
+  pencilOutline,
   linkOutline,
+  eyeOutline,
+  copyOutline,
+  shareSocialOutline,
+  qrCodeOutline,
   checkmarkCircle,
   closeCircle,
+  arrowBackOutline,
+  arrowUndoOutline,
 } from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import {
@@ -48,12 +52,16 @@ import { SPECIALIZATION_CODES } from '@features/profile-form/index.mobile'
 import { resizeImageToSquare } from '@shared/lib/image'
 import { useDirtyForm } from '@shared/lib/forms'
 import { bookingPageUrl } from '@shared/config'
-import { arrowBackOutline, arrowUndoOutline } from 'ionicons/icons'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
 // Native Ionic port of the desktop ProfileForm (features/profile-form). Kept as
 // a single page component because it's a one-off screen driven by a toolbar
 // "Done" button — no reuse that would justify splitting into a feature slice.
 // Data layer, i18n keys and validation rules are shared with the desktop form.
+//
+// The mobile form collapses first_name + last_name into a single "Full name"
+// field: those columns stay in the DB (split on save, joined on load) but aren't
+// surfaced separately here.
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
@@ -64,16 +72,14 @@ const uploadAvatarMutation = useUploadMasterAvatarMutation(userId)
 const removeAvatarMutation = useRemoveMasterAvatarMutation(userId)
 
 interface ProfileFormState {
-  first_name: string
-  last_name: string
+  full_name: string
   username: string
   specializations: string[]
   bio: string
 }
 
 const state = ref<ProfileFormState>({
-  first_name: '',
-  last_name: '',
+  full_name: '',
   username: '',
   specializations: [],
   bio: '',
@@ -88,8 +94,8 @@ const loadedUsername = ref('')
 
 function seed(profile: MasterProfile) {
   state.value = {
-    first_name: profile.first_name ?? '',
-    last_name: profile.last_name ?? '',
+    // Join the stored name columns back into one editable field.
+    full_name: [profile.first_name, profile.last_name].filter(Boolean).join(' '),
     username: profile.username ?? '',
     // Normalize to canonical order so chip toggles don't create false diffs.
     specializations: SPECIALIZATION_CODES.filter((code) =>
@@ -110,7 +116,7 @@ watch(
   { immediate: true },
 )
 
-async function showToast(message: string, color: 'success' | 'danger') {
+async function showToast(message: string, color: 'success' | 'danger' | 'medium' = 'success') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
   await toast.present()
 }
@@ -130,6 +136,20 @@ const isAvatarBusy = computed(
 
 function pickAvatar() {
   fileInput.value?.click()
+}
+
+// Tapping the avatar's edit badge opens a bottom action sheet — "Change photo"
+// always, plus a destructive "Remove" once an avatar exists.
+async function openAvatarMenu() {
+  const buttons: ActionSheetButton[] = [
+    { text: t('settings.profile.avatar.change'), handler: pickAvatar },
+    ...(hasAvatar.value
+      ? [{ text: t('settings.profile.avatar.remove'), role: 'destructive', handler: removeAvatar }]
+      : []),
+    { text: t('common.cancel'), role: 'cancel' },
+  ]
+  const sheet = await actionSheetController.create({ buttons })
+  await sheet.present()
 }
 
 function clearFileInput() {
@@ -231,18 +251,14 @@ const publicUrl = computed(() => bookingPageUrl(state.value.username || loadedUs
 // --- Required-field validation ------------------------------------------------
 // Errors only surface once the form is dirty, so a freshly-loaded profile
 // doesn't greet the user with a wall of red.
-const isFirstNameFilled = computed(() => state.value.first_name.trim().length > 0)
-const isLastNameFilled = computed(() => state.value.last_name.trim().length > 0)
+const isFullNameFilled = computed(() => state.value.full_name.trim().length > 0)
 const isUsernameFilled = computed(() => state.value.username.trim().length > 0)
 const hasSpecialization = computed(() => state.value.specializations.length > 0)
 
 const requiredMsg = computed(() => t('settings.profile.requiredField'))
 
-const firstNameError = computed(() =>
-  isDirty.value && !isFirstNameFilled.value ? requiredMsg.value : undefined,
-)
-const lastNameError = computed(() =>
-  isDirty.value && !isLastNameFilled.value ? requiredMsg.value : undefined,
+const fullNameError = computed(() =>
+  isDirty.value && !isFullNameFilled.value ? requiredMsg.value : undefined,
 )
 const specializationError = computed(() =>
   isDirty.value && !hasSpecialization.value
@@ -258,8 +274,7 @@ const usernameError = computed(() => {
 
 const isFormValid = computed(
   () =>
-    isFirstNameFilled.value &&
-    isLastNameFilled.value &&
+    isFullNameFilled.value &&
     isUsernameFilled.value &&
     hasSpecialization.value &&
     usernameStatus.value !== 'taken' &&
@@ -267,15 +282,21 @@ const isFormValid = computed(
 )
 
 const canSave = computed(() => isDirty.value && isFormValid.value)
+const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // --- Actions ------------------------------------------------------------------
 async function onSave() {
   if (!canSave.value) return
   isSaving.value = true
   try {
+    // Split the single "Full name" field back into the two stored columns:
+    // first token → first_name, the remainder → last_name.
+    const parts = state.value.full_name.trim().replace(/\s+/g, ' ').split(' ')
+    const first_name = parts.shift() ?? ''
+    const last_name = parts.join(' ')
     await updateMutation.mutateAsync({
-      first_name: state.value.first_name.trim(),
-      last_name: state.value.last_name.trim(),
+      first_name,
+      last_name,
       username: state.value.username.trim().toLowerCase(),
       specializations: state.value.specializations,
       bio: state.value.bio.trim() || null,
@@ -307,6 +328,11 @@ async function copyLink() {
 function openPage() {
   window.open(publicUrl.value, '_blank', 'noopener')
 }
+
+// Share sheet + QR code are not wired up yet — stubbed with a "coming soon" hint.
+async function comingSoon() {
+  await showToast(t('common.comingSoon'), 'medium')
+}
 </script>
 
 <template>
@@ -325,39 +351,26 @@ function openPage() {
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content class="ion-padding-bottom">
       <!-- Avatar -->
-      <ion-list inset>
-        <ion-item lines="none">
-          <ion-avatar slot="start" class="profile-avatar">
+      <section class="avatar-section">
+        <div class="avatar-picker">
+          <ion-avatar class="profile-avatar">
             <img v-if="avatarSrc" :src="avatarSrc" :alt="$t('settings.profile.title')" />
             <ion-icon v-else :icon="personOutline" aria-hidden="true" />
           </ion-avatar>
-          <div class="avatar-actions">
-            <ion-button size="small" fill="outline" :disabled="isAvatarBusy" @click="pickAvatar">
-              <ion-spinner v-if="uploadAvatarMutation.isLoading.value" name="crescent" />
-              <template v-else>
-                <ion-icon slot="start" :icon="cloudUploadOutline" aria-hidden="true" />
-                {{ $t('settings.profile.avatar.upload') }}
-              </template>
-            </ion-button>
-            <ion-button
-              v-if="hasAvatar"
-              size="small"
-              fill="clear"
-              color="medium"
-              :disabled="isAvatarBusy"
-              @click="removeAvatar"
-            >
-              <ion-spinner v-if="removeAvatarMutation.isLoading.value" name="crescent" />
-              <template v-else>
-                <ion-icon slot="start" :icon="trashOutline" aria-hidden="true" />
-                {{ $t('settings.profile.avatar.remove') }}
-              </template>
-            </ion-button>
-          </div>
-        </ion-item>
-        <ion-note class="avatar-hint">{{ $t('settings.profile.avatar.hint') }}</ion-note>
+          <ion-button
+            class="avatar-edit-button"
+            fill="solid"
+            shape="round"
+            :disabled="isAvatarBusy"
+            :aria-label="$t('settings.profile.avatar.change')"
+            @click="openAvatarMenu"
+          >
+            <ion-spinner v-if="isAvatarBusy" :name="saveSpinnerName" />
+            <ion-icon v-else slot="icon-only" :icon="pencilOutline" aria-hidden="true" />
+          </ion-button>
+        </div>
         <input
           ref="fileInput"
           type="file"
@@ -365,123 +378,122 @@ function openPage() {
           class="hidden-file-input"
           @change="onAvatarSelected"
         />
-      </ion-list>
+      </section>
 
-      <!-- Name -->
-      <ion-list inset>
-        <ion-item>
+      <!-- Identity card: full name, username, bio -->
+      <inset-list>
+        <ion-item :class="{ 'ion-invalid': fullNameError, 'ion-touched': isDirty }">
+          <ion-label class="field-label">{{ $t('settings.profile.fullName') }}</ion-label>
           <ion-input
-            v-model="state.first_name"
-            label-placement="stacked"
-            :label="$t('settings.profile.firstName')"
-            :placeholder="$t('settings.profile.firstNamePlaceholder')"
-            :class="{ 'ion-invalid': firstNameError, 'ion-touched': isDirty }"
-            :error-text="firstNameError"
+            v-model="state.full_name"
+            class="value-input"
+            :placeholder="$t('settings.profile.fullNamePlaceholder')"
             autocapitalize="words"
             enterkeyhint="next"
           />
         </ion-item>
-        <ion-item>
-          <ion-input
-            v-model="state.last_name"
-            label-placement="stacked"
-            :label="$t('settings.profile.lastName')"
-            :placeholder="$t('settings.profile.lastNamePlaceholder')"
-            :class="{ 'ion-invalid': lastNameError, 'ion-touched': isDirty }"
-            :error-text="lastNameError"
-            autocapitalize="words"
-            enterkeyhint="next"
-          />
-        </ion-item>
-      </ion-list>
 
-      <!-- Username -->
-      <ion-list inset>
-        <ion-item>
+        <ion-item :class="{ 'ion-invalid': usernameError, 'ion-touched': isDirty }" lines="none">
+          <ion-label class="field-label">{{ $t('settings.profile.username') }}</ion-label>
           <ion-input
             v-model="state.username"
-            label-placement="stacked"
-            :label="$t('settings.profile.username')"
+            class="value-input"
             autocapitalize="off"
             autocomplete="off"
             :spellcheck="false"
-            :class="{ 'ion-invalid': usernameError, 'ion-touched': isDirty }"
-            :error-text="usernameError"
-          >
-            <ion-spinner v-if="usernameStatus === 'checking'" slot="end" name="dots" />
-            <ion-icon
-              v-else-if="usernameStatus === 'available'"
-              slot="end"
-              :icon="checkmarkCircle"
-              color="success"
-              aria-hidden="true"
-            />
-            <ion-icon
-              v-else-if="usernameStatus === 'taken'"
-              slot="end"
-              :icon="closeCircle"
-              color="danger"
-              aria-hidden="true"
-            />
-          </ion-input>
+            placeholder="username"
+          />
+          <ion-spinner v-if="usernameStatus === 'checking'" slot="end" name="dots" />
+          <ion-icon
+            v-else-if="usernameStatus === 'available'"
+            slot="end"
+            :icon="checkmarkCircle"
+            color="success"
+            aria-hidden="true"
+          />
+          <ion-icon
+            v-else-if="usernameStatus === 'taken'"
+            slot="end"
+            :icon="closeCircle"
+            color="danger"
+            aria-hidden="true"
+          />
         </ion-item>
-        <ion-note class="field-hint">{{ publicUrl }}</ion-note>
-      </ion-list>
+      </inset-list>
 
-      <!-- Specialization -->
-      <ion-list inset>
-        <ion-list-header>
-          <ion-label>{{ $t('settings.profile.specialization') }}</ion-label>
-        </ion-list-header>
-        <div class="chips">
-          <ion-chip
-            v-for="code in SPECIALIZATION_CODES"
-            :key="code"
-            :outline="!isSpecializationSelected(code)"
-            :color="isSpecializationSelected(code) ? 'primary' : 'medium'"
-            @click="toggleSpecialization(code)"
-          >
-            <ion-icon v-if="isSpecializationSelected(code)" :icon="checkmark" aria-hidden="true" />
-            <ion-label>{{ $t(`onboarding.step1.categories.${code}`) }}</ion-label>
-          </ion-chip>
-        </div>
-        <ion-note v-if="specializationError" color="danger" class="field-hint">
-          {{ specializationError }}
-        </ion-note>
-      </ion-list>
+      <!-- Inline validation for the identity card -->
+      <ion-note v-if="fullNameError" color="danger" class="field-hint">{{
+        fullNameError
+      }}</ion-note>
+      <ion-note v-if="usernameError" color="danger" class="field-hint">{{
+        usernameError
+      }}</ion-note>
 
       <!-- Bio -->
-      <ion-list inset>
+      <inset-list :header="$t('settings.profile.bio')">
         <ion-item>
           <ion-textarea
             v-model="state.bio"
+            :placeholder="$t('settings.profile.bioPlaceholder')"
             :auto-grow="true"
-            :rows="4"
+            :rows="3"
             :maxlength="500"
             :counter="true"
-            label-placement="stacked"
-            :label="$t('settings.profile.bio')"
-            :placeholder="$t('settings.profile.bioPlaceholder')"
           />
         </ion-item>
-      </ion-list>
+      </inset-list>
 
-      <!-- Public page actions -->
-      <ion-list inset>
-        <ion-item button :detail="false" @click="openPage">
-          <ion-icon slot="start" :icon="openOutline" aria-hidden="true" />
-          <ion-label>{{ $t('settings.profile.openPage') }}</ion-label>
-        </ion-item>
-        <ion-item button lines="none" :detail="false" @click="copyLink">
+      <!-- Specialization -->
+      <inset-list :header="$t('settings.profile.specialization')">
+        <div class="chips">
+          <button
+            v-for="code in SPECIALIZATION_CODES"
+            :key="code"
+            type="button"
+            class="chip"
+            :class="{ 'chip--selected': isSpecializationSelected(code) }"
+            @click="toggleSpecialization(code)"
+          >
+            <ion-icon v-if="isSpecializationSelected(code)" :icon="checkmark" aria-hidden="true" />
+            {{ $t(`onboarding.step1.categories.${code}`) }}
+          </button>
+        </div>
+      </inset-list>
+      <ion-note v-if="specializationError" color="danger" class="field-hint">
+        {{ specializationError }}
+      </ion-note>
+
+      <!-- Public booking page: formed link + quick actions -->
+      <inset-list :header="$t('settings.profile.yourPage')">
+        <ion-item lines="none" class="link-item">
           <ion-icon slot="start" :icon="linkOutline" aria-hidden="true" />
-          <ion-label>{{ $t('settings.profile.copyLink') }}</ion-label>
+          <ion-label class="link-text">{{ publicUrl }}</ion-label>
         </ion-item>
-      </ion-list>
+      </inset-list>
+
+      <div class="action-grid">
+        <button type="button" class="action-btn" @click="openPage">
+          <ion-icon :icon="eyeOutline" aria-hidden="true" />
+          <span>{{ $t('settings.profile.view') }}</span>
+        </button>
+        <button type="button" class="action-btn" @click="copyLink">
+          <ion-icon :icon="copyOutline" aria-hidden="true" />
+          <span>{{ $t('settings.profile.copy') }}</span>
+        </button>
+        <button type="button" class="action-btn" @click="comingSoon">
+          <ion-icon :icon="shareSocialOutline" aria-hidden="true" />
+          <span>{{ $t('settings.profile.share') }}</span>
+        </button>
+        <button type="button" class="action-btn" @click="comingSoon">
+          <ion-icon :icon="qrCodeOutline" aria-hidden="true" />
+          <span>{{ $t('settings.profile.qrCode') }}</span>
+        </button>
+      </div>
     </ion-content>
 
     <!-- Save bar: slides in only while the form has unsaved changes. Discard on
          the left reverts to the loaded values; Save commits them. -->
-    <ion-footer v-if="isDirty" :translucent="true" class="save-footer ion-no-border">
+    <ion-footer v-if="isDirty" :translucent="true" class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start" class="ion-padding-end">
           <ion-button color="medium" :disabled="isSaving" @click="onDiscard">
@@ -498,7 +510,7 @@ function openPage() {
           <span :class="{ 'save-button-label--hidden': isSaving }">
             {{ $t('common.saveChanges') }}
           </span>
-          <ion-spinner v-if="isSaving" class="save-button-spinner" name="crescent" />
+          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -511,37 +523,157 @@ ion-header ion-toolbar.ios {
   --padding-end: 16px;
 }
 
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 24px;
+}
+
+.avatar-picker {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
 .profile-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ion-color-light, #f4f5f8);
+  width: 128px;
+  height: 128px;
+  background: var(--se-surface-card, #f4f5f8);
 }
 
 .profile-avatar ion-icon {
-  font-size: 28px;
+  font-size: 52px;
   color: var(--ion-color-medium, #92949c);
 }
 
-.avatar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+.avatar-edit-button {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  --border-radius: 50%;
+  --box-shadow: 0 0 0 3px var(--se-surface-page), 0 2px 8px rgb(0 0 0 / 20%);
+  --padding-start: 0;
+  --padding-end: 0;
 }
 
-.avatar-hint,
+.avatar-edit-button ion-icon {
+  font-size: 15px;
+}
+
+/* Identity card rows: label on the left, value right-aligned (native input
+   inherits text-align from the ion-input host). */
+.field-label {
+  flex: 0 0 auto;
+  margin-inline-end: 12px;
+  color: var(--ion-color-medium);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.value-input {
+  flex: 1 1 auto;
+  text-align: end;
+  --color: var(--ion-text-color);
+  --padding-end: 0;
+  --placeholder-color: var(--ion-color-medium);
+  --placeholder-opacity: 1;
+}
+
 .field-hint {
   display: block;
-  padding-inline: 16px;
-  padding-bottom: 8px;
+  margin-top: -14px;
+  margin-bottom: 22px;
+  padding-inline: 32px;
   font-size: 0.75rem;
 }
 
+/* Specialization chips — explicit backgrounds so they render on iOS too
+   (ion-chip[outline] draws no fill on the iOS palette). */
 .chips {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 14px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--ion-background-color-step-100, #f2f2f7);
+  color: var(--ion-color-medium, #8c8c8c);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.chip ion-icon {
+  font-size: 15px;
+}
+
+.chip--selected {
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+}
+
+.chip:active {
+  opacity: 0.75;
+}
+
+/* Public page link row */
+.link-item {
+  --min-height: 52px;
+}
+
+.link-text {
+  overflow-wrap: anywhere;
+  color: var(--ion-color-primary);
+  font-size: 0.875rem;
+}
+
+/* Four quick actions, icon stacked over label */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 6px;
-  padding: 4px 12px 12px;
+  padding: 14px 4px;
+  border: none;
+  border-radius: 12px;
+  background: var(--se-surface-card, #fff);
+  color: var(--ion-color-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.action-btn ion-icon {
+  font-size: 24px;
+}
+
+.action-btn:active {
+  opacity: 0.6;
 }
 
 .hidden-file-input {
@@ -570,8 +702,6 @@ ion-footer ion-toolbar.md {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 1.125rem;
-  height: 1.125rem;
   transform: translate(-50%, -50%);
 }
 </style>
