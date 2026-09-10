@@ -57,7 +57,12 @@ const groups = computed<SettingsGroup[]>(() => [
         icon: personOutline,
         to: '/settings/profile',
       },
-      { key: 'contacts', label: t('settings.nav.contacts'), icon: atOutline },
+      {
+        key: 'contacts',
+        label: t('settings.nav.contacts'),
+        icon: atOutline,
+        to: '/settings/contacts',
+      },
       { key: 'workingHours', label: t('settings.nav.workingHours'), icon: timeOutline },
       { key: 'booking', label: t('settings.nav.booking'), icon: calendarNumberOutline },
     ],
@@ -108,30 +113,44 @@ const groups = computed<SettingsGroup[]>(() => [
     </ion-header>
 
     <ion-content fullscreen class="se-settings-content">
-      <ion-header collapse="condense" class="ion-padding-bottom ion-padding-horizontal">
-        <ion-toolbar>
+      <ion-header collapse="condense">
+        <ion-toolbar class="ion-background-transparent">
           <ion-title size="large">{{ $t('nav.settings') }}</ion-title>
         </ion-toolbar>
       </ion-header>
 
-      <inset-list v-for="group in groups" :key="group.key" :header="group.label">
-        <ion-item
-          v-for="item in group.items"
-          :key="item.key"
-          :button="Boolean(item.to)"
-          :detail="Boolean(item.to)"
-          :disabled="!item.to"
-          :router-link="item.to"
-        >
-          <ion-icon slot="start" :icon="item.icon" aria-hidden="true" />
-          <ion-label>{{ item.label }}</ion-label>
-        </ion-item>
-      </inset-list>
+      <div class="se-settings-list">
+        <inset-list v-for="group in groups" :key="group.key" :header="group.label">
+          <ion-item
+            v-for="item in group.items"
+            :key="item.key"
+            :button="Boolean(item.to)"
+            :detail="Boolean(item.to)"
+            :disabled="!item.to"
+            :router-link="item.to"
+          >
+            <ion-icon slot="start" :icon="item.icon" aria-hidden="true" />
+            <ion-label>{{ item.label }}</ion-label>
+          </ion-item>
+        </inset-list>
+      </div>
     </ion-content>
   </ion-page>
 </template>
 
 <style scoped>
+.ion-background-transparent {
+  --background: transparent;
+}
+.se-settings-list {
+  padding-top: 10px;
+  padding-bottom: 30px;
+}
+
+ion-toolbar {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
 /* The grouped backdrop is applied globally to ion-content
    (app-mobile/styles/main.css); here we only add the vertical rhythm for the
    grouped list. */

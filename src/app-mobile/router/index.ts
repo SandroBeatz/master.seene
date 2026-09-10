@@ -83,6 +83,11 @@ const routes: RouteRecordRaw[] = [
     component: async () => (await import('@pages/settings/index.mobile')).SettingsProfilePage,
   },
   {
+    path: '/settings/contacts',
+    name: 'settings-contacts',
+    component: async () => (await import('@pages/settings/index.mobile')).SettingsContactsPage,
+  },
+  {
     path: '/settings/system-region',
     name: 'settings-system-region',
     component: async () => (await import('@pages/settings/index.mobile')).SettingsSystemRegionPage,

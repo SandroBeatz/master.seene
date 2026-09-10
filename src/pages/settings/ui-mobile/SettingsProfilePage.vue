@@ -11,6 +11,7 @@ import {
   IonButton,
   IonTitle,
   IonContent,
+  IonFooter,
   IonList,
   IonListHeader,
   IonItem,
@@ -47,6 +48,7 @@ import { SPECIALIZATION_CODES } from '@features/profile-form/index.mobile'
 import { resizeImageToSquare } from '@shared/lib/image'
 import { useDirtyForm } from '@shared/lib/forms'
 import { bookingPageUrl } from '@shared/config'
+import { arrowBackOutline, arrowUndoOutline } from 'ionicons/icons'
 
 // Native Ionic port of the desktop ProfileForm (features/profile-form). Kept as
 // a single page component because it's a one-off screen driven by a toolbar
@@ -77,7 +79,7 @@ const state = ref<ProfileFormState>({
   bio: '',
 })
 
-const { isDirty, isSaving, reset } = useDirtyForm(state, {
+const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
   message: t('common.unsavedChangesConfirm'),
 })
 
@@ -291,6 +293,12 @@ async function onSave() {
   }
 }
 
+// Reverts every field back to the last loaded/saved snapshot.
+function onDiscard() {
+  discard()
+  usernameStatus.value = 'idle'
+}
+
 async function copyLink() {
   await navigator.clipboard.writeText(publicUrl.value)
   await showToast(t('settings.profile.linkCopied'), 'success')
@@ -303,18 +311,17 @@ function openPage() {
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header :translucent="true" class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/settings" />
+          <ion-back-button
+            default-href="/tabs/settings"
+            text=""
+            :icon="arrowBackOutline"
+            color="dark"
+          />
         </ion-buttons>
         <ion-title>{{ $t('settings.profile.title') }}</ion-title>
-        <ion-buttons slot="end">
-          <ion-button strong :disabled="!canSave || isSaving" @click="onSave">
-            <ion-spinner v-if="isSaving" name="crescent" />
-            <span v-else>{{ $t('common.done') }}</span>
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -327,12 +334,7 @@ function openPage() {
             <ion-icon v-else :icon="personOutline" aria-hidden="true" />
           </ion-avatar>
           <div class="avatar-actions">
-            <ion-button
-              size="small"
-              fill="outline"
-              :disabled="isAvatarBusy"
-              @click="pickAvatar"
-            >
+            <ion-button size="small" fill="outline" :disabled="isAvatarBusy" @click="pickAvatar">
               <ion-spinner v-if="uploadAvatarMutation.isLoading.value" name="crescent" />
               <template v-else>
                 <ion-icon slot="start" :icon="cloudUploadOutline" aria-hidden="true" />
@@ -406,11 +408,7 @@ function openPage() {
             :class="{ 'ion-invalid': usernameError, 'ion-touched': isDirty }"
             :error-text="usernameError"
           >
-            <ion-spinner
-              v-if="usernameStatus === 'checking'"
-              slot="end"
-              name="dots"
-            />
+            <ion-spinner v-if="usernameStatus === 'checking'" slot="end" name="dots" />
             <ion-icon
               v-else-if="usernameStatus === 'available'"
               slot="end"
@@ -443,11 +441,7 @@ function openPage() {
             :color="isSpecializationSelected(code) ? 'primary' : 'medium'"
             @click="toggleSpecialization(code)"
           >
-            <ion-icon
-              v-if="isSpecializationSelected(code)"
-              :icon="checkmark"
-              aria-hidden="true"
-            />
+            <ion-icon v-if="isSpecializationSelected(code)" :icon="checkmark" aria-hidden="true" />
             <ion-label>{{ $t(`onboarding.step1.categories.${code}`) }}</ion-label>
           </ion-chip>
         </div>
@@ -484,10 +478,31 @@ function openPage() {
         </ion-item>
       </ion-list>
     </ion-content>
+
+    <!-- Save bar: slides in only while the form has unsaved changes. Discard on
+         the left reverts to the loaded values; Save commits them. -->
+    <ion-footer v-if="isDirty" :translucent="true" class="save-footer ion-no-border">
+      <ion-toolbar>
+        <ion-buttons slot="start" class="ion-padding-end">
+          <ion-button color="medium" :disabled="isSaving" @click="onDiscard">
+            <ion-icon slot="icon-only" :ios="arrowUndoOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+        <ion-button expand="block" :disabled="!canSave || isSaving" @click="onSave">
+          <ion-spinner v-if="isSaving" name="crescent" />
+          <span v-else>{{ $t('common.saveChanges') }}</span>
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
   </ion-page>
 </template>
 
 <style scoped>
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
 .profile-avatar {
   display: flex;
   align-items: center;
@@ -523,5 +538,15 @@ function openPage() {
 
 .hidden-file-input {
   display: none;
+}
+
+ion-footer ion-toolbar {
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+}
+
+ion-footer ion-toolbar.md {
+  --padding-start: 16px;
+  --padding-end: 16px;
 }
 </style>
