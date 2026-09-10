@@ -337,7 +337,7 @@ async function comingSoon() {
 
 <template>
   <ion-page>
-    <ion-header :translucent="true" class="ion-no-border">
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-back-button
@@ -351,7 +351,7 @@ async function comingSoon() {
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding-bottom">
+    <ion-content :fullscreen="true" class="ion-padding-bottom">
       <!-- Avatar -->
       <section class="avatar-section">
         <div class="avatar-picker">
@@ -521,6 +521,10 @@ async function comingSoon() {
 ion-header ion-toolbar.ios {
   --padding-start: 16px;
   --padding-end: 16px;
+}
+
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
 }
 
 .avatar-section {
