@@ -488,9 +488,17 @@ function openPage() {
             <ion-icon slot="icon-only" :ios="arrowUndoOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-button expand="block" :disabled="!canSave || isSaving" @click="onSave">
-          <ion-spinner v-if="isSaving" name="crescent" />
-          <span v-else>{{ $t('common.saveChanges') }}</span>
+        <ion-button
+          class="save-button"
+          expand="block"
+          :disabled="!canSave || isSaving"
+          :aria-busy="isSaving"
+          @click="onSave"
+        >
+          <span :class="{ 'save-button-label--hidden': isSaving }">
+            {{ $t('common.saveChanges') }}
+          </span>
+          <ion-spinner v-if="isSaving" class="save-button-spinner" name="crescent" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -548,5 +556,22 @@ ion-footer ion-toolbar {
 ion-footer ion-toolbar.md {
   --padding-start: 16px;
   --padding-end: 16px;
+}
+
+.save-button {
+  position: relative;
+}
+
+.save-button-label--hidden {
+  opacity: 0;
+}
+
+.save-button-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.125rem;
+  height: 1.125rem;
+  transform: translate(-50%, -50%);
 }
 </style>
