@@ -10,8 +10,7 @@ import {
   IonButton,
   IonTitle,
   IonContent,
-  IonList,
-  IonListHeader,
+  IonFooter,
   IonItem,
   IonInput,
   IonLabel,
@@ -19,6 +18,7 @@ import {
   IonIcon,
   IonToggle,
   IonSpinner,
+  isPlatform,
   toastController,
 } from '@ionic/vue'
 import {
@@ -28,20 +28,26 @@ import {
   paperPlaneOutline,
   mailOutline,
   copyOutline,
+  arrowBackOutline,
+  arrowUndoOutline,
 } from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import { useMasterProfileQuery, useUpdateMasterContactsMutation } from '@entities/master'
 import type { MasterProfile } from '@entities/master'
 import { useDirtyForm } from '@shared/lib/forms'
 import { COUNTRIES } from '@shared/lib/countries'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
 
 // Native Ionic port of the desktop ContactsForm (features/contacts-form). Kept
 // as a single page component — like SettingsProfilePage — because it's a one-off
-// screen driven by a toolbar "Done" button. Data layer, i18n keys and validation
+// screen driven by a footer "Save" bar. Data layer, i18n keys and validation
 // rules are shared with the desktop form. The one deliberate simplification: the
 // street field is a plain input rather than the Google-places autocomplete, which
 // pulls Nuxt UI and can't live in the mobile bundle.
+//
+// Structure/styling mirrors SettingsProfilePage: inset-grouped cards, iOS-style
+// label-left / value-right rows, and a save bar that only slides in once dirty.
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
@@ -83,7 +89,7 @@ const state = ref<ContactsFormState>({
   can_travel: false,
 })
 
-const { isDirty, isSaving, reset } = useDirtyForm(state, {
+const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
   message: t('common.unsavedChangesConfirm'),
 })
 
@@ -168,6 +174,7 @@ const emailError = computed(() =>
 const isPhoneValid = computed(() => phoneValid.value && state.value.phone.trim().length > 0)
 
 const canSave = computed(() => isDirty.value && isPhoneValid.value && isEmailValid.value)
+const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // --- Actions ------------------------------------------------------------------
 function orNull(value: string): string | null {
@@ -208,32 +215,37 @@ async function onSave() {
     isSaving.value = false
   }
 }
+
+// Reverts every field back to the last loaded/saved snapshot, then re-derives
+// phone validity from the restored value (vue-tel doesn't re-validate on reset).
+function onDiscard() {
+  discard()
+  phoneValid.value = state.value.phone.trim().length > 0
+}
 </script>
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/settings" />
+          <ion-back-button
+            default-href="/tabs/settings"
+            text=""
+            :icon="arrowBackOutline"
+            color="dark"
+          />
         </ion-buttons>
         <ion-title>{{ $t('settings.contacts.title') }}</ion-title>
-        <ion-buttons slot="end">
-          <ion-button strong :disabled="!canSave || isSaving" @click="onSave">
-            <ion-spinner v-if="isSaving" name="crescent" />
-            <span v-else>{{ $t('common.done') }}</span>
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <ion-note class="intro-note">{{ $t('settings.contacts.subtitle') }}</ion-note>
+    <ion-content :fullscreen="true" class="ion-padding-bottom">
+      <p class="intro-note">{{ $t('settings.contacts.subtitle') }}</p>
 
-      <!-- Phone -->
-      <ion-list inset>
+      <!-- Phone (label supplied by the section header) -->
+      <inset-list :header="$t('settings.contacts.phone')">
         <ion-item lines="none">
-          <ion-label position="stacked">{{ $t('settings.contacts.phone') }}</ion-label>
           <vue-tel-input
             v-model="state.phone"
             class="se-phone"
@@ -245,22 +257,22 @@ async function onSave() {
             @validate="onPhoneValidate"
           />
         </ion-item>
-      </ion-list>
+      </inset-list>
 
-      <!-- Social channels -->
-      <ion-list inset>
+      <!-- Reachable channels: social handles + email -->
+      <inset-list>
         <ion-item>
           <ion-icon slot="start" :icon="logoWhatsapp" aria-hidden="true" />
+          <ion-label class="field-label">{{ $t('settings.contacts.whatsapp') }}</ion-label>
           <ion-input
             v-model="state.whatsapp"
-            label-placement="stacked"
-            :label="$t('settings.contacts.whatsapp')"
+            class="value-input"
             :placeholder="$t('settings.contacts.whatsappPlaceholder')"
             inputmode="tel"
             autocapitalize="off"
           />
         </ion-item>
-        <ion-item v-if="canUseMainNumber" lines="none">
+        <ion-item v-if="canUseMainNumber">
           <ion-button fill="clear" size="small" class="use-main" @click="useMainNumber">
             <ion-icon slot="start" :icon="copyOutline" aria-hidden="true" />
             {{ $t('settings.contacts.whatsappUseMain') }}
@@ -269,10 +281,10 @@ async function onSave() {
 
         <ion-item>
           <ion-icon slot="start" :icon="paperPlaneOutline" aria-hidden="true" />
+          <ion-label class="field-label">{{ $t('settings.contacts.telegram') }}</ion-label>
           <ion-input
             v-model="state.telegram"
-            label-placement="stacked"
-            :label="$t('settings.contacts.telegram')"
+            class="value-input"
             :placeholder="$t('settings.contacts.telegramPlaceholder')"
             autocapitalize="off"
             :spellcheck="false"
@@ -281,101 +293,94 @@ async function onSave() {
 
         <ion-item>
           <ion-icon slot="start" :icon="logoInstagram" aria-hidden="true" />
+          <ion-label class="field-label">{{ $t('settings.contacts.instagram') }}</ion-label>
           <ion-input
             v-model="state.instagram"
-            label-placement="stacked"
-            :label="$t('settings.contacts.instagram')"
+            class="value-input"
             :placeholder="$t('settings.contacts.instagramPlaceholder')"
             autocapitalize="off"
             :spellcheck="false"
           />
         </ion-item>
 
-        <ion-item lines="none">
+        <ion-item>
           <ion-icon slot="start" :icon="logoTiktok" aria-hidden="true" />
+          <ion-label class="field-label">{{ $t('settings.contacts.tiktok') }}</ion-label>
           <ion-input
             v-model="state.tiktok"
-            label-placement="stacked"
-            :label="$t('settings.contacts.tiktok')"
+            class="value-input"
             :placeholder="$t('settings.contacts.tiktokPlaceholder')"
             autocapitalize="off"
             :spellcheck="false"
           />
         </ion-item>
-      </ion-list>
 
-      <!-- Email -->
-      <ion-list inset>
-        <ion-item lines="none">
+        <ion-item :class="{ 'ion-invalid': emailError, 'ion-touched': isDirty }" lines="none">
           <ion-icon slot="start" :icon="mailOutline" aria-hidden="true" />
+          <ion-label class="field-label">{{ $t('settings.contacts.email') }}</ion-label>
           <ion-input
             v-model="state.contact_email"
+            class="value-input"
             type="email"
             inputmode="email"
             autocapitalize="off"
-            label-placement="stacked"
-            :label="$t('settings.contacts.email')"
             :placeholder="$t('settings.contacts.emailPlaceholder')"
-            :class="{ 'ion-invalid': emailError, 'ion-touched': isDirty }"
-            :error-text="emailError"
           />
         </ion-item>
-      </ion-list>
+      </inset-list>
+      <ion-note v-if="emailError" color="danger" class="field-hint">{{ emailError }}</ion-note>
 
       <!-- Studio / address -->
-      <ion-list inset>
-        <ion-list-header>
-          <ion-label>{{ $t('settings.contacts.address.title') }}</ion-label>
-        </ion-list-header>
-        <ion-note class="section-note">{{ $t('settings.contacts.address.subtitle') }}</ion-note>
+      <inset-list>
+        <template #header>
+          {{ $t('settings.contacts.address.title') }}
+          <span class="header-note">{{ $t('settings.contacts.address.subtitle') }}</span>
+        </template>
 
         <ion-item button detail @click="isCountryModalOpen = true">
-          <ion-label>
-            <p>{{ $t('settings.contacts.address.country') }}</p>
-            <h3 v-if="currentCountryLabel">{{ currentCountryLabel }}</h3>
-            <h3 v-else class="placeholder">
-              {{ $t('settings.contacts.address.countryPlaceholder') }}
-            </h3>
+          <ion-label class="field-label">{{ $t('settings.contacts.address.country') }}</ion-label>
+          <ion-label slot="end" class="value-static" :class="{ placeholder: !currentCountryLabel }">
+            {{ currentCountryLabel || $t('settings.contacts.address.countryPlaceholder') }}
           </ion-label>
         </ion-item>
 
         <ion-item>
+          <ion-label class="field-label">{{ $t('settings.contacts.address.street') }}</ion-label>
           <ion-input
             v-model="state.address"
-            label-placement="stacked"
-            :label="$t('settings.contacts.address.street')"
+            class="value-input"
             :placeholder="$t('settings.contacts.address.streetPlaceholder')"
           />
         </ion-item>
         <ion-item>
+          <ion-label class="field-label">{{ $t('settings.contacts.address.houseNumber') }}</ion-label>
           <ion-input
             v-model="state.house_number"
-            label-placement="stacked"
-            :label="$t('settings.contacts.address.houseNumber')"
+            class="value-input"
             :placeholder="$t('settings.contacts.address.houseNumberPlaceholder')"
           />
         </ion-item>
         <ion-item>
+          <ion-label class="field-label">{{ $t('settings.contacts.address.zipCode') }}</ion-label>
           <ion-input
             v-model="state.zip_code"
-            label-placement="stacked"
-            :label="$t('settings.contacts.address.zipCode')"
+            class="value-input"
             :placeholder="$t('settings.contacts.address.zipCodePlaceholder')"
             inputmode="numeric"
           />
         </ion-item>
         <ion-item lines="none">
+          <ion-label class="field-label">{{ $t('settings.contacts.address.city') }}</ion-label>
           <ion-input
             v-model="state.city"
-            label-placement="stacked"
-            :label="$t('settings.contacts.address.city')"
+            class="value-input"
             :placeholder="$t('settings.contacts.address.cityPlaceholder')"
           />
         </ion-item>
-      </ion-list>
+      </inset-list>
 
       <!-- Availability -->
-      <ion-list inset>
+      <inset-list>
         <ion-item>
           <ion-toggle v-model="state.works_at_place">
             {{ $t('settings.contacts.address.worksAtPlace') }}
@@ -386,7 +391,7 @@ async function onSave() {
             {{ $t('settings.contacts.address.canTravel') }}
           </ion-toggle>
         </ion-item>
-      </ion-list>
+      </inset-list>
 
       <!-- Country picker (iOS card modal) -->
       <list-picker-modal
@@ -399,24 +404,96 @@ async function onSave() {
         @update:model-value="onCountrySelected"
       />
     </ion-content>
+
+    <!-- Save bar: slides in only while the form has unsaved changes. Discard on
+         the left reverts to the loaded values; Save commits them. -->
+    <ion-footer v-if="isDirty" :translucent="true" class="ion-no-border">
+      <ion-toolbar>
+        <ion-buttons slot="start" class="ion-padding-end">
+          <ion-button color="medium" :disabled="isSaving" @click="onDiscard">
+            <ion-icon slot="icon-only" :ios="arrowUndoOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+        <ion-button
+          class="save-button"
+          expand="block"
+          :disabled="!canSave || isSaving"
+          :aria-busy="isSaving"
+          @click="onSave"
+        >
+          <span :class="{ 'save-button-label--hidden': isSaving }">
+            {{ $t('common.saveChanges') }}
+          </span>
+          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
   </ion-page>
 </template>
 
 <style scoped>
-.intro-note,
-.section-note {
-  display: block;
-  padding-inline: 16px;
-  padding-bottom: 8px;
-  font-size: 0.8rem;
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
 }
 
 .intro-note {
-  padding-top: 8px;
+  display: block;
+  margin: 0;
+  padding: 8px 16px 12px;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
 }
 
-.placeholder {
-  color: var(--ion-color-medium, #92949c);
+/* Section-header sub-line (rendered inside inset-list's header slot). */
+.header-note {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+/* iOS Settings-style rows: label on the left, value right-aligned (native
+   input inherits text-align from the ion-input host). Shared with the profile
+   page's identity card. */
+.field-label {
+  flex: 0 0 auto;
+  margin-inline-end: 12px;
+  color: var(--ion-color-medium);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.value-input {
+  flex: 1 1 auto;
+  text-align: end;
+  --color: var(--ion-text-color);
+  --padding-end: 0;
+  --placeholder-color: var(--ion-color-medium);
+  --placeholder-opacity: 1;
+}
+
+/* Read-only value (country picker row) styled to match .value-input. */
+.value-static {
+  flex: 1 1 auto;
+  text-align: end;
+  color: var(--ion-text-color);
+  font-size: 0.95rem;
+}
+
+.value-static.placeholder {
+  color: var(--ion-color-medium);
+}
+
+.field-hint {
+  display: block;
+  margin-top: -14px;
+  margin-bottom: 22px;
+  padding-inline: 32px;
+  font-size: 0.75rem;
 }
 
 .use-main {
@@ -430,5 +507,30 @@ async function onSave() {
   margin-top: 6px;
   border-radius: 8px;
   --vti-border-radius: 8px;
+}
+
+ion-footer ion-toolbar {
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+}
+
+ion-footer ion-toolbar.md {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.save-button {
+  position: relative;
+}
+
+.save-button-label--hidden {
+  opacity: 0;
+}
+
+.save-button-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 </style>
