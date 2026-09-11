@@ -3,6 +3,9 @@ import { IonicVue } from '@ionic/vue'
 import VueTelInput from 'vue-tel-input'
 import 'vue-tel-input/vue-tel-input.css'
 
+/* Country flag sprites (CSS + on-demand SVGs) used by the shared PhoneField. */
+import 'flag-icons/css/flag-icons.min.css'
+
 /* Required Ionic core styles (documented order). */
 import '@ionic/vue/css/core.css'
 import '@ionic/vue/css/normalize.css'

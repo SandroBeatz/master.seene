@@ -85,11 +85,16 @@ export interface MasterProfileUpdate {
   username: string
   specializations: string[]
   bio: string | null
+  // Optional: the mobile Profile page edits the phone here (desktop keeps it on
+  // the Contacts form), so it's only written when present.
+  phone?: string
 }
 
 /** Fields editable from the Contacts & social settings form. */
 export interface MasterContactsUpdate {
-  phone: string
+  // Optional: the mobile Contacts page no longer edits the phone (moved to the
+  // Profile page); desktop still sends it. Only written when present.
+  phone?: string
   whatsapp: string | null
   telegram: string | null
   instagram: string | null

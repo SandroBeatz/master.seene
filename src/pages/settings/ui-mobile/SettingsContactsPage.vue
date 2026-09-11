@@ -16,7 +16,6 @@ import {
   IonLabel,
   IonNote,
   IonIcon,
-  IonToggle,
   IonSpinner,
   isPlatform,
   toastController,
@@ -27,7 +26,7 @@ import {
   logoTiktok,
   paperPlaneOutline,
   mailOutline,
-  copyOutline,
+  informationCircleOutline,
   arrowBackOutline,
   arrowUndoOutline,
 } from 'ionicons/icons'
@@ -56,7 +55,6 @@ const { data: profileData } = useMasterProfileQuery(userId)
 const updateMutation = useUpdateMasterContactsMutation(userId)
 
 interface ContactsFormState {
-  phone: string
   whatsapp: string
   telegram: string
   instagram: string
@@ -73,7 +71,6 @@ interface ContactsFormState {
 }
 
 const state = ref<ContactsFormState>({
-  phone: '',
   whatsapp: '',
   telegram: '',
   instagram: '',
@@ -93,13 +90,8 @@ const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
   message: t('common.unsavedChangesConfirm'),
 })
 
-// Tracks vue-tel-input validity for the phone field. Seeded from whether the
-// loaded profile already has a phone (vue-tel may not emit validate on load).
-const phoneValid = ref(false)
-
 function seed(profile: MasterProfile) {
   state.value = {
-    phone: profile.phone ?? '',
     whatsapp: profile.whatsapp ?? '',
     telegram: profile.telegram ?? '',
     instagram: profile.instagram ?? '',
@@ -114,7 +106,6 @@ function seed(profile: MasterProfile) {
     works_at_place: profile.works_at_place ?? true,
     can_travel: profile.can_travel ?? false,
   }
-  phoneValid.value = (profile.phone ?? '').length > 0
   reset()
 }
 
@@ -126,21 +117,6 @@ watch(
   },
   { immediate: true },
 )
-
-function onPhoneValidate(obj: { valid: boolean }) {
-  phoneValid.value = obj.valid
-}
-
-// Offer the shortcut only when there's a main number to copy and it isn't
-// already mirrored into the WhatsApp field.
-const canUseMainNumber = computed(
-  () =>
-    state.value.phone.trim().length > 0 && state.value.whatsapp.trim() !== state.value.phone.trim(),
-)
-
-function useMainNumber() {
-  state.value.whatsapp = state.value.phone
-}
 
 // --- Country picker (iOS card modal) ------------------------------------------
 const isCountryModalOpen = ref(false)
@@ -170,10 +146,7 @@ const emailError = computed(() =>
   isDirty.value && !isEmailValid.value ? t('settings.contacts.emailInvalid') : undefined,
 )
 
-// Phone is NOT NULL in the DB — a valid number is required to save.
-const isPhoneValid = computed(() => phoneValid.value && state.value.phone.trim().length > 0)
-
-const canSave = computed(() => isDirty.value && isPhoneValid.value && isEmailValid.value)
+const canSave = computed(() => isDirty.value && isEmailValid.value)
 const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // --- Actions ------------------------------------------------------------------
@@ -192,7 +165,6 @@ async function onSave() {
   isSaving.value = true
   try {
     await updateMutation.mutateAsync({
-      phone: state.value.phone.trim(),
       whatsapp: orNull(state.value.whatsapp),
       telegram: orNull(state.value.telegram),
       instagram: orNull(state.value.instagram),
@@ -216,11 +188,9 @@ async function onSave() {
   }
 }
 
-// Reverts every field back to the last loaded/saved snapshot, then re-derives
-// phone validity from the restored value (vue-tel doesn't re-validate on reset).
+// Reverts every field back to the last loaded/saved snapshot.
 function onDiscard() {
   discard()
-  phoneValid.value = state.value.phone.trim().length > 0
 }
 </script>
 
@@ -240,27 +210,22 @@ function onDiscard() {
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" class="ion-padding-bottom">
-      <p class="intro-note">{{ $t('settings.contacts.subtitle') }}</p>
-
-      <!-- Phone (label supplied by the section header) -->
-      <inset-list :header="$t('settings.contacts.phone')">
-        <ion-item lines="none">
-          <vue-tel-input
-            v-model="state.phone"
-            class="se-phone"
-            mode="international"
-            :input-options="{
-              placeholder: $t('settings.contacts.phonePlaceholder'),
-              showDialCode: true,
-            }"
-            @validate="onPhoneValidate"
+    <ion-content :fullscreen="true" class="ion-padding-vertical">
+      <!-- Intro hint: styled as a card with a leading info icon -->
+      <inset-list>
+        <ion-item lines="none" class="hint-item">
+          <ion-icon
+            slot="start"
+            :icon="informationCircleOutline"
+            color="primary"
+            aria-hidden="true"
           />
+          <ion-label class="ion-text-wrap hint-text">{{ $t('settings.contacts.subtitle') }}</ion-label>
         </ion-item>
       </inset-list>
 
       <!-- Reachable channels: social handles + email -->
-      <inset-list>
+      <inset-list :header="$t('settings.contacts.waysToContact')">
         <ion-item>
           <ion-icon slot="start" :icon="logoWhatsapp" aria-hidden="true" />
           <ion-label class="field-label">{{ $t('settings.contacts.whatsapp') }}</ion-label>
@@ -272,13 +237,6 @@ function onDiscard() {
             autocapitalize="off"
           />
         </ion-item>
-        <ion-item v-if="canUseMainNumber">
-          <ion-button fill="clear" size="small" class="use-main" @click="useMainNumber">
-            <ion-icon slot="start" :icon="copyOutline" aria-hidden="true" />
-            {{ $t('settings.contacts.whatsappUseMain') }}
-          </ion-button>
-        </ion-item>
-
         <ion-item>
           <ion-icon slot="start" :icon="paperPlaneOutline" aria-hidden="true" />
           <ion-label class="field-label">{{ $t('settings.contacts.telegram') }}</ion-label>
@@ -330,18 +288,22 @@ function onDiscard() {
       </inset-list>
       <ion-note v-if="emailError" color="danger" class="field-hint">{{ emailError }}</ion-note>
 
-      <!-- Studio / address -->
-      <inset-list>
-        <template #header>
-          {{ $t('settings.contacts.address.title') }}
-          <span class="header-note">{{ $t('settings.contacts.address.subtitle') }}</span>
-        </template>
-
+      <!-- Address -->
+      <inset-list :header="$t('settings.contacts.address.title')">
         <ion-item button detail @click="isCountryModalOpen = true">
           <ion-label class="field-label">{{ $t('settings.contacts.address.country') }}</ion-label>
           <ion-label slot="end" class="value-static" :class="{ placeholder: !currentCountryLabel }">
             {{ currentCountryLabel || $t('settings.contacts.address.countryPlaceholder') }}
           </ion-label>
+        </ion-item>
+
+        <ion-item>
+          <ion-label class="field-label">{{ $t('settings.contacts.address.city') }}</ion-label>
+          <ion-input
+            v-model="state.city"
+            class="value-input"
+            :placeholder="$t('settings.contacts.address.cityPlaceholder')"
+          />
         </ion-item>
 
         <ion-item>
@@ -362,7 +324,7 @@ function onDiscard() {
             :placeholder="$t('settings.contacts.address.houseNumberPlaceholder')"
           />
         </ion-item>
-        <ion-item>
+        <ion-item lines="none">
           <ion-label class="field-label">{{ $t('settings.contacts.address.zipCode') }}</ion-label>
           <ion-input
             v-model="state.zip_code"
@@ -370,28 +332,6 @@ function onDiscard() {
             :placeholder="$t('settings.contacts.address.zipCodePlaceholder')"
             inputmode="numeric"
           />
-        </ion-item>
-        <ion-item lines="none">
-          <ion-label class="field-label">{{ $t('settings.contacts.address.city') }}</ion-label>
-          <ion-input
-            v-model="state.city"
-            class="value-input"
-            :placeholder="$t('settings.contacts.address.cityPlaceholder')"
-          />
-        </ion-item>
-      </inset-list>
-
-      <!-- Availability -->
-      <inset-list>
-        <ion-item>
-          <ion-toggle v-model="state.works_at_place">
-            {{ $t('settings.contacts.address.worksAtPlace') }}
-          </ion-toggle>
-        </ion-item>
-        <ion-item lines="none">
-          <ion-toggle v-model="state.can_travel">
-            {{ $t('settings.contacts.address.canTravel') }}
-          </ion-toggle>
         </ion-item>
       </inset-list>
 
@@ -443,19 +383,22 @@ ion-header ion-toolbar {
   --background: var(--se-surface-page, #f2f2f7);
 }
 
-.intro-note {
-  display: block;
-  margin: 0;
-  padding: 8px 16px 12px;
-  color: var(--ion-color-medium);
-  font-size: 0.8rem;
+/* Intro hint card: muted body text next to a primary-colored info icon. */
+.hint-item {
+  --padding-top: 6px;
+  --padding-bottom: 6px;
 }
 
-/* Section-header sub-line (rendered inside inset-list's header slot). */
-.header-note {
-  display: block;
-  margin-top: 2px;
-  font-weight: 400;
+.hint-item ion-icon[slot='start'] {
+  color: var(--ion-color-primary);
+  font-size: 22px;
+}
+
+.hint-text {
+  margin: 0;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 /* iOS Settings-style rows: label on the left, value right-aligned (native
@@ -496,19 +439,6 @@ ion-header ion-toolbar {
   margin-bottom: 22px;
   padding-inline: 32px;
   font-size: 0.75rem;
-}
-
-.use-main {
-  margin-inline-start: -8px;
-}
-
-/* vue-tel-input is a light-DOM component, so it needs to be nudged to match the
-   Ionic list item it sits inside. */
-.se-phone {
-  width: 100%;
-  margin-top: 6px;
-  border-radius: 8px;
-  --vti-border-radius: 8px;
 }
 
 ion-footer ion-toolbar {

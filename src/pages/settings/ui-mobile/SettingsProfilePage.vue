@@ -53,6 +53,7 @@ import { resizeImageToSquare } from '@shared/lib/image'
 import { useDirtyForm } from '@shared/lib/forms'
 import { bookingPageUrl } from '@shared/config'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { PhoneField } from '@shared/ui/phone-field/index.mobile'
 
 // Native Ionic port of the desktop ProfileForm (features/profile-form). Kept as
 // a single page component because it's a one-off screen driven by a toolbar
@@ -74,6 +75,7 @@ const removeAvatarMutation = useRemoveMasterAvatarMutation(userId)
 interface ProfileFormState {
   full_name: string
   username: string
+  phone: string
   specializations: string[]
   bio: string
 }
@@ -81,6 +83,7 @@ interface ProfileFormState {
 const state = ref<ProfileFormState>({
   full_name: '',
   username: '',
+  phone: '',
   specializations: [],
   bio: '',
 })
@@ -92,11 +95,16 @@ const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
 // The username the profile was loaded with — counts as "available".
 const loadedUsername = ref('')
 
+// Tracks vue-tel-input validity for the phone field. Seeded from whether the
+// loaded profile already has a phone (vue-tel may not emit validate on load).
+const phoneValid = ref(false)
+
 function seed(profile: MasterProfile) {
   state.value = {
     // Join the stored name columns back into one editable field.
     full_name: [profile.first_name, profile.last_name].filter(Boolean).join(' '),
     username: profile.username ?? '',
+    phone: profile.phone ?? '',
     // Normalize to canonical order so chip toggles don't create false diffs.
     specializations: SPECIALIZATION_CODES.filter((code) =>
       (profile.specializations ?? []).includes(code),
@@ -104,14 +112,29 @@ function seed(profile: MasterProfile) {
     bio: profile.bio ?? '',
   }
   loadedUsername.value = profile.username ?? ''
+  phoneValid.value = (profile.phone ?? '').length > 0
   reset()
 }
+
+function onPhoneValidate(obj: { valid: boolean }) {
+  phoneValid.value = obj.valid
+}
+
+// Whether the form has been seeded from the loaded profile at least once. The
+// `isDirty` guard below must not apply before this: vue-tel-input normalizes the
+// phone on mount (dial code / formatting), which flips `isDirty` to true *before*
+// the async profile arrives — so a naive `if (isDirty) return` would skip the
+// first seed and leave every field empty on a hard reload.
+const hasSeeded = ref(false)
 
 watch(
   profileData,
   (profile) => {
-    if (!profile || isDirty.value) return
+    if (!profile) return
+    // After the first seed, don't clobber genuine unsaved edits on a refetch.
+    if (hasSeeded.value && isDirty.value) return
     seed(profile)
+    hasSeeded.value = true
   },
   { immediate: true },
 )
@@ -254,6 +277,8 @@ const publicUrl = computed(() => bookingPageUrl(state.value.username || loadedUs
 const isFullNameFilled = computed(() => state.value.full_name.trim().length > 0)
 const isUsernameFilled = computed(() => state.value.username.trim().length > 0)
 const hasSpecialization = computed(() => state.value.specializations.length > 0)
+// Phone is NOT NULL in the DB — a valid number is required to save.
+const isPhoneValid = computed(() => phoneValid.value && state.value.phone.trim().length > 0)
 
 const requiredMsg = computed(() => t('settings.profile.requiredField'))
 
@@ -271,11 +296,18 @@ const usernameError = computed(() => {
   if (isDirty.value && !isUsernameFilled.value) return requiredMsg.value
   return undefined
 })
+const phoneError = computed(() => {
+  if (!isDirty.value) return undefined
+  if (state.value.phone.trim().length === 0) return requiredMsg.value
+  if (!phoneValid.value) return t('settings.profile.phoneInvalid')
+  return undefined
+})
 
 const isFormValid = computed(
   () =>
     isFullNameFilled.value &&
     isUsernameFilled.value &&
+    isPhoneValid.value &&
     hasSpecialization.value &&
     usernameStatus.value !== 'taken' &&
     usernameStatus.value !== 'invalid',
@@ -298,6 +330,7 @@ async function onSave() {
       first_name,
       last_name,
       username: state.value.username.trim().toLowerCase(),
+      phone: state.value.phone.trim(),
       specializations: state.value.specializations,
       bio: state.value.bio.trim() || null,
     })
@@ -314,10 +347,12 @@ async function onSave() {
   }
 }
 
-// Reverts every field back to the last loaded/saved snapshot.
+// Reverts every field back to the last loaded/saved snapshot, then re-derives
+// phone validity from the restored value (vue-tel doesn't re-validate on reset).
 function onDiscard() {
   discard()
   usernameStatus.value = 'idle'
+  phoneValid.value = state.value.phone.trim().length > 0
 }
 
 async function copyLink() {
@@ -380,7 +415,7 @@ async function comingSoon() {
         />
       </section>
 
-      <!-- Identity card: full name, username, bio -->
+      <!-- Identity card: full name, phone, username -->
       <inset-list>
         <ion-item :class="{ 'ion-invalid': fullNameError, 'ion-touched': isDirty }">
           <ion-label class="field-label">{{ $t('settings.profile.fullName') }}</ion-label>
@@ -392,6 +427,14 @@ async function comingSoon() {
             enterkeyhint="next"
           />
         </ion-item>
+
+        <phone-field
+          v-model="state.phone"
+          :label="$t('settings.profile.phone')"
+          :placeholder="$t('settings.profile.phonePlaceholder')"
+          :invalid="Boolean(phoneError)"
+          @validate="onPhoneValidate"
+        />
 
         <ion-item :class="{ 'ion-invalid': usernameError, 'ion-touched': isDirty }" lines="none">
           <ion-label class="field-label">{{ $t('settings.profile.username') }}</ion-label>
@@ -428,6 +471,7 @@ async function comingSoon() {
       <ion-note v-if="usernameError" color="danger" class="field-hint">{{
         usernameError
       }}</ion-note>
+      <ion-note v-if="phoneError" color="danger" class="field-hint">{{ phoneError }}</ion-note>
 
       <!-- Bio -->
       <inset-list :header="$t('settings.profile.bio')">
