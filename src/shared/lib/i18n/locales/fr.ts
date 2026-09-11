@@ -752,6 +752,7 @@ export default {
       subtitle:
         'Votre disponibilité hebdomadaire. Les clients ne peuvent réserver que pendant ces heures.',
       dayOff: 'Jour de repos',
+      hours: 'Horaires',
       from: 'De',
       to: 'À',
       break: 'Pause',

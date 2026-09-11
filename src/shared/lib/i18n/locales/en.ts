@@ -746,6 +746,7 @@ export default {
       title: 'Working hours',
       subtitle: 'Your weekly availability. Clients can only book inside these hours.',
       dayOff: 'Day off',
+      hours: 'Hours',
       from: 'From',
       to: 'To',
       break: 'Break',

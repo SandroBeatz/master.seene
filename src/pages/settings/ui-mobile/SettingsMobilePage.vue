@@ -63,7 +63,12 @@ const groups = computed<SettingsGroup[]>(() => [
         icon: atOutline,
         to: '/settings/contacts',
       },
-      { key: 'workingHours', label: t('settings.nav.workingHours'), icon: timeOutline },
+      {
+        key: 'workingHours',
+        label: t('settings.nav.workingHours'),
+        icon: timeOutline,
+        to: '/settings/working-hours',
+      },
       { key: 'booking', label: t('settings.nav.booking'), icon: calendarNumberOutline },
     ],
   },
