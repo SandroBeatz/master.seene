@@ -687,9 +687,6 @@ ion-header ion-toolbar {
 ion-footer ion-toolbar {
   --padding-top: 16px;
   --padding-bottom: 16px;
-}
-
-ion-footer ion-toolbar.md {
   --padding-start: 16px;
   --padding-end: 16px;
 }

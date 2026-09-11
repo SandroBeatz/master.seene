@@ -353,7 +353,9 @@ function onDiscard() {
           />
         </ion-item>
         <ion-item>
-          <ion-label class="field-label">{{ $t('settings.contacts.address.houseNumber') }}</ion-label>
+          <ion-label class="field-label">{{
+            $t('settings.contacts.address.houseNumber')
+          }}</ion-label>
           <ion-input
             v-model="state.house_number"
             class="value-input"
@@ -512,9 +514,6 @@ ion-header ion-toolbar {
 ion-footer ion-toolbar {
   --padding-top: 16px;
   --padding-bottom: 16px;
-}
-
-ion-footer ion-toolbar.md {
   --padding-start: 16px;
   --padding-end: 16px;
 }
