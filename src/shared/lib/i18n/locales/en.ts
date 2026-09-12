@@ -782,6 +782,8 @@ export default {
       onlineOn: 'Online booking on',
       onlineOff: 'Online booking off',
       onlineToggleAria: 'Toggle online booking',
+      autoConfirm: 'Auto-confirm new online bookings',
+      autoConfirmDescription: 'New bookings are confirmed automatically instead of waiting for your approval.',
       defaultStatus: 'Default status for new bookings',
       defaultStatusDescription: 'How online requests arrive in your calendar.',
       statusAutoConfirmed: 'Auto-confirmed',

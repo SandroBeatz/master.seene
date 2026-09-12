@@ -778,6 +778,8 @@ export default {
       onlineOn: 'Онлайн-запись включена',
       onlineOff: 'Онлайн-запись выключена',
       onlineToggleAria: 'Переключить онлайн-запись',
+      autoConfirm: 'Автоматически подтверждать новую запись онлайн',
+      autoConfirmDescription: 'Новые записи подтверждаются автоматически, без вашего одобрения.',
       defaultStatus: 'Статус новых записей по умолчанию',
       defaultStatusDescription: 'Как онлайн-заявки попадают в ваш календарь.',
       statusAutoConfirmed: 'Подтверждать автоматически',

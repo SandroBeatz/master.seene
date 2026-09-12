@@ -28,7 +28,6 @@ import {
 } from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import { useMasterPreferencesQuery, useUpdateMasterBookingSettingsMutation } from '@entities/master'
-import type { BookingDefaultStatus } from '@entities/master'
 import { useBookingSettings } from '@features/booking-settings-form/index.mobile'
 import { useDirtyForm } from '@shared/lib/forms'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
@@ -86,23 +85,20 @@ const noticeItems = computed(() =>
   })),
 )
 
-const statusItems = computed(() => [
-  { value: 'confirmed', label: t('settings.booking.statusAutoConfirmed') },
-  { value: 'pending', label: t('settings.booking.statusNeedsConfirmation') },
-])
-
 const enabled = computed(() => onlineEnabled.value)
-const currentStatusLabel = computed(
-  () => statusItems.value.find((item) => item.value === state.value.defaultStatus)?.label ?? '',
+// "No buffer" / "No minimum" (value 0) reads as "no limit" — leave the row's
+// trailing summary blank in that case rather than spelling out the absence.
+const currentBufferLabel = computed(() =>
+  state.value.bufferMinutes === 0
+    ? ''
+    : (bufferItems.value.find((item) => item.value === state.value.bufferMinutes)?.label ?? ''),
 )
-const currentBufferLabel = computed(
-  () => bufferItems.value.find((item) => item.value === state.value.bufferMinutes)?.label ?? '',
-)
-const currentNoticeLabel = computed(
-  () => noticeItems.value.find((item) => item.value === state.value.minNoticeMinutes)?.label ?? '',
+const currentNoticeLabel = computed(() =>
+  state.value.minNoticeMinutes === 0
+    ? ''
+    : (noticeItems.value.find((item) => item.value === state.value.minNoticeMinutes)?.label ?? ''),
 )
 
-const isStatusModalOpen = ref(false)
 const isBufferModalOpen = ref(false)
 const isNoticeModalOpen = ref(false)
 const presentingElement = ref<HTMLElement | null>(null)
@@ -111,10 +107,8 @@ onMounted(() => {
   presentingElement.value = document.querySelector('ion-router-outlet')
 })
 
-function onStatusSelected(value: string | number) {
-  if (value === 'confirmed' || value === 'pending') {
-    state.value.defaultStatus = value as BookingDefaultStatus
-  }
+function onAutoConfirmChange(checked: boolean) {
+  state.value.defaultStatus = checked ? 'confirmed' : 'pending'
 }
 
 function onBufferSelected(value: string | number) {
@@ -242,12 +236,17 @@ function onDiscard() {
         </template>
 
         <template v-else>
-          <ion-item button detail :disabled="!enabled" @click="isStatusModalOpen = true">
+          <ion-item :disabled="!enabled">
             <ion-label class="ion-text-wrap setting-copy">
-              <h2>{{ $t('settings.booking.defaultStatus') }}</h2>
-              <p>{{ $t('settings.booking.defaultStatusDescription') }}</p>
+              <h2>{{ $t('settings.booking.autoConfirm') }}</h2>
+              <p>{{ $t('settings.booking.autoConfirmDescription') }}</p>
             </ion-label>
-            <ion-label slot="end" class="value-static">{{ currentStatusLabel }}</ion-label>
+            <ion-toggle
+              slot="end"
+              :checked="state.defaultStatus === 'confirmed'"
+              :disabled="!enabled"
+              @ion-change="onAutoConfirmChange($event.detail.checked)"
+            />
           </ion-item>
 
           <ion-item button detail :disabled="!enabled" @click="isBufferModalOpen = true">
@@ -274,14 +273,6 @@ function onDiscard() {
         </template>
       </inset-list>
 
-      <list-picker-modal
-        v-model:is-open="isStatusModalOpen"
-        :title="$t('settings.booking.defaultStatus')"
-        :items="statusItems"
-        :model-value="state.defaultStatus"
-        :presenting-element="presentingElement"
-        @update:model-value="onStatusSelected"
-      />
       <list-picker-modal
         v-model:is-open="isBufferModalOpen"
         :title="$t('settings.booking.buffer')"
