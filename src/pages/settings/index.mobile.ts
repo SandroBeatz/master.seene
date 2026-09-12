@@ -11,3 +11,4 @@ export { default as SettingsBookingPage } from './ui-mobile/SettingsBookingPage.
 export { default as SettingsSystemRegionPage } from './ui-mobile/SettingsSystemRegionPage.vue'
 export { default as SettingsAccountPage } from './ui-mobile/SettingsAccountPage.vue'
 export { default as SettingsPaymentTypesPage } from './ui-mobile/SettingsPaymentTypesPage.vue'
+export { default as SettingsServiceCategoriesPage } from './ui-mobile/SettingsServiceCategoriesPage.vue'
