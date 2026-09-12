@@ -788,6 +788,9 @@ export default {
       onlineOn: 'Réservation en ligne activée',
       onlineOff: 'Réservation en ligne désactivée',
       onlineToggleAria: 'Activer la réservation en ligne',
+      autoConfirm: 'Confirmer automatiquement les nouvelles réservations',
+      autoConfirmDescription:
+        'Les nouvelles réservations sont confirmées automatiquement, sans votre validation.',
       defaultStatus: 'Statut par défaut des nouvelles réservations',
       defaultStatusDescription: 'Comment les demandes en ligne arrivent dans votre agenda.',
       statusAutoConfirmed: 'Confirmé automatiquement',
