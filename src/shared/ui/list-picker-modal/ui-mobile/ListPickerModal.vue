@@ -26,6 +26,7 @@ interface PickerItem {
   value: PickerValue
   label: string
   icon?: string
+  flag?: string
   swatchColor?: string
 }
 
@@ -48,7 +49,7 @@ const query = ref('')
 
 const sheetStyle = computed(() => {
   if (!props.sheet) return undefined
-  const height = 104 + props.items.length * 49
+  const height = 92 + props.items.length * 49
   return {
     '--height': `min(${height}px, 82vh)`,
     '--border-radius': '20px 20px 0 0',
@@ -92,7 +93,7 @@ function select(value: PickerValue) {
     :handle="sheet"
     @did-dismiss="close"
   >
-    <ion-header class="ion-no-border" :class="{ 'sheet-header': sheet }">
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-button
@@ -130,6 +131,13 @@ function select(value: PickerValue) {
             aria-hidden="true"
           />
           <span
+            v-else-if="item.flag"
+            slot="start"
+            class="picker-flag"
+            :class="`fi fis fi-${item.flag}`"
+            aria-hidden="true"
+          />
+          <span
             v-else-if="item.swatchColor"
             slot="start"
             class="picker-swatch"
@@ -151,10 +159,6 @@ function select(value: PickerValue) {
 </template>
 
 <style scoped>
-.sheet-header {
-  padding-top: 12px;
-}
-
 .list-picker-modal--sheet ion-toolbar {
   --background: var(--se-surface-page, var(--ion-background-color));
 }
@@ -171,6 +175,15 @@ function select(value: PickerValue) {
   margin-inline-end: 14px;
   color: var(--ion-color-medium);
   font-size: 22px;
+}
+
+.picker-flag {
+  width: 24px;
+  height: 24px;
+  margin-inline-end: 14px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
+  flex-shrink: 0;
 }
 
 .picker-swatch {
