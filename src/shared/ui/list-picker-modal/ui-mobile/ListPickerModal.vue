@@ -14,17 +14,17 @@ import {
   IonLabel,
   IonIcon,
 } from '@ionic/vue'
-import { checkmark } from 'ionicons/icons'
+import { checkmark, closeOutline } from 'ionicons/icons'
 
-// Native Ionic single-select picker rendered as an iOS card modal
-// (https://ionicframework.com/docs/api/modal#card-modal). Pass the tab's
-// `ion-router-outlet` as `presentingElement` to get the card presentation.
+// Native Ionic single-select picker. Long lists use the existing iOS card
+// presentation; short lists can opt into a content-sized sheet via `sheet`.
 // Optionally searchable for long lists (e.g. time zones).
 type PickerValue = string | number
 
 interface PickerItem {
   value: PickerValue
   label: string
+  swatchColor?: string
 }
 
 const props = defineProps<{
@@ -33,6 +33,7 @@ const props = defineProps<{
   items: readonly PickerItem[]
   modelValue: PickerValue
   searchable?: boolean
+  sheet?: boolean
   presentingElement?: HTMLElement | null
 }>()
 
@@ -42,6 +43,12 @@ const emit = defineEmits<{
 }>()
 
 const query = ref('')
+
+const sheetStyle = computed(() => {
+  if (!props.sheet) return undefined
+  const height = 88 + props.items.length * 49
+  return { '--height': `min(${height}px, 82vh)` }
+})
 
 // Clear the filter whenever the sheet opens so a stale query never hides the
 // list on reopen.
@@ -72,13 +79,27 @@ function select(value: PickerValue) {
 <template>
   <ion-modal
     :is-open="isOpen"
-    :presenting-element="presentingElement ?? undefined"
+    :class="{ 'list-picker-modal--sheet': sheet }"
+    :style="sheetStyle"
+    :presenting-element="sheet ? undefined : (presentingElement ?? undefined)"
+    :breakpoints="sheet ? [0, 1] : undefined"
+    :initial-breakpoint="sheet ? 1 : undefined"
+    :handle="sheet"
     @did-dismiss="close"
   >
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-button @click="close">{{ $t('common.done') }}</ion-button>
+          <ion-button
+            v-if="sheet"
+            fill="clear"
+            color="dark"
+            :aria-label="$t('common.close')"
+            @click="close"
+          >
+            <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
+          </ion-button>
+          <ion-button v-else @click="close">{{ $t('common.done') }}</ion-button>
         </ion-buttons>
         <ion-title>{{ title }}</ion-title>
       </ion-toolbar>
@@ -88,7 +109,7 @@ function select(value: PickerValue) {
     </ion-header>
 
     <ion-content>
-      <ion-list>
+      <ion-list :inset="sheet">
         <ion-item
           v-for="item in filteredItems"
           :key="String(item.value)"
@@ -96,6 +117,13 @@ function select(value: PickerValue) {
           :detail="false"
           @click="select(item.value)"
         >
+          <span
+            v-if="item.swatchColor"
+            slot="start"
+            class="picker-swatch"
+            :style="{ backgroundColor: item.swatchColor }"
+            aria-hidden="true"
+          />
           <ion-label>{{ item.label }}</ion-label>
           <ion-icon
             v-if="item.value === modelValue"
@@ -109,3 +137,21 @@ function select(value: PickerValue) {
     </ion-content>
   </ion-modal>
 </template>
+
+<style scoped>
+.list-picker-modal--sheet {
+  --border-radius: 16px 16px 0 0;
+}
+
+.list-picker-modal--sheet ion-toolbar {
+  --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.picker-swatch {
+  width: 22px;
+  height: 22px;
+  margin-inline-end: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+</style>
