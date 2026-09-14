@@ -19,7 +19,16 @@ import {
   isPlatform,
   toastController,
 } from '@ionic/vue'
-import { arrowBackOutline, arrowUndoOutline } from 'ionicons/icons'
+import {
+  arrowBackOutline,
+  arrowUndoOutline,
+  calendarClearOutline,
+  calendarOutline,
+  desktopOutline,
+  moonOutline,
+  sunnyOutline,
+  todayOutline,
+} from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import {
   useMasterPreferencesQuery,
@@ -108,9 +117,9 @@ const currencyItems = CURRENCIES.map((currency) => ({
 const dateFormatItems = DATE_FORMATS
 
 const themeItems = computed(() => [
-  { value: 'light', label: t('settings.systemRegion.themeLight') },
-  { value: 'dark', label: t('settings.systemRegion.themeDark') },
-  { value: 'auto', label: t('settings.systemRegion.themeSystem') },
+  { value: 'light', label: t('settings.systemRegion.themeLight'), icon: sunnyOutline },
+  { value: 'dark', label: t('settings.systemRegion.themeDark'), icon: moonOutline },
+  { value: 'auto', label: t('settings.systemRegion.themeSystem'), icon: desktopOutline },
 ])
 const appearanceItems = computed(() =>
   appearance.presets.map((preset) => ({
@@ -128,9 +137,21 @@ const firstDayItems = computed(() => [
   { value: 0, label: t('settings.systemRegion.firstDaySunday') },
 ])
 const calendarViewItems = computed(() => [
-  { value: 'timeGridDay', label: t('settings.systemRegion.calendarViewDay') },
-  { value: 'timeGridWeek', label: t('settings.systemRegion.calendarViewWeek') },
-  { value: 'dayGridMonth', label: t('settings.systemRegion.calendarViewMonth') },
+  {
+    value: 'timeGridDay',
+    label: t('settings.systemRegion.calendarViewDay'),
+    icon: todayOutline,
+  },
+  {
+    value: 'timeGridWeek',
+    label: t('settings.systemRegion.calendarViewWeek'),
+    icon: calendarClearOutline,
+  },
+  {
+    value: 'dayGridMonth',
+    label: t('settings.systemRegion.calendarViewMonth'),
+    icon: calendarOutline,
+  },
 ])
 
 const SLOT_STEP_VALUES = [5, 10, 15, 20, 30, 60]
