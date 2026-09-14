@@ -104,10 +104,10 @@ onMounted(() => {
   presentingElement.value = document.querySelector('ion-router-outlet')
 })
 
-const LANGUAGES: { value: AppLanguage; label: string }[] = [
-  { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
-  { value: 'fr', label: 'Français' },
+const LANGUAGES: { value: AppLanguage; label: string; flag: string }[] = [
+  { value: 'ru', label: 'Русский', flag: 'ru' },
+  { value: 'en', label: 'English', flag: 'gb' },
+  { value: 'fr', label: 'Français', flag: 'fr' },
 ]
 
 const currencyItems = CURRENCIES.map((currency) => ({
