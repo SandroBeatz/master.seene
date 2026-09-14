@@ -10,22 +10,25 @@ import {
   IonButton,
   IonTitle,
   IonContent,
-  IonList,
-  IonListHeader,
+  IonFooter,
   IonItem,
   IonLabel,
-  IonNote,
-  IonSelect,
-  IonSelectOption,
-  IonSegment,
-  IonSegmentButton,
+  IonIcon,
   IonSkeletonText,
   IonSpinner,
-  IonModal,
-  IonIcon,
+  isPlatform,
   toastController,
 } from '@ionic/vue'
-import { checkmark } from 'ionicons/icons'
+import {
+  arrowBackOutline,
+  arrowUndoOutline,
+  calendarClearOutline,
+  calendarOutline,
+  desktopOutline,
+  moonOutline,
+  sunnyOutline,
+  todayOutline,
+} from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import {
   useMasterPreferencesQuery,
@@ -47,49 +50,46 @@ import { useFormats } from '@shared/lib/formats'
 import { CURRENCIES } from '@shared/config/currencies'
 import { DATE_FORMATS } from '@shared/config/date-formats'
 import { useDirtyForm } from '@shared/lib/forms'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
 
-// Native Ionic port of the desktop SystemRegionForm. Reuses the pure
-// state-mapping composable (useSystemSettings) and the shared data layer;
-// language + theme apply live as the user edits, everything else is committed
-// by the toolbar "Done" button. Theme is bridged to the mobile appearance
-// store (light/dark/system), mapping the preferences' `auto` ⇄ `system`.
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const localeStore = useLocaleStore()
 const appearance = useAppearanceStore()
 const formats = useFormats()
+const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
-
 const { data: preferences, isPending } = useMasterPreferencesQuery(userId)
 const updateSystemMutation = useUpdateMasterSystemSettingsMutation(userId)
 const updateScheduleMutation = useUpdateMasterScheduleMutation(userId)
 
 const { state, seed, toUpdate, toScheduleUpdate } = useSystemSettings()
-const { isDirty, isSaving, reset } = useDirtyForm(state, {
+const { isDirty, isSaving, reset, discard } = useDirtyForm(state, {
   message: t('common.unsavedChangesConfirm'),
 })
+
+const savedAccentColor = ref(appearance.primary)
+const isAccentDirty = computed(() => appearance.primary !== savedAccentColor.value)
+const hasUnsavedChanges = computed(() => isDirty.value || isAccentDirty.value)
 
 watch(
   preferences,
   (prefs) => {
-    if (!prefs || isDirty.value) return
+    if (!prefs || isDirty.value || isAccentDirty.value) return
     seed(prefs)
     reset()
+    savedAccentColor.value = appearance.primary
   },
   { immediate: true },
 )
 
-// The preferences' theme uses `auto`; the mobile appearance store uses `system`.
 function toThemeMode(theme: ThemePreference): ThemeMode {
   return theme === 'auto' ? 'system' : theme
 }
 
-// Language and theme apply live (no immediate run, so the fast localStorage
-// value picked at boot isn't overwritten before settings load). Discarding
-// reverts `state`, which fires these watchers back to the saved values.
 watch(
   () => state.value.language,
   (language) => localeStore.setLocale(language),
@@ -99,43 +99,60 @@ watch(
   (theme) => appearance.setTheme(toThemeMode(theme)),
 )
 
-// --- Accent color -------------------------------------------------------------
-// Applied live and persisted to localStorage via the appearance store (it sets
-// the Ionic `--ion-color-primary*` variables). Intentionally NOT saved to the
-// database yet, so it lives outside the dirty-form / "Done" save flow.
-// TODO: add an `accent_color` column to master_settings and round-trip it here
-// alongside the other system settings once we want it synced across devices.
-const isColorModalOpen = ref(false)
-const currentAccentColor = computed(
-  () => appearance.presets.find((preset) => preset.key === appearance.primary)?.base,
-)
-
-// The tab's router outlet is the "presenting element" that makes the modal
-// render as an iOS card (page scaled behind the sheet). See Ionic card modal
-// docs: https://ionicframework.com/docs/api/modal#card-modal
 const presentingElement = ref<HTMLElement | null>(null)
 onMounted(() => {
   presentingElement.value = document.querySelector('ion-router-outlet')
 })
 
-function selectAccentColor(key: string) {
-  appearance.setPrimary(key)
-  isColorModalOpen.value = false
-}
-
-// --- Option lists -------------------------------------------------------------
-const LANGUAGES: { value: AppLanguage; label: string }[] = [
-  { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
-  { value: 'fr', label: 'Français' },
+const LANGUAGES: { value: AppLanguage; label: string; flag: string }[] = [
+  { value: 'ru', label: 'Русский', flag: 'ru' },
+  { value: 'en', label: 'English', flag: 'gb' },
+  { value: 'fr', label: 'Français', flag: 'fr' },
 ]
 
 const currencyItems = CURRENCIES.map((currency) => ({
   label: `${currency.symbol} ${currency.label}`,
   value: currency.code,
 }))
-
 const dateFormatItems = DATE_FORMATS
+
+const themeItems = computed(() => [
+  { value: 'light', label: t('settings.systemRegion.themeLight'), icon: sunnyOutline },
+  { value: 'dark', label: t('settings.systemRegion.themeDark'), icon: moonOutline },
+  { value: 'auto', label: t('settings.systemRegion.themeSystem'), icon: desktopOutline },
+])
+const appearanceItems = computed(() =>
+  appearance.presets.map((preset) => ({
+    value: preset.key,
+    label: t(`appearance.colors.${preset.key}`),
+    swatchColor: preset.base,
+  })),
+)
+const timeFormatItems = computed(() => [
+  { value: 12, label: t('settings.systemRegion.timeFormat12') },
+  { value: 24, label: t('settings.systemRegion.timeFormat24') },
+])
+const firstDayItems = computed(() => [
+  { value: 1, label: t('settings.systemRegion.firstDayMonday') },
+  { value: 0, label: t('settings.systemRegion.firstDaySunday') },
+])
+const calendarViewItems = computed(() => [
+  {
+    value: 'timeGridDay',
+    label: t('settings.systemRegion.calendarViewDay'),
+    icon: todayOutline,
+  },
+  {
+    value: 'timeGridWeek',
+    label: t('settings.systemRegion.calendarViewWeek'),
+    icon: calendarClearOutline,
+  },
+  {
+    value: 'dayGridMonth',
+    label: t('settings.systemRegion.calendarViewMonth'),
+    icon: calendarOutline,
+  },
+])
 
 const SLOT_STEP_VALUES = [5, 10, 15, 20, 30, 60]
 const slotStepItems = computed(() =>
@@ -145,10 +162,6 @@ const slotStepItems = computed(() =>
   })),
 )
 
-// Live preview of how prices will look with the selected currency.
-const pricePreview = computed(() => formats.price(1234.56, state.value.currency))
-
-// --- Time zones ---------------------------------------------------------------
 function timeZoneLabel(timeZone: string): string {
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -185,91 +198,128 @@ const baseTimeZones =
     ? Intl.supportedValuesOf('timeZone')
     : FALLBACK_TIME_ZONES
 const baseTimeZoneSet = new Set(baseTimeZones)
-
-// Keep the currently saved zone selectable even if it isn't in the IANA list.
 const allTimeZones = computed(() => {
-  const tz = state.value.timezone
-  return tz && !baseTimeZoneSet.has(tz) ? [tz, ...baseTimeZones] : baseTimeZones
+  const timeZone = state.value.timezone
+  return timeZone && !baseTimeZoneSet.has(timeZone) ? [timeZone, ...baseTimeZones] : baseTimeZones
 })
-
-const currentTimeZoneLabel = computed(() => timeZoneLabel(state.value.timezone))
-
-// Time zones as picker items — the searchable card modal handles the full IANA
-// set (IonSelect's action sheet is unusable at that length).
 const timeZoneItems = computed(() =>
-  allTimeZones.value.map((tz) => ({ value: tz, label: timeZoneLabel(tz) })),
+  allTimeZones.value.map((timeZone) => ({
+    value: timeZone,
+    label: timeZoneLabel(timeZone),
+  })),
 )
-
-// --- Picker modals (iOS card style) -------------------------------------------
-// Language, currency and time zone all open a ListPickerModal card instead of a
-// native select, for a consistent full-screen picking experience.
-const isLanguageModalOpen = ref(false)
-const isCurrencyModalOpen = ref(false)
-const isTimeZoneModalOpen = ref(false)
 
 const currentLanguageLabel = computed(
-  () => LANGUAGES.find((lang) => lang.value === state.value.language)?.label ?? '',
+  () => LANGUAGES.find((item) => item.value === state.value.language)?.label ?? '',
 )
-const currentCurrencyLabel = computed(
-  () => currencyItems.find((item) => item.value === state.value.currency)?.label ?? '',
+const currentThemeLabel = computed(
+  () => themeItems.value.find((item) => item.value === state.value.theme)?.label ?? '',
 )
+const currentAppearanceLabel = computed(
+  () => appearanceItems.value.find((item) => item.value === appearance.primary)?.label ?? '',
+)
+const currentAccentColor = computed(
+  () => appearance.presets.find((preset) => preset.key === appearance.primary)?.base,
+)
+const currentDateFormatLabel = computed(
+  () => dateFormatItems.find((item) => item.value === state.value.dateFormat)?.label ?? '',
+)
+const currentTimeFormatLabel = computed(
+  () => timeFormatItems.value.find((item) => item.value === state.value.timeFormat)?.label ?? '',
+)
+const currentTimeZoneLabel = computed(() => timeZoneLabel(state.value.timezone))
+const currentFirstDayLabel = computed(
+  () => firstDayItems.value.find((item) => item.value === state.value.firstDay)?.label ?? '',
+)
+const currentCalendarViewLabel = computed(
+  () =>
+    calendarViewItems.value.find((item) => item.value === state.value.calendarView)?.label ?? '',
+)
+const currentSlotStepLabel = computed(
+  () => slotStepItems.value.find((item) => item.value === state.value.slotStepMinutes)?.label ?? '',
+)
+const pricePreview = computed(() => formats.price(1234.56, state.value.currency))
+
+const skeletonGroups = computed(() => [
+  { key: 'interface', header: t('settings.systemRegion.sectionInterface'), rows: 3 },
+  { key: 'formats', header: t('settings.systemRegion.sectionFormats'), rows: 4 },
+  { key: 'calendar', header: t('settings.systemRegion.sectionCalendar'), rows: 3 },
+])
+
+const isLanguageModalOpen = ref(false)
+const isThemeModalOpen = ref(false)
+const isAppearanceModalOpen = ref(false)
+const isCurrencyModalOpen = ref(false)
+const isDateFormatModalOpen = ref(false)
+const isTimeFormatModalOpen = ref(false)
+const isTimeZoneModalOpen = ref(false)
+const isFirstDayModalOpen = ref(false)
+const isCalendarViewModalOpen = ref(false)
+const isSlotStepModalOpen = ref(false)
 
 function onLanguageSelected(value: string | number) {
   state.value.language = value as AppLanguage
 }
+function onThemeSelected(value: string | number) {
+  if (value === 'light' || value === 'dark' || value === 'auto') state.value.theme = value
+}
+function onAppearanceSelected(value: string | number) {
+  const key = String(value)
+  if (appearance.presets.some((preset) => preset.key === key)) appearance.setPrimary(key)
+}
 function onCurrencySelected(value: string | number) {
   state.value.currency = String(value)
+}
+function onDateFormatSelected(value: string | number) {
+  state.value.dateFormat = String(value)
+}
+function onTimeFormatSelected(value: string | number) {
+  state.value.timeFormat = (Number(value) === 12 ? 12 : 24) as TimeFormat
 }
 function onTimeZoneSelected(value: string | number) {
   state.value.timezone = String(value)
 }
-
-// --- Segment change handlers (Ionic segment values are strings) ---------------
-function onThemeChange(value: string | number | undefined) {
-  if (value === 'light' || value === 'dark' || value === 'auto') state.value.theme = value
-}
-function onTimeFormatChange(value: string | number | undefined) {
-  state.value.timeFormat = (Number(value) === 12 ? 12 : 24) as TimeFormat
-}
-function onFirstDayChange(value: string | number | undefined) {
+function onFirstDaySelected(value: string | number) {
   state.value.firstDay = (Number(value) === 0 ? 0 : 1) as CalendarFirstDay
 }
-function onCalendarViewChange(value: string | number | undefined) {
-  if (
-    value === 'timeGridDay' ||
-    value === 'timeGridWeek' ||
-    value === 'dayGridMonth'
-  ) {
+function onCalendarViewSelected(value: string | number) {
+  if (value === 'timeGridDay' || value === 'timeGridWeek' || value === 'dayGridMonth') {
     state.value.calendarView = value as MasterCalendarViewType
   }
 }
+function onSlotStepSelected(value: string | number) {
+  const minutes = Number(value)
+  if (SLOT_STEP_VALUES.includes(minutes)) state.value.slotStepMinutes = minutes
+}
 
-// --- Save ---------------------------------------------------------------------
 async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
   await toast.present()
 }
 
 async function onSave() {
-  if (!isDirty.value) return
+  if (!hasUnsavedChanges.value || isSaving.value) return
   isSaving.value = true
-  try {
-    const prefs = preferences.value
-    const profile = prefs?.profile ?? null
-    const timezoneChanged = Boolean(prefs) && state.value.timezone !== prefs?.timeZone
+  const systemSettingsChanged = isDirty.value
 
-    const requests: Promise<unknown>[] = [updateSystemMutation.mutateAsync(toUpdate())]
-    // Time zone lives in profile.schedule.timezone — persist it separately,
-    // preserving the working-hours days. Skip when there's no profile row yet.
-    if (timezoneChanged && profile) {
-      requests.push(updateScheduleMutation.mutateAsync(toScheduleUpdate(profile)))
+  try {
+    if (systemSettingsChanged) {
+      const prefs = preferences.value
+      const profile = prefs?.profile ?? null
+      const timezoneChanged = Boolean(prefs) && state.value.timezone !== prefs?.timeZone
+      const requests: Promise<unknown>[] = [updateSystemMutation.mutateAsync(toUpdate())]
+
+      if (timezoneChanged && profile) {
+        requests.push(updateScheduleMutation.mutateAsync(toScheduleUpdate(profile)))
+      }
+      await Promise.all(requests)
     }
 
-    await Promise.all(requests)
     reset()
-    // Refresh the global preferences store so app-wide consumers (price/date
-    // formatting, calendar) pick up the new settings without a reload.
-    if (userId.value) void masterPreferencesStore.loadPreferences(userId.value)
+    savedAccentColor.value = appearance.primary
+    if (systemSettingsChanged && userId.value) {
+      void masterPreferencesStore.loadPreferences(userId.value)
+    }
     await showToast(t('settings.systemRegion.saveSuccess'), 'success')
   } catch {
     await showToast(t('settings.systemRegion.saveError'), 'danger')
@@ -277,208 +327,165 @@ async function onSave() {
     isSaving.value = false
   }
 }
+
+function onDiscard() {
+  discard()
+  appearance.setPrimary(savedAccentColor.value)
+}
 </script>
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/settings" />
+          <ion-back-button
+            default-href="/tabs/settings"
+            text=""
+            :icon="arrowBackOutline"
+            color="dark"
+          />
         </ion-buttons>
         <ion-title>{{ $t('settings.systemRegion.title') }}</ion-title>
-        <ion-buttons slot="end">
-          <ion-button strong :disabled="!isDirty || isSaving" @click="onSave">
-            <ion-spinner v-if="isSaving" name="crescent" />
-            <span v-else>{{ $t('common.done') }}</span>
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <!-- Loading skeletons -->
-      <ion-list v-if="isPending" inset>
-        <ion-item v-for="n in 6" :key="`skeleton-${n}`" lines="full">
-          <ion-label>
-            <h3><ion-skeleton-text :animated="true" style="width: 45%" /></h3>
-            <p><ion-skeleton-text :animated="true" style="width: 70%" /></p>
-          </ion-label>
-          <ion-skeleton-text slot="end" :animated="true" style="width: 88px; height: 20px" />
-        </ion-item>
-      </ion-list>
-
-      <template v-else>
-        <!-- Language & theme -->
-        <ion-list inset>
-          <ion-list-header>
-            <ion-label>{{ $t('settings.systemRegion.language') }}</ion-label>
-          </ion-list-header>
-          <ion-item button detail @click="isLanguageModalOpen = true">
+    <ion-content :fullscreen="true" class="system-content ion-padding-vertical">
+      <template v-if="isPending">
+        <inset-list v-for="group in skeletonGroups" :key="group.key" :header="group.header">
+          <ion-item v-for="index in group.rows" :key="index">
             <ion-label>
-              <p>{{ $t('settings.systemRegion.language') }}</p>
-              <h3>{{ currentLanguageLabel }}</h3>
+              <ion-skeleton-text :animated="true" class="skeleton-title" />
+              <ion-skeleton-text :animated="true" class="skeleton-description" />
             </ion-label>
+            <ion-skeleton-text slot="end" :animated="true" class="skeleton-value" />
           </ion-item>
-          <ion-item lines="none">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.theme') }}</p>
-            </ion-label>
-          </ion-item>
-          <div class="segment-wrap">
-            <ion-segment :value="state.theme" @ion-change="onThemeChange($event.detail.value)">
-              <ion-segment-button value="light">
-                <ion-label>{{ $t('settings.systemRegion.themeLight') }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="dark">
-                <ion-label>{{ $t('settings.systemRegion.themeDark') }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="auto">
-                <ion-label>{{ $t('settings.systemRegion.themeSystem') }}</ion-label>
-              </ion-segment-button>
-            </ion-segment>
-          </div>
-
-          <!-- Accent color -->
-          <ion-item button detail lines="none" @click="isColorModalOpen = true">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.accentColor') }}</p>
-              <h3>{{ $t(`appearance.colors.${appearance.primary}`) }}</h3>
-            </ion-label>
-            <span slot="end" class="color-dot" :style="{ backgroundColor: currentAccentColor }" />
-          </ion-item>
-        </ion-list>
-
-        <!-- Currency & formats -->
-        <ion-list inset>
-          <ion-list-header>
-            <ion-label>{{ $t('settings.systemRegion.currency') }}</ion-label>
-          </ion-list-header>
-          <ion-item button detail @click="isCurrencyModalOpen = true">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.currency') }}</p>
-              <h3>{{ currentCurrencyLabel }}</h3>
-            </ion-label>
-            <ion-note slot="end" class="price-preview">{{ pricePreview }}</ion-note>
-          </ion-item>
-
-          <ion-item>
-            <ion-select
-              v-model="state.dateFormat"
-              interface="popover"
-              :label="$t('settings.systemRegion.dateFormat')"
-              label-placement="stacked"
-            >
-              <ion-select-option
-                v-for="item in dateFormatItems"
-                :key="item.value"
-                :value="item.value"
-              >
-                {{ item.label }}
-              </ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item lines="none">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.timeFormat') }}</p>
-            </ion-label>
-          </ion-item>
-          <div class="segment-wrap">
-            <ion-segment
-              :value="String(state.timeFormat)"
-              @ion-change="onTimeFormatChange($event.detail.value)"
-            >
-              <ion-segment-button value="12">
-                <ion-label>{{ $t('settings.systemRegion.timeFormat12') }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="24">
-                <ion-label>{{ $t('settings.systemRegion.timeFormat24') }}</ion-label>
-              </ion-segment-button>
-            </ion-segment>
-          </div>
-        </ion-list>
-
-        <!-- Calendar -->
-        <ion-list inset>
-          <ion-list-header>
-            <ion-label>{{ $t('settings.systemRegion.timeZone') }}</ion-label>
-          </ion-list-header>
-          <ion-item button detail @click="isTimeZoneModalOpen = true">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.timeZone') }}</p>
-              <h3>{{ currentTimeZoneLabel }}</h3>
-            </ion-label>
-          </ion-item>
-
-          <ion-item lines="none">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.firstDay') }}</p>
-            </ion-label>
-          </ion-item>
-          <div class="segment-wrap">
-            <ion-segment
-              :value="String(state.firstDay)"
-              @ion-change="onFirstDayChange($event.detail.value)"
-            >
-              <ion-segment-button value="1">
-                <ion-label>{{ $t('settings.systemRegion.firstDayMonday') }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="0">
-                <ion-label>{{ $t('settings.systemRegion.firstDaySunday') }}</ion-label>
-              </ion-segment-button>
-            </ion-segment>
-          </div>
-
-          <ion-item lines="none">
-            <ion-label>
-              <p>{{ $t('settings.systemRegion.calendarView') }}</p>
-            </ion-label>
-          </ion-item>
-          <div class="segment-wrap">
-            <ion-segment
-              :value="state.calendarView"
-              @ion-change="onCalendarViewChange($event.detail.value)"
-            >
-              <ion-segment-button value="timeGridDay">
-                <ion-label>{{ $t('settings.systemRegion.calendarViewDay') }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="timeGridWeek">
-                <ion-label>{{ $t('settings.systemRegion.calendarViewWeek') }}</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="dayGridMonth">
-                <ion-label>{{ $t('settings.systemRegion.calendarViewMonth') }}</ion-label>
-              </ion-segment-button>
-            </ion-segment>
-          </div>
-
-          <ion-item>
-            <ion-select
-              v-model="state.slotStepMinutes"
-              interface="popover"
-              :label="$t('settings.systemRegion.slotStep')"
-              label-placement="stacked"
-            >
-              <ion-select-option
-                v-for="item in slotStepItems"
-                :key="item.value"
-                :value="item.value"
-              >
-                {{ item.label }}
-              </ion-select-option>
-            </ion-select>
-          </ion-item>
-        </ion-list>
+        </inset-list>
       </template>
 
-      <!-- Language / currency / time zone pickers (iOS card modals) -->
+      <template v-else>
+        <inset-list :header="$t('settings.systemRegion.sectionInterface')">
+          <ion-item button detail @click="isLanguageModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.language') }}</h2>
+              <p>{{ $t('settings.systemRegion.languageDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentLanguageLabel }}</ion-label>
+          </ion-item>
+
+          <ion-item button detail @click="isThemeModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.theme') }}</h2>
+              <p>{{ $t('settings.systemRegion.themeDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentThemeLabel }}</ion-label>
+          </ion-item>
+
+          <ion-item button detail @click="isAppearanceModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.appearance') }}</h2>
+              <p>{{ $t('settings.systemRegion.appearanceDescription') }}</p>
+            </ion-label>
+            <div slot="end" class="setting-value setting-value--color">
+              <span
+                class="color-dot"
+                :style="{ backgroundColor: currentAccentColor }"
+                aria-hidden="true"
+              />
+              <span>{{ currentAppearanceLabel }}</span>
+            </div>
+          </ion-item>
+        </inset-list>
+
+        <inset-list :header="$t('settings.systemRegion.sectionFormats')">
+          <ion-item button detail @click="isCurrencyModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.currency') }}</h2>
+              <p>{{ $t('settings.systemRegion.currencyDescription') }}</p>
+            </ion-label>
+            <div slot="end" class="setting-value setting-value--stacked">
+              <span>{{ state.currency }}</span>
+              <small>{{ pricePreview }}</small>
+            </div>
+          </ion-item>
+
+          <ion-item button detail @click="isDateFormatModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.dateFormat') }}</h2>
+              <p>{{ $t('settings.systemRegion.dateFormatDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentDateFormatLabel }}</ion-label>
+          </ion-item>
+
+          <ion-item button detail @click="isTimeFormatModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.timeFormat') }}</h2>
+              <p>{{ $t('settings.systemRegion.timeFormatDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentTimeFormatLabel }}</ion-label>
+          </ion-item>
+
+          <ion-item button detail @click="isTimeZoneModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.timeZone') }}</h2>
+              <p>{{ $t('settings.systemRegion.timeZoneDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value setting-value--timezone">
+              {{ currentTimeZoneLabel }}
+            </ion-label>
+          </ion-item>
+        </inset-list>
+
+        <inset-list :header="$t('settings.systemRegion.sectionCalendar')">
+          <ion-item button detail @click="isFirstDayModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.firstDay') }}</h2>
+              <p>{{ $t('settings.systemRegion.firstDayDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentFirstDayLabel }}</ion-label>
+          </ion-item>
+
+          <ion-item button detail @click="isCalendarViewModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.calendarView') }}</h2>
+              <p>{{ $t('settings.systemRegion.calendarViewDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentCalendarViewLabel }}</ion-label>
+          </ion-item>
+
+          <ion-item button detail @click="isSlotStepModalOpen = true">
+            <ion-label class="setting-copy">
+              <h2>{{ $t('settings.systemRegion.slotStep') }}</h2>
+              <p>{{ $t('settings.systemRegion.slotStepDescription') }}</p>
+            </ion-label>
+            <ion-label slot="end" class="setting-value">{{ currentSlotStepLabel }}</ion-label>
+          </ion-item>
+        </inset-list>
+      </template>
+
       <list-picker-modal
         v-model:is-open="isLanguageModalOpen"
         :title="$t('settings.systemRegion.language')"
         :items="LANGUAGES"
         :model-value="state.language"
-        :presenting-element="presentingElement"
+        sheet
         @update:model-value="onLanguageSelected"
+      />
+      <list-picker-modal
+        v-model:is-open="isThemeModalOpen"
+        :title="$t('settings.systemRegion.theme')"
+        :items="themeItems"
+        :model-value="state.theme"
+        sheet
+        @update:model-value="onThemeSelected"
+      />
+      <list-picker-modal
+        v-model:is-open="isAppearanceModalOpen"
+        :title="$t('settings.systemRegion.appearance')"
+        :items="appearanceItems"
+        :model-value="appearance.primary"
+        sheet
+        @update:model-value="onAppearanceSelected"
       />
       <list-picker-modal
         v-model:is-open="isCurrencyModalOpen"
@@ -489,6 +496,22 @@ async function onSave() {
         @update:model-value="onCurrencySelected"
       />
       <list-picker-modal
+        v-model:is-open="isDateFormatModalOpen"
+        :title="$t('settings.systemRegion.dateFormat')"
+        :items="dateFormatItems"
+        :model-value="state.dateFormat"
+        sheet
+        @update:model-value="onDateFormatSelected"
+      />
+      <list-picker-modal
+        v-model:is-open="isTimeFormatModalOpen"
+        :title="$t('settings.systemRegion.timeFormat')"
+        :items="timeFormatItems"
+        :model-value="state.timeFormat"
+        sheet
+        @update:model-value="onTimeFormatSelected"
+      />
+      <list-picker-modal
         v-model:is-open="isTimeZoneModalOpen"
         :title="$t('settings.systemRegion.timeZone')"
         :items="timeZoneItems"
@@ -497,61 +520,172 @@ async function onSave() {
         :presenting-element="presentingElement"
         @update:model-value="onTimeZoneSelected"
       />
-
-      <!-- Accent color picker (iOS card modal) -->
-      <ion-modal
-        :is-open="isColorModalOpen"
-        :presenting-element="presentingElement ?? undefined"
-        @did-dismiss="isColorModalOpen = false"
-      >
-        <ion-header>
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-button @click="isColorModalOpen = false">{{ $t('common.done') }}</ion-button>
-            </ion-buttons>
-            <ion-title>{{ $t('settings.systemRegion.accentColor') }}</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <ion-list inset>
-            <ion-item
-              v-for="preset in appearance.presets"
-              :key="preset.key"
-              button
-              :detail="false"
-              @click="selectAccentColor(preset.key)"
-            >
-              <span slot="start" class="color-dot" :style="{ backgroundColor: preset.base }" />
-              <ion-label>{{ $t(`appearance.colors.${preset.key}`) }}</ion-label>
-              <ion-icon
-                v-if="preset.key === appearance.primary"
-                slot="end"
-                :icon="checkmark"
-                color="primary"
-                aria-hidden="true"
-              />
-            </ion-item>
-          </ion-list>
-        </ion-content>
-      </ion-modal>
+      <list-picker-modal
+        v-model:is-open="isFirstDayModalOpen"
+        :title="$t('settings.systemRegion.firstDay')"
+        :items="firstDayItems"
+        :model-value="state.firstDay"
+        sheet
+        @update:model-value="onFirstDaySelected"
+      />
+      <list-picker-modal
+        v-model:is-open="isCalendarViewModalOpen"
+        :title="$t('settings.systemRegion.calendarView')"
+        :items="calendarViewItems"
+        :model-value="state.calendarView"
+        sheet
+        @update:model-value="onCalendarViewSelected"
+      />
+      <list-picker-modal
+        v-model:is-open="isSlotStepModalOpen"
+        :title="$t('settings.systemRegion.slotStep')"
+        :items="slotStepItems"
+        :model-value="state.slotStepMinutes"
+        sheet
+        @update:model-value="onSlotStepSelected"
+      />
     </ion-content>
+
+    <ion-footer v-if="hasUnsavedChanges" :translucent="true" class="ion-no-border">
+      <ion-toolbar>
+        <ion-buttons slot="start" class="ion-padding-end">
+          <ion-button
+            color="medium"
+            :disabled="isSaving"
+            :aria-label="$t('common.discard')"
+            @click="onDiscard"
+          >
+            <ion-icon slot="icon-only" :icon="arrowUndoOutline" aria-hidden="true" />
+          </ion-button>
+        </ion-buttons>
+        <ion-button
+          class="save-button"
+          expand="block"
+          :disabled="isSaving"
+          :aria-busy="isSaving"
+          @click="onSave"
+        >
+          <span :class="{ 'save-button-label--hidden': isSaving }">
+            {{ $t('common.saveChanges') }}
+          </span>
+          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
   </ion-page>
 </template>
 
 <style scoped>
-.segment-wrap {
-  padding: 4px 12px 12px;
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
 }
 
-.price-preview {
-  font-weight: 600;
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+.system-content {
+  --padding-bottom: 20px;
+}
+
+.setting-copy {
+  min-width: 0;
+  margin-block: 10px;
+}
+
+.setting-copy h2,
+.setting-copy p {
+  margin: 0;
+}
+
+.setting-copy h2 {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.setting-copy p {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.setting-value {
+  max-width: 42%;
+  color: var(--ion-color-medium);
+  font-size: 0.82rem;
+  text-align: end;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.setting-value--color {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.setting-value--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.setting-value--stacked small {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.setting-value--timezone {
+  max-width: 46%;
 }
 
 .color-dot {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-title {
+  width: 45%;
+  height: 14px;
+}
+
+.skeleton-description {
+  width: 72%;
+  height: 10px;
+  margin-top: 7px;
+}
+
+.skeleton-value {
+  width: 76px;
+  height: 18px;
+}
+
+ion-footer ion-toolbar {
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.save-button {
+  position: relative;
+}
+
+.save-button-label--hidden {
+  opacity: 0;
+}
+
+.save-button-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 </style>
