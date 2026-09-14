@@ -295,6 +295,9 @@ export default {
   services: {
     title: 'Services',
     subtitle: 'Gérez les services que vous proposez à vos clients.',
+    mobileInfo:
+      'Ajoutez des services pour les utiliser dans les réservations, calculer la durée des rendez-vous et suivre les revenus.',
+    filterLabel: 'Filtrer les services par catégorie',
     description:
       "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
     addService: 'Ajouter un service',
@@ -319,11 +322,13 @@ export default {
     form: {
       createTitle: 'Ajouter un service',
       editTitle: 'Modifier le service',
+      editTitleMobile: 'Modifier',
       name: 'Nom du service',
       namePlaceholder: 'ex. Coupe de cheveux',
       description: 'Description',
       descriptionPlaceholder: 'Décrivez le service…',
       duration: 'Durée',
+      durationPlaceholder: 'Choisissez une durée',
       price: 'Prix',
       pricePlaceholder: '0',
       category: 'Catégorie',
@@ -334,6 +339,8 @@ export default {
       categoryCreateError: 'Échec de la création de la catégorie',
       color: 'Couleur',
       isActive: 'Actif',
+      isActiveDescription:
+        'Les services inactifs ne peuvent pas être sélectionnés lors de la création d’une réservation.',
       minutesLabel: '{n} min',
       save: 'Enregistrer',
       saveSuccess: 'Service enregistré',

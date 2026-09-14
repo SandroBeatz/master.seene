@@ -295,6 +295,9 @@ export default {
   services: {
     title: 'Services',
     subtitle: 'Manage the services you offer to your clients.',
+    mobileInfo:
+      'Add services to use them in client bookings, calculate visit duration, and track income.',
+    filterLabel: 'Filter services by category',
     description:
       "Welcome back to your dashboard. Here's what's happening with your projects today.",
     addService: 'Add service',
@@ -318,11 +321,13 @@ export default {
     form: {
       createTitle: 'Add service',
       editTitle: 'Edit service',
+      editTitleMobile: 'Edit',
       name: 'Service name',
       namePlaceholder: 'e.g. Haircut',
       description: 'Description',
       descriptionPlaceholder: 'Describe the service…',
       duration: 'Duration',
+      durationPlaceholder: 'Choose a duration',
       price: 'Price',
       pricePlaceholder: '0',
       category: 'Category',
@@ -333,6 +338,7 @@ export default {
       categoryCreateError: 'Failed to create category',
       color: 'Color',
       isActive: 'Active',
+      isActiveDescription: 'Inactive services cannot be selected when creating a booking.',
       minutesLabel: '{n} min',
       save: 'Save',
       saveSuccess: 'Service saved',

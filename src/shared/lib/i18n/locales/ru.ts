@@ -292,6 +292,9 @@ export default {
   services: {
     title: 'Услуги',
     subtitle: 'Управляйте услугами, которые вы предлагаете клиентам.',
+    mobileInfo:
+      'Добавьте услуги, чтобы использовать их при записи клиентов, рассчитывать длительность визита и учитывать доход.',
+    filterLabel: 'Фильтр услуг по категориям',
     description: 'С возвращением на ваш дашборд. Вот что происходит с вашими проектами сегодня.',
     addService: 'Добавить услугу',
     addFirstService: 'Добавить первую услугу',
@@ -314,11 +317,13 @@ export default {
     form: {
       createTitle: 'Добавить услугу',
       editTitle: 'Редактировать услугу',
+      editTitleMobile: 'Редактировать',
       name: 'Название услуги',
       namePlaceholder: 'Например, Стрижка',
       description: 'Описание',
       descriptionPlaceholder: 'Опишите услугу…',
       duration: 'Длительность',
+      durationPlaceholder: 'Выберите длительность',
       price: 'Цена',
       pricePlaceholder: '0',
       category: 'Категория',
@@ -329,6 +334,7 @@ export default {
       categoryCreateError: 'Не удалось создать категорию',
       color: 'Цвет',
       isActive: 'Активна',
+      isActiveDescription: 'Неактивную услугу нельзя выбрать при создании записи.',
       minutesLabel: '{n} мин',
       save: 'Сохранить',
       saveSuccess: 'Услуга сохранена',
