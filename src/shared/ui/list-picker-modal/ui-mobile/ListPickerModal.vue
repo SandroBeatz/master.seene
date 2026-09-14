@@ -15,6 +15,7 @@ import {
   IonIcon,
 } from '@ionic/vue'
 import { checkmark, closeOutline } from 'ionicons/icons'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
 // Native Ionic single-select picker. Long lists use the existing iOS card
 // presentation; short lists can opt into a content-sized sheet via `sheet`.
@@ -24,6 +25,7 @@ type PickerValue = string | number
 interface PickerItem {
   value: PickerValue
   label: string
+  icon?: string
   swatchColor?: string
 }
 
@@ -46,8 +48,11 @@ const query = ref('')
 
 const sheetStyle = computed(() => {
   if (!props.sheet) return undefined
-  const height = 88 + props.items.length * 49
-  return { '--height': `min(${height}px, 82vh)` }
+  const height = 104 + props.items.length * 49
+  return {
+    '--height': `min(${height}px, 82vh)`,
+    '--border-radius': '20px 20px 0 0',
+  }
 })
 
 // Clear the filter whenever the sheet opens so a stale query never hides the
@@ -87,7 +92,7 @@ function select(value: PickerValue) {
     :handle="sheet"
     @did-dismiss="close"
   >
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border" :class="{ 'sheet-header': sheet }">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-button
@@ -108,8 +113,8 @@ function select(value: PickerValue) {
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <ion-list :inset="sheet">
+    <ion-content :class="{ 'sheet-content': sheet }">
+      <component :is="sheet ? InsetList : IonList" class="picker-list">
         <ion-item
           v-for="item in filteredItems"
           :key="String(item.value)"
@@ -117,8 +122,15 @@ function select(value: PickerValue) {
           :detail="false"
           @click="select(item.value)"
         >
+          <ion-icon
+            v-if="item.icon"
+            slot="start"
+            class="picker-icon"
+            :icon="item.icon"
+            aria-hidden="true"
+          />
           <span
-            v-if="item.swatchColor"
+            v-else-if="item.swatchColor"
             slot="start"
             class="picker-swatch"
             :style="{ backgroundColor: item.swatchColor }"
@@ -133,18 +145,32 @@ function select(value: PickerValue) {
             aria-hidden="true"
           />
         </ion-item>
-      </ion-list>
+      </component>
     </ion-content>
   </ion-modal>
 </template>
 
 <style scoped>
-.list-picker-modal--sheet {
-  --border-radius: 16px 16px 0 0;
+.sheet-header {
+  padding-top: 12px;
 }
 
 .list-picker-modal--sheet ion-toolbar {
   --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.sheet-content {
+  --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.sheet-content .picker-list {
+  margin-top: 8px;
+}
+
+.picker-icon {
+  margin-inline-end: 14px;
+  color: var(--ion-color-medium);
+  font-size: 22px;
 }
 
 .picker-swatch {
