@@ -17,12 +17,13 @@ import {
   IonIcon,
   IonToggle,
   IonSpinner,
-  IonButton,
+  IonFab,
+  IonFabButton,
   alertController,
   toastController,
 } from '@ionic/vue'
 import {
-  addOutline,
+  add,
   arrowBackOutline,
   cardOutline,
   cashOutline,
@@ -51,6 +52,9 @@ const userId = computed(() => sessionStore.session?.user.id ?? '')
 const { data: paymentTypes, isPending } = usePaymentTypesQuery(userId)
 const setActiveMutation = useSetPaymentTypeActiveMutation(userId)
 const deleteMutation = useDeletePaymentTypeMutation(userId)
+// UI-only placeholder for the future account-level setting. It intentionally
+// does not persist or alter payment-method data yet.
+const isPaymentTypesEnabled = ref(true)
 
 onMounted(async () => {
   if (userId.value) await ensureSystemPaymentTypes(userId.value)
@@ -172,7 +176,7 @@ async function onSwipeEdit(paymentType: PaymentType, event: Event) {
 
     <ion-content :fullscreen="true" class="ion-padding-vertical">
       <inset-list>
-        <ion-item lines="none" class="hint-item">
+        <ion-item class="hint-item">
           <ion-icon
             slot="start"
             :icon="informationCircleOutline"
@@ -183,6 +187,17 @@ async function onSwipeEdit(paymentType: PaymentType, event: Event) {
             {{ $t('settings.paymentTypes.subtitle') }}
           </ion-label>
         </ion-item>
+        <ion-item lines="none" class="feature-toggle-item">
+          <ion-label class="ion-text-wrap">
+            <h2>{{ $t('settings.paymentTypes.featureToggle.label') }}</h2>
+            <p>{{ $t('settings.paymentTypes.featureToggle.description') }}</p>
+          </ion-label>
+          <ion-toggle
+            v-model="isPaymentTypesEnabled"
+            slot="end"
+            :aria-label="$t('settings.paymentTypes.featureToggle.label')"
+          />
+        </ion-item>
       </inset-list>
 
       <div v-if="isPending" class="loading-state" aria-live="polite">
@@ -192,6 +207,7 @@ async function onSwipeEdit(paymentType: PaymentType, event: Event) {
       <inset-list v-else-if="list.length">
         <ion-item-sliding v-for="paymentType in list" :key="paymentType.id">
           <ion-item
+            class="payment-method-item"
             :button="paymentType.kind === 'custom'"
             :detail="paymentType.kind === 'custom'"
             @click="openEdit(paymentType)"
@@ -221,6 +237,7 @@ async function onSwipeEdit(paymentType: PaymentType, event: Event) {
             </ion-label>
 
             <ion-toggle
+              v-if="paymentType.kind !== 'custom'"
               slot="end"
               :checked="paymentType.is_active"
               :disabled="setActiveMutation.isLoading.value"
@@ -259,12 +276,14 @@ async function onSwipeEdit(paymentType: PaymentType, event: Event) {
         </ion-item>
       </inset-list>
 
-      <div v-if="!isPending" class="add-action">
-        <ion-button expand="block" fill="outline" @click="openCreate">
-          <ion-icon slot="start" :icon="addOutline" aria-hidden="true" />
-          {{ $t('settings.paymentTypes.addCustomButton') }}
-        </ion-button>
-      </div>
+      <ion-fab v-if="!isPending" slot="fixed" vertical="bottom" horizontal="end">
+        <ion-fab-button
+          :aria-label="$t('settings.paymentTypes.addCustomButton')"
+          @click="openCreate"
+        >
+          <ion-icon :icon="add" aria-hidden="true" />
+        </ion-fab-button>
+      </ion-fab>
 
       <payment-type-form-mobile
         v-model:is-open="isFormOpen"
@@ -303,6 +322,24 @@ ion-header ion-toolbar {
   line-height: 1.35;
 }
 
+.feature-toggle-item {
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+}
+
+.feature-toggle-item h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.feature-toggle-item p {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .loading-state {
   display: flex;
   justify-content: center;
@@ -320,6 +357,23 @@ ion-header ion-toolbar {
   border-radius: 12px;
   font-size: 21px;
   transition: opacity 160ms ease;
+}
+
+ion-item-sliding {
+  background: var(--se-surface-card, #fff);
+}
+
+ion-item-sliding:not(:last-child) {
+  border-bottom: 1px solid var(--se-separator, rgb(0 0 0 / 11%));
+}
+
+ion-item.payment-method-item {
+  --min-height: 68px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  --background: var(--se-surface-card, #fff) !important;
+  --border-width: 0;
+  --inner-border-width: 0;
 }
 
 .method-tile--system {
@@ -372,15 +426,5 @@ ion-header ion-toolbar {
   color: var(--ion-color-medium);
   font-size: 0.8rem;
   line-height: 1.35;
-}
-
-.add-action {
-  padding-inline: 16px;
-}
-
-.add-action ion-button {
-  min-height: 48px;
-  margin: 0;
-  --border-radius: 12px;
 }
 </style>
