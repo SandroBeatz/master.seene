@@ -11,7 +11,8 @@ import {
   IonButton,
   IonIcon,
   IonContent,
-  IonChip,
+  IonSegment,
+  IonSegmentButton,
   IonLabel,
   IonItem,
   IonItemSliding,
@@ -93,10 +94,6 @@ watch(
 
 function handleReorder(event: CustomEvent<ItemReorderEventDetail>) {
   displayList.value = event.detail.complete([...displayList.value])
-}
-
-function selectCategory(id: string) {
-  activeCategory.value = id
 }
 
 const isFormOpen = ref(false)
@@ -218,23 +215,19 @@ function categoryName(service: Service): string {
       </inset-list>
 
       <div v-if="categoryChips.length > 1" class="category-filter-shell">
-        <div class="category-filter" role="group" :aria-label="$t('services.filterLabel')">
-          <ion-chip
-            v-for="chip in categoryChips"
-            :key="chip.id"
-            :outline="activeCategory !== chip.id"
-            :color="activeCategory === chip.id ? 'primary' : 'medium'"
-            role="button"
-            tabindex="0"
-            :aria-pressed="activeCategory === chip.id"
-            @click="selectCategory(chip.id)"
-            @keydown.enter.prevent="selectCategory(chip.id)"
-            @keydown.space.prevent="selectCategory(chip.id)"
-          >
-            <ion-label>{{ chip.label }}</ion-label>
-            <span class="chip-count">{{ chip.count }}</span>
-          </ion-chip>
-        </div>
+        <ion-segment
+          v-model="activeCategory"
+          class="category-filter"
+          scrollable
+          :aria-label="$t('services.filterLabel')"
+        >
+          <ion-segment-button v-for="chip in categoryChips" :key="chip.id" :value="chip.id">
+            <ion-label class="segment-label">
+              <span>{{ chip.label }}</span>
+              <span class="segment-count">{{ chip.count }}</span>
+            </ion-label>
+          </ion-segment-button>
+        </ion-segment>
       </div>
 
       <div v-if="isPending" class="loading-state" aria-live="polite">
@@ -354,41 +347,33 @@ ion-header ion-toolbar {
 }
 
 .category-filter {
-  display: flex;
   width: 100%;
-  gap: 8px;
-  padding-block: 2px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-inline: contain;
   scrollbar-width: none;
-  touch-action: pan-x;
-  -webkit-overflow-scrolling: touch;
 }
 
 .category-filter::-webkit-scrollbar {
   display: none;
 }
 
-.category-filter ion-chip {
+.category-filter ion-segment-button {
   flex: 0 0 auto;
-  min-height: 34px;
-  margin-inline: 0;
+  min-width: auto;
+  min-height: 36px;
+  --padding-start: 16px;
+  --padding-end: 16px;
   font-size: 0.82rem;
 }
 
-.chip-count {
-  display: inline-flex;
+.segment-label {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  margin-inline-start: 7px;
-  padding-inline: 5px;
-  border-radius: 999px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  gap: 7px;
+}
+
+.segment-count {
   font-size: 0.7rem;
   font-weight: 700;
+  opacity: 0.7;
 }
 
 .loading-state {
