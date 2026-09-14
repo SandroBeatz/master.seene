@@ -655,7 +655,8 @@ export default {
     },
     about: {
       title: 'About',
-      description: 'App information and version details.',
+      description: 'Your personal assistant for clients and appointments.',
+      body: 'Seene helps beauty professionals manage their schedule, bookings, clients and income — everything needed for everyday work in one app.',
       version: 'Version',
     },
     profile: {

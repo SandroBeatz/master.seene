@@ -9,6 +9,7 @@ export { default as SettingsContactsPage } from './ui-mobile/SettingsContactsPag
 export { default as SettingsWorkingHoursPage } from './ui-mobile/SettingsWorkingHoursPage.vue'
 export { default as SettingsBookingPage } from './ui-mobile/SettingsBookingPage.vue'
 export { default as SettingsNotificationsPage } from './ui-mobile/SettingsNotificationsPage.vue'
+export { default as SettingsAboutPage } from './ui-mobile/SettingsAboutPage.vue'
 export { default as SettingsSystemRegionPage } from './ui-mobile/SettingsSystemRegionPage.vue'
 export { default as SettingsAccountPage } from './ui-mobile/SettingsAccountPage.vue'
 export { default as SettingsPaymentTypesPage } from './ui-mobile/SettingsPaymentTypesPage.vue'
