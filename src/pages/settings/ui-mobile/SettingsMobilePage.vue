@@ -113,7 +113,12 @@ const groups = computed<SettingsGroup[]>(() => [
         icon: personCircleOutline,
         to: '/settings/account',
       },
-      { key: 'about', label: t('settings.nav.about'), icon: informationCircleOutline },
+      {
+        key: 'about',
+        label: t('settings.nav.about'),
+        icon: informationCircleOutline,
+        to: '/settings/about',
+      },
     ],
   },
 ])

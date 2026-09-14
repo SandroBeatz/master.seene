@@ -659,7 +659,8 @@ export default {
     },
     about: {
       title: 'À propos',
-      description: "Informations sur l'application et détails de version.",
+      description: 'Votre assistant personnel pour vos clients et rendez-vous.',
+      body: 'Seene aide les professionnels de la beauté à gérer leur planning, leurs rendez-vous, leurs clients et leurs revenus — tout le nécessaire au quotidien dans une seule application.',
       version: 'Version',
     },
     profile: {
