@@ -784,7 +784,8 @@ export default {
       onlineOff: 'Online booking off',
       onlineToggleAria: 'Toggle online booking',
       autoConfirm: 'Auto-confirm new online bookings',
-      autoConfirmDescription: 'New bookings are confirmed automatically instead of waiting for your approval.',
+      autoConfirmDescription:
+        'New bookings are confirmed automatically instead of waiting for your approval.',
       defaultStatus: 'Default status for new bookings',
       defaultStatusDescription: 'How online requests arrive in your calendar.',
       statusAutoConfirmed: 'Auto-confirmed',
@@ -995,7 +996,11 @@ export default {
     },
     paymentTypes: {
       title: 'Payment methods',
-      subtitle: 'Tell clients how they can pay you. Toggles apply right away.',
+      subtitle: 'Use payment methods to see where your money is and keep an accurate budget.',
+      featureToggle: {
+        label: 'Track payment methods',
+        description: 'Allocate income by payment method when managing your budget.',
+      },
       addCustomButton: 'Add custom method',
       emptyTitle: 'No payment methods yet',
       emptyDescription: 'Add your first payment method to start using it in appointments.',
@@ -1020,10 +1025,12 @@ export default {
       },
       form: {
         titleCreate: 'Add payment method',
-        titleEdit: 'Edit payment method',
+        titleEdit: 'Edit',
         name: 'Name',
         namePlaceholder: 'e.g. Card',
         color: 'Color',
+        active: 'Active',
+        activeDescription: 'Show this method when adding a payment.',
         preview: 'Method preview',
         submitCreate: 'Add',
         submitEdit: 'Save',

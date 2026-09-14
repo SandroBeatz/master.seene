@@ -9,7 +9,6 @@ import {
   IonBackButton,
   IonTitle,
   IonContent,
-  IonList,
   IonItem,
   IonItemSliding,
   IonItemOptions,
@@ -23,7 +22,16 @@ import {
   alertController,
   toastController,
 } from '@ionic/vue'
-import { add, cash, card, cashOutline, createOutline, trash } from 'ionicons/icons'
+import {
+  add,
+  arrowBackOutline,
+  cardOutline,
+  cashOutline,
+  createOutline,
+  informationCircleOutline,
+  trashOutline,
+  walletOutline,
+} from 'ionicons/icons'
 import {
   usePaymentTypesQuery,
   useSetPaymentTypeActiveMutation,
@@ -35,41 +43,40 @@ import {
 } from '@entities/payment-type'
 import { PaymentTypeFormMobile } from '@features/payment-type-form/index.mobile'
 import { useSessionStore } from '@entities/session'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 
-// The same Colada query the desktop payment methods page uses — shared cache,
-// shared Supabase call. Nothing about data fetching is duplicated for mobile.
 const { data: paymentTypes, isPending } = usePaymentTypesQuery(userId)
 const setActiveMutation = useSetPaymentTypeActiveMutation(userId)
 const deleteMutation = useDeletePaymentTypeMutation(userId)
+// UI-only placeholder for the future account-level setting. It intentionally
+// does not persist or alter payment-method data yet.
+const isPaymentTypesEnabled = ref(true)
 
-// System methods (cash/card) must exist before the list is meaningful.
 onMounted(async () => {
   if (userId.value) await ensureSystemPaymentTypes(userId.value)
 })
 
-// Server already returns methods in their sort order.
 const list = computed(() => paymentTypes.value ?? [])
 
-// --- Display helpers -------------------------------------------------------
 const KIND_ICON: Record<PaymentTypeKind, string> = {
-  cash,
-  card,
-  custom: cashOutline,
+  cash: cashOutline,
+  card: cardOutline,
+  custom: walletOutline,
 }
 
-function methodName(pt: PaymentType): string {
-  if (pt.kind === 'cash') return t('settings.paymentTypes.system.cash.name')
-  if (pt.kind === 'card') return t('settings.paymentTypes.system.card.name')
-  return pt.name
+function methodName(paymentType: PaymentType): string {
+  if (paymentType.kind === 'cash') return t('settings.paymentTypes.system.cash.name')
+  if (paymentType.kind === 'card') return t('settings.paymentTypes.system.card.name')
+  return paymentType.name
 }
 
-function methodSubtitle(pt: PaymentType): string {
-  if (pt.kind === 'cash') return t('settings.paymentTypes.system.cash.subtitle')
-  if (pt.kind === 'card') return t('settings.paymentTypes.system.card.subtitle')
+function methodSubtitle(paymentType: PaymentType): string {
+  if (paymentType.kind === 'cash') return t('settings.paymentTypes.system.cash.subtitle')
+  if (paymentType.kind === 'card') return t('settings.paymentTypes.system.card.subtitle')
   return ''
 }
 
@@ -78,15 +85,14 @@ async function showToast(message: string, color: 'success' | 'danger') {
   await toast.present()
 }
 
-async function onToggle(pt: PaymentType, value: boolean) {
+async function onToggle(paymentType: PaymentType, value: boolean) {
   try {
-    await setActiveMutation.mutateAsync({ id: pt.id, is_active: value })
+    await setActiveMutation.mutateAsync({ id: paymentType.id, is_active: value })
   } catch {
     await showToast(t('settings.paymentTypes.saveError'), 'danger')
   }
 }
 
-// --- Create / edit ---------------------------------------------------------
 const isFormOpen = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
 const editing = ref<PaymentType | null>(null)
@@ -102,136 +108,180 @@ function openCreate() {
   isFormOpen.value = true
 }
 
-function openEdit(pt: PaymentType) {
-  if (isSystemPaymentType(pt)) return
+function openEdit(paymentType: PaymentType) {
+  if (isSystemPaymentType(paymentType)) return
   formMode.value = 'edit'
-  editing.value = pt
+  editing.value = paymentType
   isFormOpen.value = true
 }
 
-// --- Delete (custom only) --------------------------------------------------
-async function deletePaymentType(pt: PaymentType) {
+async function deletePaymentType(paymentType: PaymentType): Promise<boolean> {
   try {
-    await deleteMutation.mutateAsync(pt.id)
+    await deleteMutation.mutateAsync(paymentType.id)
     await showToast(t('settings.paymentTypes.deleteSuccess'), 'success')
+    return true
   } catch {
     await showToast(t('settings.paymentTypes.deleteError'), 'danger')
+    return false
   }
 }
 
-async function confirmDelete(pt: PaymentType) {
+async function confirmDelete(paymentType: PaymentType): Promise<boolean> {
   const alert = await alertController.create({
     header: t('settings.paymentTypes.deleteConfirmTitle'),
-    message: t('settings.paymentTypes.deleteConfirmBody', { name: methodName(pt) }),
+    message: t('settings.paymentTypes.deleteConfirmBody', { name: methodName(paymentType) }),
     buttons: [
       { text: t('settings.paymentTypes.form.cancel'), role: 'cancel' },
-      {
-        text: t('settings.paymentTypes.deleteAction'),
-        role: 'destructive',
-        handler: () => {
-          void deletePaymentType(pt)
-        },
-      },
+      { text: t('settings.paymentTypes.deleteAction'), role: 'destructive' },
     ],
   })
   await alert.present()
-  await alert.onDidDismiss()
+  const result = await alert.onDidDismiss()
+  if (result.role !== 'destructive') return false
+  return deletePaymentType(paymentType)
 }
 
-async function onSwipeDelete(pt: PaymentType, ev: Event) {
-  const sliding = (ev.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
+async function onSwipeDelete(paymentType: PaymentType, event: Event) {
+  const sliding = (event.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
     | (HTMLElement & { close: () => Promise<void> })
     | null
-  await confirmDelete(pt)
+  await confirmDelete(paymentType)
   await sliding?.close()
 }
 
-async function onSwipeEdit(pt: PaymentType, ev: Event) {
-  const sliding = (ev.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
+async function onSwipeEdit(paymentType: PaymentType, event: Event) {
+  const sliding = (event.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
     | (HTMLElement & { close: () => Promise<void> })
     | null
   await sliding?.close()
-  openEdit(pt)
+  openEdit(paymentType)
 }
 </script>
 
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/settings" />
+          <ion-back-button
+            default-href="/tabs/settings"
+            text=""
+            :icon="arrowBackOutline"
+            color="dark"
+          />
         </ion-buttons>
         <ion-title>{{ $t('settings.paymentTypes.title') }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">{{ $t('settings.paymentTypes.title') }}</ion-title>
-        </ion-toolbar>
-      </ion-header>
+    <ion-content :fullscreen="true" class="ion-padding-vertical">
+      <inset-list>
+        <ion-item class="hint-item">
+          <ion-icon
+            slot="start"
+            :icon="informationCircleOutline"
+            color="primary"
+            aria-hidden="true"
+          />
+          <ion-label class="ion-text-wrap hint-text">
+            {{ $t('settings.paymentTypes.subtitle') }}
+          </ion-label>
+        </ion-item>
+        <ion-item lines="none" class="feature-toggle-item">
+          <ion-label class="ion-text-wrap">
+            <h2>{{ $t('settings.paymentTypes.featureToggle.label') }}</h2>
+            <p>{{ $t('settings.paymentTypes.featureToggle.description') }}</p>
+          </ion-label>
+          <ion-toggle
+            v-model="isPaymentTypesEnabled"
+            slot="end"
+            :aria-label="$t('settings.paymentTypes.featureToggle.label')"
+          />
+        </ion-item>
+      </inset-list>
 
-      <div v-if="isPending" class="flex justify-center py-10">
-        <ion-spinner />
+      <div v-if="isPending" class="loading-state" aria-live="polite">
+        <ion-spinner name="crescent" />
       </div>
 
-      <ion-list v-else inset>
-        <ion-item-sliding v-for="pt in list" :key="pt.id">
+      <inset-list v-else-if="list.length">
+        <ion-item-sliding v-for="paymentType in list" :key="paymentType.id">
           <ion-item
-            :button="pt.kind === 'custom'"
-            :detail="pt.kind === 'custom'"
-            :class="{ 'se-inactive': !pt.is_active }"
-            @click="openEdit(pt)"
+            class="payment-method-item"
+            :button="paymentType.kind === 'custom'"
+            :detail="paymentType.kind === 'custom'"
+            @click="openEdit(paymentType)"
           >
             <span
               slot="start"
-              class="se-method-tile"
+              class="method-tile"
+              :class="{
+                'method-tile--system': paymentType.kind !== 'custom',
+                'method-content--inactive': !paymentType.is_active,
+              }"
               :style="
-                pt.kind === 'custom'
-                  ? { backgroundColor: `${pt.color}1a`, color: pt.color }
+                paymentType.kind === 'custom'
+                  ? { backgroundColor: `${paymentType.color}1a`, color: paymentType.color }
                   : undefined
               "
-              :class="{ 'se-method-tile--system': pt.kind !== 'custom' }"
             >
-              <ion-icon :icon="KIND_ICON[pt.kind]" aria-hidden="true" />
+              <ion-icon :icon="KIND_ICON[paymentType.kind]" aria-hidden="true" />
             </span>
-            <ion-label>
-              <h2>{{ methodName(pt) }}</h2>
-              <p v-if="methodSubtitle(pt)">{{ methodSubtitle(pt) }}</p>
+
+            <ion-label
+              class="method-label"
+              :class="{ 'method-content--inactive': !paymentType.is_active }"
+            >
+              <h2>{{ methodName(paymentType) }}</h2>
+              <p v-if="methodSubtitle(paymentType)">{{ methodSubtitle(paymentType) }}</p>
             </ion-label>
+
             <ion-toggle
+              v-if="paymentType.kind !== 'custom'"
               slot="end"
-              :checked="pt.is_active"
-              :aria-label="$t('settings.paymentTypes.subtitle')"
+              :checked="paymentType.is_active"
+              :disabled="setActiveMutation.isLoading.value"
+              :aria-label="`${methodName(paymentType)}: ${$t('settings.paymentTypes.subtitle')}`"
               @click.stop
-              @ion-change="onToggle(pt, $event.detail.checked)"
+              @ion-change="onToggle(paymentType, $event.detail.checked)"
             />
           </ion-item>
-          <ion-item-options v-if="pt.kind === 'custom'" side="end">
+
+          <ion-item-options v-if="paymentType.kind === 'custom'" side="end">
             <ion-item-option
               color="medium"
               :aria-label="$t('settings.paymentTypes.form.titleEdit')"
-              @click="onSwipeEdit(pt, $event)"
+              @click="onSwipeEdit(paymentType, $event)"
             >
               <ion-icon slot="icon-only" :icon="createOutline" />
             </ion-item-option>
             <ion-item-option
               color="danger"
               :aria-label="$t('settings.paymentTypes.deleteAction')"
-              @click="onSwipeDelete(pt, $event)"
+              @click="onSwipeDelete(paymentType, $event)"
             >
-              <ion-icon slot="icon-only" :icon="trash" />
+              <ion-icon slot="icon-only" :icon="trashOutline" />
             </ion-item-option>
           </ion-item-options>
         </ion-item-sliding>
-      </ion-list>
+      </inset-list>
 
-      <!-- Primary add action, bottom-right per Material/iOS FAB pattern. -->
-      <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-        <ion-fab-button :aria-label="$t('settings.paymentTypes.addCustomButton')" @click="openCreate">
-          <ion-icon :icon="add" />
+      <inset-list v-else>
+        <ion-item lines="none" class="empty-item">
+          <ion-icon slot="start" :icon="walletOutline" aria-hidden="true" />
+          <ion-label class="ion-text-wrap">
+            <h2>{{ $t('settings.paymentTypes.emptyTitle') }}</h2>
+            <p>{{ $t('settings.paymentTypes.emptyDescription') }}</p>
+          </ion-label>
+        </ion-item>
+      </inset-list>
+
+      <ion-fab v-if="!isPending" slot="fixed" vertical="bottom" horizontal="end">
+        <ion-fab-button
+          :aria-label="$t('settings.paymentTypes.addCustomButton')"
+          @click="openCreate"
+        >
+          <ion-icon :icon="add" aria-hidden="true" />
         </ion-fab-button>
       </ion-fab>
 
@@ -240,31 +290,146 @@ async function onSwipeEdit(pt: PaymentType, ev: Event) {
         :mode="formMode"
         :payment-type="editing"
         :presenting-element="presentingElement"
-        @delete="confirmDelete"
       />
     </ion-content>
   </ion-page>
 </template>
 
 <style scoped>
-.se-method-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  margin-inline-end: 12px;
-  font-size: 20px;
-  flex-shrink: 0;
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
 }
 
-.se-method-tile--system {
-  background-color: var(--ion-color-step-100, #f2f2f2);
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+.hint-item {
+  --padding-top: 6px;
+  --padding-bottom: 6px;
+}
+
+.hint-item ion-icon[slot='start'] {
+  color: var(--ion-color-primary);
+  font-size: 22px;
+}
+
+.hint-text {
+  margin: 0;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.feature-toggle-item {
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+}
+
+.feature-toggle-item h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.feature-toggle-item p {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 28px 16px 36px;
+}
+
+.method-tile {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-inline-end: 12px;
+  border-radius: 12px;
+  font-size: 21px;
+  transition: opacity 160ms ease;
+}
+
+ion-item-sliding {
+  background: var(--se-surface-card, #fff);
+}
+
+ion-item-sliding:not(:last-child) {
+  border-bottom: 1px solid var(--se-separator, rgb(0 0 0 / 11%));
+}
+
+ion-item.payment-method-item {
+  --min-height: 64px;
+  --padding-top: 5px;
+  --padding-bottom: 5px;
+  --background: var(--se-surface-card, #fff) !important;
+  --border-width: 0;
+  --inner-border-width: 0;
+}
+
+ion-fab {
+  margin-inline-end: 8px;
+  margin-bottom: 8px;
+}
+
+.method-tile--system {
+  background: var(--ion-color-step-100, #e8e8ed);
   color: var(--ion-color-medium);
 }
 
-.se-inactive {
-  opacity: 0.55;
+.method-label {
+  min-width: 0;
+  transition: opacity 160ms ease;
+}
+
+.method-label h2 {
+  overflow: hidden;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.method-label p {
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.method-content--inactive {
+  opacity: 0.45;
+}
+
+.empty-item {
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+}
+
+.empty-item ion-icon {
+  color: var(--ion-color-medium);
+}
+
+.empty-item h2 {
+  font-weight: 600;
+}
+
+.empty-item p {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 </style>
