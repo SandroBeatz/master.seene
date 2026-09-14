@@ -645,7 +645,7 @@ export default {
       groupSystem: 'Système',
       groupWorkspace: 'Espace de travail',
       profile: 'Profil',
-      contacts: 'Contacts et réseaux',
+      contacts: 'Contacts et adresse',
       workingHours: 'Heures de travail',
       booking: 'Réservation',
       paymentMethods: 'Modes de paiement',

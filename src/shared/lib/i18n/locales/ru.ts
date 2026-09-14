@@ -636,7 +636,7 @@ export default {
       groupSystem: 'Система',
       groupWorkspace: 'Рабочее пространство',
       profile: 'Профиль',
-      contacts: 'Контакты и соцсети',
+      contacts: 'Контакты и адрес',
       workingHours: 'Рабочие часы',
       booking: 'Онлайн-запись',
       paymentMethods: 'Способы оплаты',

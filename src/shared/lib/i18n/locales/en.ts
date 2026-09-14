@@ -641,7 +641,7 @@ export default {
       groupSystem: 'System',
       groupWorkspace: 'Workspace',
       profile: 'Profile',
-      contacts: 'Contacts & social',
+      contacts: 'Contacts & address',
       workingHours: 'Working hours',
       booking: 'Booking',
       paymentMethods: 'Payment methods',
