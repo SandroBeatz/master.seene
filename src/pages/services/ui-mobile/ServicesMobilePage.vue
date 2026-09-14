@@ -30,6 +30,7 @@ import {
   add,
   arrowBackOutline,
   checkmark,
+  createOutline,
   informationCircleOutline,
   swapVertical,
   trashOutline,
@@ -158,6 +159,14 @@ async function onSwipeDelete(service: Service, event: Event) {
   await sliding?.close()
 }
 
+async function onSwipeEdit(service: Service, event: Event) {
+  const sliding = (event.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
+    | (HTMLElement & { close: () => Promise<void> })
+    | null
+  await sliding?.close()
+  openEdit(service)
+}
+
 function categoryName(service: Service): string {
   return service.category?.name ?? t('services.form.allServices')
 }
@@ -208,26 +217,24 @@ function categoryName(service: Service): string {
         </ion-item>
       </inset-list>
 
-      <div
-        v-if="categoryChips.length > 1"
-        class="category-filter"
-        :aria-label="$t('services.filterLabel')"
-      >
-        <ion-chip
-          v-for="chip in categoryChips"
-          :key="chip.id"
-          :outline="activeCategory !== chip.id"
-          :color="activeCategory === chip.id ? 'primary' : 'medium'"
-          role="button"
-          tabindex="0"
-          :aria-pressed="activeCategory === chip.id"
-          @click="selectCategory(chip.id)"
-          @keydown.enter.prevent="selectCategory(chip.id)"
-          @keydown.space.prevent="selectCategory(chip.id)"
-        >
-          <ion-label>{{ chip.label }}</ion-label>
-          <span class="chip-count">{{ chip.count }}</span>
-        </ion-chip>
+      <div v-if="categoryChips.length > 1" class="category-filter-shell">
+        <div class="category-filter" role="group" :aria-label="$t('services.filterLabel')">
+          <ion-chip
+            v-for="chip in categoryChips"
+            :key="chip.id"
+            :outline="activeCategory !== chip.id"
+            :color="activeCategory === chip.id ? 'primary' : 'medium'"
+            role="button"
+            tabindex="0"
+            :aria-pressed="activeCategory === chip.id"
+            @click="selectCategory(chip.id)"
+            @keydown.enter.prevent="selectCategory(chip.id)"
+            @keydown.space.prevent="selectCategory(chip.id)"
+          >
+            <ion-label>{{ chip.label }}</ion-label>
+            <span class="chip-count">{{ chip.count }}</span>
+          </ion-chip>
+        </div>
       </div>
 
       <div v-if="isPending" class="loading-state" aria-live="polite">
@@ -265,6 +272,13 @@ function categoryName(service: Service): string {
               <ion-reorder slot="end" />
             </ion-item>
             <ion-item-options v-if="!reorderEnabled" side="end">
+              <ion-item-option
+                color="medium"
+                :aria-label="$t('services.form.editTitleMobile')"
+                @click="onSwipeEdit(service, $event)"
+              >
+                <ion-icon slot="icon-only" :icon="createOutline" aria-hidden="true" />
+              </ion-item-option>
               <ion-item-option
                 color="danger"
                 :aria-label="$t('services.deleteAction')"
@@ -304,6 +318,12 @@ ion-header ion-toolbar {
 }
 
 .reorder-button {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  --padding-start: 0;
+  --padding-end: 0;
+  --border-radius: 50%;
   --box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
 }
 
@@ -328,14 +348,21 @@ ion-header ion-toolbar {
   line-height: 1.4;
 }
 
-.category-filter {
-  display: flex;
-  gap: 4px;
+.category-filter-shell {
   margin: -6px 0 20px;
   padding-inline: 16px;
+}
+
+.category-filter {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  padding-block: 2px;
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-inline: contain;
   scrollbar-width: none;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -417,9 +444,7 @@ ion-item-sliding:not(:last-child) {
   width: 12px;
   height: 12px;
   margin-inline-end: 14px;
-  border: 2px solid rgb(255 255 255 / 70%);
   border-radius: 50%;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 8%);
   flex-shrink: 0;
 }
 
