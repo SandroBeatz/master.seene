@@ -368,12 +368,17 @@ ion-item-sliding:not(:last-child) {
 }
 
 ion-item.payment-method-item {
-  --min-height: 68px;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
+  --min-height: 64px;
+  --padding-top: 5px;
+  --padding-bottom: 5px;
   --background: var(--se-surface-card, #fff) !important;
   --border-width: 0;
   --inner-border-width: 0;
+}
+
+ion-fab {
+  margin-inline-end: 8px;
+  margin-bottom: 8px;
 }
 
 .method-tile--system {
