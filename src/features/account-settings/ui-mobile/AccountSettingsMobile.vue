@@ -29,7 +29,7 @@ onMounted(() => {
         </span>
         <h2>{{ $t('settings.account.upgrade.title') }}</h2>
         <p>{{ $t('settings.account.upgrade.description') }}</p>
-        <ion-button expand="block" color="light" @click="plansOpen = true">
+        <ion-button expand="block" size="default" color="light" @click="plansOpen = true">
           {{ $t('settings.account.upgrade.button') }}
           <ion-icon slot="end" :icon="arrowUpOutline" aria-hidden="true" />
         </ion-button>
@@ -122,8 +122,6 @@ onMounted(() => {
 }
 
 .upgrade-card ion-button {
-  min-height: 48px;
-  margin: 20px 0 0;
-  --border-radius: 999px;
+  margin-top: 20px;
 }
 </style>
