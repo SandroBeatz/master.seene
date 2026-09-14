@@ -11,10 +11,8 @@ import {
   IonButton,
   IonIcon,
   IonContent,
-  IonSegment,
-  IonSegmentButton,
+  IonChip,
   IonLabel,
-  IonList,
   IonItem,
   IonItemSliding,
   IonItemOptions,
@@ -28,42 +26,45 @@ import {
   toastController,
   type ItemReorderEventDetail,
 } from '@ionic/vue'
-import { add, checkmark, swapVertical, trash } from 'ionicons/icons'
 import {
-  useServicesQuery,
-  useDeleteServiceMutation,
-  type Service,
-} from '@entities/service'
+  add,
+  arrowBackOutline,
+  checkmark,
+  informationCircleOutline,
+  swapVertical,
+  trashOutline,
+} from 'ionicons/icons'
+import { useServicesQuery, useDeleteServiceMutation, type Service } from '@entities/service'
 import { useServiceCategoriesQuery } from '@entities/service-category'
 import { ServiceFormMobile } from '@features/service-form/index.mobile'
 import { useSessionStore } from '@entities/session'
 import { useFormats } from '@shared/lib/formats'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
-const f = useFormats()
+const formats = useFormats()
 
-// The same Colada queries the desktop services page uses — shared cache, shared
-// Supabase calls. Nothing about data fetching is duplicated for mobile.
 const { data: services, isPending } = useServicesQuery(userId)
 const { data: categories } = useServiceCategoriesQuery(userId)
 const deleteMutation = useDeleteServiceMutation(userId)
 
-// Category filter — 'all' plus one entry per category, each with a live count.
 const activeCategory = ref<string>('all')
-
 const categoryChips = computed(() => {
   const list = services.value ?? []
-  const chips = [{ id: 'all', label: t('services.filterAll'), count: list.length }]
-  for (const c of categories.value ?? []) {
-    chips.push({
-      id: c.id,
-      label: c.name,
-      count: list.filter((s) => s.category_id === c.id).length,
-    })
-  }
-  return chips
+  return [
+    { id: 'all', label: t('services.filterAll'), count: list.length },
+    ...(categories.value ?? []).map((category) => ({
+      id: category.id,
+      label: category.name,
+      count: list.filter((service) => service.category_id === category.id).length,
+    })),
+  ]
+})
+
+watch(categoryChips, (chips) => {
+  if (!chips.some((chip) => chip.id === activeCategory.value)) activeCategory.value = 'all'
 })
 
 const filteredServices = computed(() => {
@@ -71,19 +72,14 @@ const filteredServices = computed(() => {
   const scoped =
     activeCategory.value === 'all'
       ? list
-      : list.filter((s) => s.category_id === activeCategory.value)
-  // Inactive services always sink to the bottom; within each group order by
-  // creation date (oldest first) — mirrors the desktop page.
+      : list.filter((service) => service.category_id === activeCategory.value)
+
   return [...scoped].sort((a, b) => {
     if (a.is_active !== b.is_active) return a.is_active ? -1 : 1
     return a.created_at.localeCompare(b.created_at)
   })
 })
 
-// --- Reorder ---------------------------------------------------------------
-// A local, mutable copy of the visible list so drag-reordering has something to
-// move. Not persisted yet — the manual order lives only until the data or the
-// active filter changes.
 const reorderEnabled = ref(false)
 const displayList = ref<Service[]>([])
 watch(
@@ -94,18 +90,19 @@ watch(
   { immediate: true },
 )
 
-function handleReorder(ev: CustomEvent<ItemReorderEventDetail>) {
-  displayList.value = ev.detail.complete([...displayList.value])
+function handleReorder(event: CustomEvent<ItemReorderEventDetail>) {
+  displayList.value = event.detail.complete([...displayList.value])
 }
 
-// --- Create / edit ---------------------------------------------------------
+function selectCategory(id: string) {
+  activeCategory.value = id
+}
+
 const isFormOpen = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
 const editing = ref<Service | null>(null)
-
-// The top-level router outlet is the "presenting element" that lets the modal
-// render as an iOS card (full-height sheet with the page scaled behind it).
 const presentingElement = ref<HTMLElement | null>(null)
+
 onMounted(() => {
   presentingElement.value = document.querySelector('ion-router-outlet')
 })
@@ -117,6 +114,7 @@ function openCreate() {
 }
 
 function openEdit(service: Service) {
+  if (reorderEnabled.value) return
   formMode.value = 'edit'
   editing.value = service
   isFormOpen.value = true
@@ -127,41 +125,33 @@ async function showToast(message: string, color: 'success' | 'danger') {
   await toast.present()
 }
 
-// --- Delete ----------------------------------------------------------------
-async function deleteService(service: Service) {
+async function deleteService(service: Service): Promise<boolean> {
   try {
     await deleteMutation.mutateAsync(service.id)
     await showToast(t('services.deleteSuccess'), 'success')
+    return true
   } catch {
     await showToast(t('services.deleteError'), 'danger')
+    return false
   }
 }
 
-// Shared confirm dialog — used both by the swipe action and by the form's
-// delete button (edit mode).
-async function confirmDelete(service: Service) {
+async function confirmDelete(service: Service): Promise<boolean> {
   const alert = await alertController.create({
     header: t('services.deleteConfirmTitle'),
     message: t('services.deleteConfirmBody', { name: service.name }),
     buttons: [
       { text: t('services.form.cancel'), role: 'cancel' },
-      {
-        text: t('services.deleteAction'),
-        role: 'destructive',
-        handler: () => {
-          void deleteService(service)
-        },
-      },
+      { text: t('services.deleteAction'), role: 'destructive' },
     ],
   })
   await alert.present()
-  await alert.onDidDismiss()
+  if ((await alert.onDidDismiss()).role !== 'destructive') return false
+  return deleteService(service)
 }
 
-// Swipe reveals a destructive option; confirm before deleting and collapse the
-// sliding item afterwards so a cancelled swipe doesn't stay stuck open.
-async function onSwipeDelete(service: Service, ev: Event) {
-  const sliding = (ev.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
+async function onSwipeDelete(service: Service, event: Event) {
+  const sliding = (event.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
     | (HTMLElement & { close: () => Promise<void> })
     | null
   await confirmDelete(service)
@@ -175,91 +165,121 @@ function categoryName(service: Service): string {
 
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/settings" />
+          <ion-back-button
+            default-href="/tabs/settings"
+            text=""
+            :icon="arrowBackOutline"
+            color="dark"
+          />
         </ion-buttons>
         <ion-title>{{ $t('services.title') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button
+            class="reorder-button"
+            fill="solid"
+            color="light"
+            shape="round"
             :aria-label="reorderEnabled ? $t('services.reorderDone') : $t('services.reorder')"
             @click="reorderEnabled = !reorderEnabled"
           >
-            <ion-icon slot="icon-only" :icon="reorderEnabled ? checkmark : swapVertical" />
+            <ion-icon
+              slot="icon-only"
+              :icon="reorderEnabled ? checkmark : swapVertical"
+              aria-hidden="true"
+            />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">{{ $t('services.title') }}</ion-title>
-        </ion-toolbar>
-      </ion-header>
+    <ion-content :fullscreen="true" class="services-content ion-padding-vertical">
+      <inset-list>
+        <ion-item lines="none" class="hint-item">
+          <ion-icon
+            slot="start"
+            :icon="informationCircleOutline"
+            color="primary"
+            aria-hidden="true"
+          />
+          <ion-label class="ion-text-wrap hint-text">{{ $t('services.mobileInfo') }}</ion-label>
+        </ion-item>
+      </inset-list>
 
-      <div v-if="isPending" class="flex justify-center py-10">
-        <ion-spinner />
+      <div
+        v-if="categoryChips.length > 1"
+        class="category-filter"
+        :aria-label="$t('services.filterLabel')"
+      >
+        <ion-chip
+          v-for="chip in categoryChips"
+          :key="chip.id"
+          :outline="activeCategory !== chip.id"
+          :color="activeCategory === chip.id ? 'primary' : 'medium'"
+          role="button"
+          tabindex="0"
+          :aria-pressed="activeCategory === chip.id"
+          @click="selectCategory(chip.id)"
+          @keydown.enter.prevent="selectCategory(chip.id)"
+          @keydown.space.prevent="selectCategory(chip.id)"
+        >
+          <ion-label>{{ chip.label }}</ion-label>
+          <span class="chip-count">{{ chip.count }}</span>
+        </ion-chip>
       </div>
 
-      <template v-else>
-        <!-- Category filter — horizontally scrollable so many categories fit. -->
-        <ion-segment
-          v-if="categoryChips.length > 1"
-          v-model="activeCategory"
-          scrollable
-          class="se-category-filter"
-        >
-          <ion-segment-button v-for="chip in categoryChips" :key="chip.id" :value="chip.id">
-            <ion-label>{{ chip.label }} ({{ chip.count }})</ion-label>
-          </ion-segment-button>
-        </ion-segment>
+      <div v-if="isPending" class="loading-state" aria-live="polite">
+        <ion-spinner name="crescent" />
+      </div>
 
-        <div v-if="!filteredServices.length" class="px-6 py-16 text-center">
-          <p class="text-lg font-semibold">{{ $t('services.emptyTitle') }}</p>
-          <p class="mt-1 text-sm text-gray-500">{{ $t('services.emptyDescription') }}</p>
-        </div>
+      <div v-else-if="!filteredServices.length" class="empty-state">
+        <h2>{{ $t('services.emptyTitle') }}</h2>
+        <p>{{ $t('services.emptyDescription') }}</p>
+      </div>
 
-        <ion-list v-else>
-          <ion-reorder-group :disabled="!reorderEnabled" @ion-item-reorder="handleReorder">
-            <ion-item-sliding v-for="service in displayList" :key="service.id">
-              <ion-item
-                button
-                :detail="!reorderEnabled"
-                :class="{ 'se-inactive': !service.is_active }"
-                @click="openEdit(service)"
+      <inset-list v-else>
+        <ion-reorder-group :disabled="!reorderEnabled" @ion-item-reorder="handleReorder">
+          <ion-item-sliding v-for="service in displayList" :key="service.id">
+            <ion-item
+              class="service-item"
+              :button="!reorderEnabled"
+              :detail="!reorderEnabled"
+              :class="{ 'service-item--inactive': !service.is_active }"
+              @click="openEdit(service)"
+            >
+              <span
+                slot="start"
+                class="service-color"
+                :style="{ backgroundColor: service.color }"
+                aria-hidden="true"
+              />
+              <ion-label class="service-copy">
+                <p class="service-category">{{ categoryName(service) }}</p>
+                <h2>{{ service.name }}</h2>
+                <p class="service-meta">
+                  {{ formats.duration(service.duration) }} · {{ formats.price(service.price) }}
+                </p>
+              </ion-label>
+              <ion-reorder slot="end" />
+            </ion-item>
+            <ion-item-options v-if="!reorderEnabled" side="end">
+              <ion-item-option
+                color="danger"
+                :aria-label="$t('services.deleteAction')"
+                @click="onSwipeDelete(service, $event)"
               >
-                <span
-                  slot="start"
-                  class="se-color-dot"
-                  :style="{ backgroundColor: service.color }"
-                />
-                <ion-label>
-                  <p class="se-category">{{ categoryName(service) }}</p>
-                  <h2>{{ service.name }}</h2>
-                  <p>{{ f.duration(service.duration) }} · {{ f.price(service.price) }}</p>
-                </ion-label>
-                <ion-reorder slot="end" />
-              </ion-item>
-              <ion-item-options side="end">
-                <ion-item-option
-                  color="danger"
-                  :aria-label="$t('services.deleteAction')"
-                  @click="onSwipeDelete(service, $event)"
-                >
-                  <ion-icon slot="icon-only" :icon="trash" />
-                </ion-item-option>
-              </ion-item-options>
-            </ion-item-sliding>
-          </ion-reorder-group>
-        </ion-list>
-      </template>
+                <ion-icon slot="icon-only" :icon="trashOutline" aria-hidden="true" />
+              </ion-item-option>
+            </ion-item-options>
+          </ion-item-sliding>
+        </ion-reorder-group>
+      </inset-list>
 
-      <!-- Primary add action, bottom-right per Material/iOS FAB pattern. -->
-      <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab v-if="!isPending" slot="fixed" vertical="bottom" horizontal="end">
         <ion-fab-button :aria-label="$t('services.addService')" @click="openCreate">
-          <ion-icon :icon="add" />
+          <ion-icon :icon="add" aria-hidden="true" />
         </ion-fab-button>
       </ion-fab>
 
@@ -268,36 +288,176 @@ function categoryName(service: Service): string {
         :mode="formMode"
         :service="editing"
         :presenting-element="presentingElement"
-        @delete="confirmDelete"
       />
     </ion-content>
   </ion-page>
 </template>
 
 <style scoped>
-.se-color-dot {
-  width: 6px;
-  align-self: stretch;
-  margin-block: 12px;
-  margin-inline-end: 12px;
-  border-radius: 9999px;
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+.reorder-button {
+  --box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+}
+
+.services-content {
+  --padding-bottom: 84px;
+}
+
+.hint-item {
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+}
+
+.hint-item ion-icon[slot='start'] {
+  color: var(--ion-color-primary);
+  font-size: 22px;
+}
+
+.hint-text {
+  margin: 0;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.category-filter {
+  display: flex;
+  gap: 4px;
+  margin: -6px 0 20px;
+  padding-inline: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.category-filter::-webkit-scrollbar {
+  display: none;
+}
+
+.category-filter ion-chip {
+  flex: 0 0 auto;
+  min-height: 34px;
+  margin-inline: 0;
+  font-size: 0.82rem;
+}
+
+.chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-inline-start: 7px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 28px 16px;
+}
+
+.empty-state {
+  padding: 44px 32px;
+  text-align: center;
+}
+
+.empty-state h2,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin-top: 5px;
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+ion-item-sliding {
+  background: var(--se-surface-card, #fff);
+}
+
+ion-item-sliding:not(:last-child) {
+  border-bottom: 1px solid var(--se-separator, rgb(0 0 0 / 11%));
+}
+
+.service-item {
+  --min-height: 70px;
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+  --background: var(--se-surface-card, #fff) !important;
+  --border-width: 0;
+  --inner-border-width: 0;
+}
+
+.service-item--inactive {
+  opacity: 0.5;
+}
+
+.service-color {
+  width: 12px;
+  height: 12px;
+  margin-inline-end: 14px;
+  border: 2px solid rgb(255 255 255 / 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 8%);
   flex-shrink: 0;
 }
 
-.se-category {
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.service-copy {
+  min-width: 0;
+}
+
+.service-category,
+.service-copy h2,
+.service-meta {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-category {
   color: var(--ion-color-medium);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
 }
 
-.se-inactive {
-  opacity: 0.55;
+.service-copy h2 {
+  margin-top: 2px;
+  font-size: 0.96rem;
+  font-weight: 600;
 }
 
-.se-category-filter {
-  padding-inline: 12px;
-  margin-block: 8px;
+.service-meta {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+}
+
+ion-fab {
+  margin-inline-end: 8px;
+  margin-bottom: 8px;
 }
 </style>
