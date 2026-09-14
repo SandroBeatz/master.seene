@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Joi from 'joi'
 import {
   IonModal,
   IonHeader,
@@ -10,45 +9,43 @@ import {
   IonButtons,
   IonButton,
   IonContent,
-  IonList,
-  IonListHeader,
+  IonFooter,
   IonItem,
   IonInput,
   IonLabel,
+  IonNote,
   IonIcon,
   IonSpinner,
+  alertController,
+  isPlatform,
   toastController,
 } from '@ionic/vue'
-import { cashOutline } from 'ionicons/icons'
+import { checkmark, closeOutline, trashOutline, walletOutline } from 'ionicons/icons'
 import {
   useCreatePaymentTypeMutation,
+  useDeletePaymentTypeMutation,
   useUpdatePaymentTypeMutation,
   type CreatePaymentTypeDto,
   type PaymentType,
 } from '@entities/payment-type'
 import { useSessionStore } from '@entities/session'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
   mode: 'create' | 'edit'
   paymentType?: PaymentType | null
-  // Parent element (router outlet / parent modal) — lets this present as an iOS
-  // card (page scaled behind the sheet). See Ionic "card modal" docs.
   presentingElement?: HTMLElement | null
 }>()
 
 const emit = defineEmits<{
   'update:isOpen': [boolean]
   saved: [paymentType: PaymentType]
-  // Deletion is owned by the parent (confirm dialog + mutation live on the
-  // list); the form just closes and hands the method back.
-  delete: [paymentType: PaymentType]
 }>()
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
-
 const isEdit = computed(() => props.mode === 'edit')
 
 const COLOR_PALETTE = [
@@ -73,13 +70,19 @@ const state = reactive<FormState>({
   name: '',
   color: COLOR_PALETTE[0]!,
 })
-
-const errors = reactive<Record<string, string>>({})
+const initialState = ref<FormState>({ ...state })
 const submitted = ref(false)
+const allowDismiss = ref(false)
+const isSubmitting = ref(false)
+
+function currentState(): FormState {
+  return { name: state.name, color: state.color }
+}
 
 function resetForm() {
   submitted.value = false
-  for (const key of Object.keys(errors)) delete errors[key]
+  allowDismiss.value = false
+
   if (isEdit.value && props.paymentType) {
     state.name = props.paymentType.name
     state.color = props.paymentType.color
@@ -87,10 +90,10 @@ function resetForm() {
     state.name = ''
     state.color = COLOR_PALETTE[0]!
   }
+
+  initialState.value = currentState()
 }
 
-// Re-seed every time the sheet opens so a reused component instance never shows
-// a previous method's data.
 watch(
   () => props.isOpen,
   (open) => {
@@ -98,53 +101,71 @@ watch(
   },
 )
 
-const schema = Joi.object({
-  name: Joi.string().trim().min(1).max(50).required(),
-  color: Joi.string().required(),
+const trimmedName = computed(() => state.name.trim())
+const isFormValid = computed(() => trimmedName.value.length > 0 && trimmedName.value.length <= 50)
+const isDirty = computed(
+  () => state.name !== initialState.value.name || state.color !== initialState.value.color,
+)
+const nameError = computed(() => {
+  if (!submitted.value) return undefined
+  if (!trimmedName.value) return t('common.validation.required')
+  if (trimmedName.value.length > 50) return t('common.validation.tooLong')
+  return undefined
 })
-
-function validate(): boolean {
-  for (const key of Object.keys(errors)) delete errors[key]
-  const { error } = schema.validate(
-    { name: state.name, color: state.color },
-    { abortEarly: false },
-  )
-  if (error) {
-    for (const detail of error.details) {
-      const field = String(detail.path[0])
-      if (errors[field]) continue
-      if (field === 'name') {
-        errors.name =
-          detail.type === 'string.max'
-            ? t('common.validation.tooLong')
-            : t('common.validation.required')
-      }
-    }
-  }
-  return Object.keys(errors).length === 0
-}
 
 const createMutation = useCreatePaymentTypeMutation(userId)
 const updateMutation = useUpdatePaymentTypeMutation(userId)
-const isLoading = computed(
-  () => createMutation.isLoading.value || updateMutation.isLoading.value,
+const deleteMutation = useDeletePaymentTypeMutation(userId)
+const isLoading = computed(() => isSubmitting.value || deleteMutation.isLoading.value)
+const canSubmit = computed(
+  () => isFormValid.value && (!isEdit.value || isDirty.value) && !isLoading.value,
 )
+const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
   await toast.present()
 }
 
-function close() {
+async function confirmDiscard(): Promise<boolean> {
+  const alert = await alertController.create({
+    header: t('common.unsavedChanges'),
+    message: t('common.unsavedChangesConfirm'),
+    buttons: [
+      { text: t('common.cancel'), role: 'cancel' },
+      { text: t('common.discard'), role: 'destructive' },
+    ],
+  })
+  await alert.present()
+  const result = await alert.onDidDismiss()
+  return result.role === 'destructive'
+}
+
+async function canDismiss(): Promise<boolean> {
+  if (isLoading.value) return false
+  if (allowDismiss.value || !isDirty.value) return true
+  return confirmDiscard()
+}
+
+async function close() {
+  if (isLoading.value) return
+  if (!allowDismiss.value && isDirty.value && !(await confirmDiscard())) return
+  allowDismiss.value = true
+  emit('update:isOpen', false)
+}
+
+function onDidDismiss() {
+  allowDismiss.value = false
   emit('update:isOpen', false)
 }
 
 async function onSubmit() {
   submitted.value = true
-  if (!validate()) return
+  if (!canSubmit.value) return
+  isSubmitting.value = true
 
   const dto: CreatePaymentTypeDto = {
-    name: state.name.trim(),
+    name: trimmedName.value,
     color: state.color,
     kind: 'custom',
     is_default: false,
@@ -153,26 +174,50 @@ async function onSubmit() {
   }
 
   try {
-    let saved: PaymentType
-    if (isEdit.value && props.paymentType) {
-      saved = await updateMutation.mutateAsync({ ...dto, id: props.paymentType.id })
-      await showToast(t('settings.paymentTypes.updateSuccess'), 'success')
-    } else {
-      saved = await createMutation.mutateAsync(dto)
-      await showToast(t('settings.paymentTypes.createSuccess'), 'success')
-    }
+    const saved =
+      isEdit.value && props.paymentType
+        ? await updateMutation.mutateAsync({ ...dto, id: props.paymentType.id })
+        : await createMutation.mutateAsync(dto)
+    await showToast(
+      isEdit.value
+        ? t('settings.paymentTypes.updateSuccess')
+        : t('settings.paymentTypes.createSuccess'),
+      'success',
+    )
+    initialState.value = currentState()
+    allowDismiss.value = true
     emit('saved', saved)
-    close()
+    emit('update:isOpen', false)
   } catch {
     await showToast(t('settings.paymentTypes.saveError'), 'danger')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
-function onDelete() {
-  if (!props.paymentType) return
-  const pt = props.paymentType
-  close()
-  emit('delete', pt)
+async function onDelete() {
+  if (!props.paymentType || isLoading.value) return
+
+  const alert = await alertController.create({
+    header: t('settings.paymentTypes.deleteConfirmTitle'),
+    message: t('settings.paymentTypes.deleteConfirmBody', { name: props.paymentType.name }),
+    buttons: [
+      { text: t('settings.paymentTypes.form.cancel'), role: 'cancel' },
+      { text: t('settings.paymentTypes.deleteAction'), role: 'destructive' },
+    ],
+  })
+  await alert.present()
+  const result = await alert.onDidDismiss()
+  if (result.role !== 'destructive') return
+
+  try {
+    await deleteMutation.mutateAsync(props.paymentType.id)
+    await showToast(t('settings.paymentTypes.deleteSuccess'), 'success')
+    allowDismiss.value = true
+    emit('update:isOpen', false)
+  } catch {
+    await showToast(t('settings.paymentTypes.deleteError'), 'danger')
+  }
 }
 </script>
 
@@ -180,15 +225,23 @@ function onDelete() {
   <ion-modal
     :is-open="isOpen"
     :presenting-element="presentingElement ?? undefined"
-    @did-dismiss="close"
+    :can-dismiss="canDismiss"
+    @did-dismiss="onDidDismiss"
   >
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-button :disabled="isLoading" @click="close">
-            {{ $t('settings.paymentTypes.form.cancel') }}
+          <ion-button
+            fill="clear"
+            color="dark"
+            :disabled="isLoading"
+            :aria-label="$t('common.close')"
+            @click="close"
+          >
+            <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
+
         <ion-title>
           {{
             isEdit
@@ -196,108 +249,213 @@ function onDelete() {
               : $t('settings.paymentTypes.form.titleCreate')
           }}
         </ion-title>
-        <ion-buttons slot="end">
-          <ion-button strong :disabled="isLoading" @click="onSubmit">
-            <ion-spinner v-if="isLoading" name="crescent" />
-            <span v-else>
-              {{
-                isEdit
-                  ? $t('settings.paymentTypes.form.submitEdit')
-                  : $t('settings.paymentTypes.form.submitCreate')
-              }}
-            </span>
+
+        <ion-buttons v-if="isEdit" slot="end">
+          <ion-button
+            color="danger"
+            :disabled="isLoading"
+            :aria-busy="deleteMutation.isLoading.value"
+            @click="onDelete"
+          >
+            <ion-spinner v-if="deleteMutation.isLoading.value" :name="spinnerName" />
+            <template v-else>
+              <ion-icon slot="start" :icon="trashOutline" aria-hidden="true" />
+              {{ $t('settings.paymentTypes.deleteAction') }}
+            </template>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding-vertical">
-      <form @submit.prevent="onSubmit">
-        <ion-list inset>
-          <ion-item>
-            <div slot="start" class="pt-preview" :style="{ backgroundColor: `${state.color}1a` }">
-              <ion-icon :icon="cashOutline" :style="{ color: state.color }" aria-hidden="true" />
-            </div>
+    <ion-content :fullscreen="true" class="ion-padding-vertical">
+      <form id="payment-type-form" @submit.prevent="onSubmit">
+        <inset-list>
+          <ion-item :class="{ 'ion-invalid': nameError, 'ion-touched': submitted }" lines="none">
+            <span
+              slot="start"
+              class="method-preview"
+              :style="{ backgroundColor: `${state.color}1a`, color: state.color }"
+            >
+              <ion-icon :icon="walletOutline" aria-hidden="true" />
+            </span>
+            <ion-label class="field-label">{{ $t('settings.paymentTypes.form.name') }}</ion-label>
             <ion-input
               v-model="state.name"
-              label-placement="stacked"
-              :label="$t('settings.paymentTypes.form.name')"
+              class="value-input"
               :placeholder="$t('settings.paymentTypes.form.namePlaceholder')"
-              :class="{ 'ion-invalid': errors.name, 'ion-touched': submitted }"
-              :error-text="errors.name"
+              :maxlength="50"
               autocapitalize="sentences"
               enterkeyhint="done"
             />
           </ion-item>
-        </ion-list>
+        </inset-list>
+        <ion-note v-if="nameError" color="danger" class="field-hint">{{ nameError }}</ion-note>
 
-        <ion-list inset>
-          <ion-list-header>
-            <ion-label>{{ $t('settings.paymentTypes.form.color') }}</ion-label>
-          </ion-list-header>
-          <ion-item lines="none">
-            <div class="color-palette">
+        <inset-list :header="$t('settings.paymentTypes.form.color')">
+          <ion-item lines="none" class="palette-item">
+            <div class="color-palette" role="radiogroup">
               <button
-                v-for="c in COLOR_PALETTE"
-                :key="c"
+                v-for="color in COLOR_PALETTE"
+                :key="color"
                 type="button"
                 class="color-swatch"
-                :style="{
-                  backgroundColor: c,
-                  boxShadow: state.color === c ? `0 0 0 2px var(--ion-background-color), 0 0 0 4px ${c}` : 'none',
-                }"
-                :aria-label="c"
-                @click="state.color = c"
-              />
+                :class="{ 'color-swatch--selected': state.color === color }"
+                :style="{ '--swatch-color': color }"
+                role="radio"
+                :aria-checked="state.color === color"
+                :aria-label="color"
+                @click="state.color = color"
+              >
+                <ion-icon v-if="state.color === color" :icon="checkmark" aria-hidden="true" />
+              </button>
             </div>
           </ion-item>
-        </ion-list>
+        </inset-list>
 
-        <ion-list v-if="isEdit" inset>
-          <ion-item button lines="none" :disabled="isLoading" @click="onDelete">
-            <ion-label color="danger">{{ $t('settings.paymentTypes.deleteAction') }}</ion-label>
-          </ion-item>
-        </ion-list>
-
-        <!-- Lets the keyboard "done" action submit the form. -->
         <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true" />
       </form>
     </ion-content>
+
+    <ion-footer class="ion-no-border">
+      <ion-toolbar>
+        <ion-button
+          class="save-button"
+          expand="block"
+          type="button"
+          :disabled="!canSubmit"
+          :aria-busy="isLoading"
+          @click="onSubmit"
+        >
+          <span :class="{ 'save-button-label--hidden': isLoading }">
+            {{
+              isEdit
+                ? $t('settings.paymentTypes.form.submitEdit')
+                : $t('settings.paymentTypes.form.submitCreate')
+            }}
+          </span>
+          <ion-spinner v-if="isLoading" class="save-button-spinner" :name="spinnerName" />
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
   </ion-modal>
 </template>
 
 <style scoped>
-.pt-preview {
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+.method-preview {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
   margin-inline-end: 12px;
+  border-radius: 12px;
   font-size: 20px;
-  flex-shrink: 0;
+}
+
+.field-label {
+  flex: 0 0 auto;
+  margin-inline-end: 12px;
+  color: var(--ion-color-medium);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.value-input {
+  flex: 1 1 auto;
+  text-align: end;
+  --color: var(--ion-text-color);
+  --padding-end: 0;
+  --placeholder-color: var(--ion-color-medium);
+  --placeholder-opacity: 1;
+}
+
+.field-hint {
+  display: block;
+  margin-top: -14px;
+  margin-bottom: 22px;
+  padding-inline: 32px;
+  font-size: 0.75rem;
+}
+
+.palette-item {
+  --padding-top: 12px;
+  --padding-bottom: 12px;
 }
 
 .color-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-block: 8px;
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(5, minmax(40px, 1fr));
+  gap: 14px 10px;
 }
 
 .color-swatch {
-  width: 28px;
-  height: 28px;
-  border-radius: 9999px;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
   padding: 0;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  color: #fff;
   cursor: pointer;
-  transition: transform 0.1s ease;
+  justify-self: center;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition:
+    transform 120ms ease,
+    outline-color 120ms ease;
+}
+
+.color-swatch--selected {
+  outline-color: var(--swatch-color);
+  transform: scale(0.9);
 }
 
 .color-swatch:active {
-  transform: scale(1.1);
+  transform: scale(0.84);
+}
+
+.color-swatch ion-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 25%));
+}
+
+ion-footer ion-toolbar {
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.save-button {
+  position: relative;
+  min-height: 48px;
+  margin: 0;
+  --border-radius: 12px;
+}
+
+.save-button-label--hidden {
+  opacity: 0;
+}
+
+.save-button-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .sr-only {
