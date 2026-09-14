@@ -14,6 +14,7 @@ import {
   IonInput,
   IonLabel,
   IonNote,
+  IonToggle,
   IonIcon,
   IonSpinner,
   alertController,
@@ -64,11 +65,13 @@ const COLOR_PALETTE = [
 interface FormState {
   name: string
   color: string
+  isActive: boolean
 }
 
 const state = reactive<FormState>({
   name: '',
   color: COLOR_PALETTE[0]!,
+  isActive: true,
 })
 const initialState = ref<FormState>({ ...state })
 const submitted = ref(false)
@@ -76,7 +79,7 @@ const allowDismiss = ref(false)
 const isSubmitting = ref(false)
 
 function currentState(): FormState {
-  return { name: state.name, color: state.color }
+  return { name: state.name, color: state.color, isActive: state.isActive }
 }
 
 function resetForm() {
@@ -86,9 +89,11 @@ function resetForm() {
   if (isEdit.value && props.paymentType) {
     state.name = props.paymentType.name
     state.color = props.paymentType.color
+    state.isActive = props.paymentType.is_active
   } else {
     state.name = ''
     state.color = COLOR_PALETTE[0]!
+    state.isActive = true
   }
 
   initialState.value = currentState()
@@ -104,7 +109,10 @@ watch(
 const trimmedName = computed(() => state.name.trim())
 const isFormValid = computed(() => trimmedName.value.length > 0 && trimmedName.value.length <= 50)
 const isDirty = computed(
-  () => state.name !== initialState.value.name || state.color !== initialState.value.color,
+  () =>
+    state.name !== initialState.value.name ||
+    state.color !== initialState.value.color ||
+    state.isActive !== initialState.value.isActive,
 )
 const nameError = computed(() => {
   if (!submitted.value) return undefined
@@ -169,7 +177,7 @@ async function onSubmit() {
     color: state.color,
     kind: 'custom',
     is_default: false,
-    is_active: props.paymentType?.is_active ?? true,
+    is_active: state.isActive,
     sort_order: props.paymentType?.sort_order ?? 0,
   }
 
@@ -253,15 +261,14 @@ async function onDelete() {
         <ion-buttons v-if="isEdit" slot="end">
           <ion-button
             color="danger"
+            fill="clear"
             :disabled="isLoading"
             :aria-busy="deleteMutation.isLoading.value"
+            :aria-label="$t('settings.paymentTypes.deleteAction')"
             @click="onDelete"
           >
             <ion-spinner v-if="deleteMutation.isLoading.value" :name="spinnerName" />
-            <template v-else>
-              <ion-icon slot="start" :icon="trashOutline" aria-hidden="true" />
-              {{ $t('settings.paymentTypes.deleteAction') }}
-            </template>
+            <ion-icon v-else slot="icon-only" :icon="trashOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -309,6 +316,20 @@ async function onDelete() {
                 <ion-icon v-if="state.color === color" :icon="checkmark" aria-hidden="true" />
               </button>
             </div>
+          </ion-item>
+        </inset-list>
+
+        <inset-list>
+          <ion-item lines="none" class="active-item">
+            <ion-label class="ion-text-wrap">
+              <h2>{{ $t('settings.paymentTypes.form.active') }}</h2>
+              <p>{{ $t('settings.paymentTypes.form.activeDescription') }}</p>
+            </ion-label>
+            <ion-toggle
+              v-model="state.isActive"
+              slot="end"
+              :aria-label="$t('settings.paymentTypes.form.active')"
+            />
           </ion-item>
         </inset-list>
 
@@ -390,6 +411,24 @@ ion-header ion-toolbar {
 .palette-item {
   --padding-top: 12px;
   --padding-bottom: 12px;
+}
+
+.active-item {
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+}
+
+.active-item h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.active-item p {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .color-palette {
