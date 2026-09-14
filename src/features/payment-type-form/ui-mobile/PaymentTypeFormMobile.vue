@@ -277,7 +277,11 @@ async function onDelete() {
     <ion-content :fullscreen="true" class="ion-padding-vertical">
       <form id="payment-type-form" @submit.prevent="onSubmit">
         <inset-list>
-          <ion-item :class="{ 'ion-invalid': nameError, 'ion-touched': submitted }" lines="none">
+          <ion-item
+            class="name-item"
+            :class="{ 'ion-invalid': nameError, 'ion-touched': submitted }"
+            lines="none"
+          >
             <span
               slot="start"
               class="method-preview"
@@ -383,6 +387,11 @@ ion-header ion-toolbar {
   font-size: 20px;
 }
 
+.name-item {
+  --padding-top: 5px;
+  --padding-bottom: 5px;
+}
+
 .field-label {
   flex: 0 0 auto;
   margin-inline-end: 12px;
@@ -409,8 +418,8 @@ ion-header ion-toolbar {
 }
 
 .palette-item {
-  --padding-top: 12px;
-  --padding-bottom: 12px;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
 }
 
 .active-item {
@@ -434,6 +443,7 @@ ion-header ion-toolbar {
 .color-palette {
   display: grid;
   width: 100%;
+  padding-block: 3px;
   grid-template-columns: repeat(5, minmax(40px, 1fr));
   gap: 14px 10px;
 }
