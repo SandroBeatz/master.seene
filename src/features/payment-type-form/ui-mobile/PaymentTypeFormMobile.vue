@@ -149,7 +149,7 @@ async function confirmDiscard(): Promise<boolean> {
   return result.role === 'destructive'
 }
 
-async function canDismiss(): Promise<boolean> {
+function canDismiss(): boolean | Promise<boolean> {
   if (isLoading.value) return false
   if (allowDismiss.value || !isDirty.value) return true
   return confirmDiscard()
