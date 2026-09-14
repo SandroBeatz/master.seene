@@ -229,7 +229,7 @@ async function onSignOut() {
           <h2>{{ $t('settings.account.email.label') }}</h2>
           <p>{{ currentEmail || $t('settings.account.email.notSet') }}</p>
         </div>
-        <ion-button expand="block" fill="outline" color="medium" @click="openEmail">
+        <ion-button expand="block" size="default" fill="outline" color="medium" @click="openEmail">
           <ion-icon slot="start" :icon="mailOutline" aria-hidden="true" />
           {{ $t('settings.account.email.changeButton') }}
         </ion-button>
@@ -242,7 +242,13 @@ async function onSignOut() {
           <h2>{{ $t('settings.account.password.label') }}</h2>
           <p>{{ $t('settings.account.password.description') }}</p>
         </div>
-        <ion-button expand="block" fill="outline" color="medium" @click="openPassword">
+        <ion-button
+          expand="block"
+          size="default"
+          fill="outline"
+          color="medium"
+          @click="openPassword"
+        >
           <ion-icon slot="start" :icon="keyOutline" aria-hidden="true" />
           {{ $t('settings.account.password.changeButton') }}
         </ion-button>
@@ -257,6 +263,7 @@ async function onSignOut() {
         </div>
         <ion-button
           expand="block"
+          size="default"
           fill="outline"
           color="medium"
           :disabled="signOutLoading"
@@ -452,12 +459,6 @@ async function onSignOut() {
   color: var(--ion-color-medium);
   font-size: 0.85rem;
   line-height: 1.35;
-}
-
-.account-row ion-button {
-  min-height: 44px;
-  margin: 0;
-  --border-radius: 12px;
 }
 
 ion-header ion-toolbar {
