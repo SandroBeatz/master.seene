@@ -95,7 +95,12 @@ const groups = computed<SettingsGroup[]>(() => [
     key: 'system',
     label: t('settings.nav.groupSystem'),
     items: [
-      { key: 'notifications', label: t('settings.nav.notifications'), icon: notificationsOutline },
+      {
+        key: 'notifications',
+        label: t('settings.nav.notifications'),
+        icon: notificationsOutline,
+        to: '/settings/notifications',
+      },
       {
         key: 'systemRegion',
         label: t('settings.nav.systemRegion'),
