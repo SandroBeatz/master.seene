@@ -19,7 +19,6 @@ import {
   calendarNumberOutline,
   cardOutline,
   gridOutline,
-  peopleOutline,
   notificationsOutline,
   globeOutline,
   personCircleOutline,
@@ -88,7 +87,6 @@ const groups = computed<SettingsGroup[]>(() => [
         icon: cardOutline,
         to: '/settings/payment-types',
       },
-      { key: 'clients', label: t('settings.nav.clients'), icon: peopleOutline },
     ],
   },
   {
