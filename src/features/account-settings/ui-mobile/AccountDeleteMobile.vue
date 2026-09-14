@@ -132,7 +132,7 @@ async function onConfirmDelete() {
       <div class="danger-card">
         <h2>{{ $t('settings.account.delete.sectionTitle') }}</h2>
         <p>{{ $t('settings.account.delete.sectionDescription') }}</p>
-        <ion-button expand="block" color="danger" @click="open">
+        <ion-button expand="block" size="default" color="danger" @click="open">
           <ion-icon slot="start" :icon="trashOutline" aria-hidden="true" />
           {{ $t('settings.account.delete.button') }}
         </ion-button>
@@ -265,9 +265,7 @@ async function onConfirmDelete() {
 }
 
 .danger-card ion-button {
-  min-height: 46px;
-  margin: 16px 0 0;
-  --border-radius: 12px;
+  margin-top: 16px;
 }
 
 ion-header ion-toolbar {
