@@ -1004,7 +1004,12 @@ export default {
     },
     paymentTypes: {
       title: 'Modes de paiement',
-      subtitle: 'Indiquez à vos clients comment vous régler. Les bascules s’appliquent aussitôt.',
+      subtitle:
+        'Utilisez les modes de paiement pour savoir où se trouve votre argent et tenir un budget précis.',
+      featureToggle: {
+        label: 'Suivre les modes de paiement',
+        description: 'Répartir les revenus par mode de paiement dans votre budget.',
+      },
       addCustomButton: 'Ajouter un mode personnalisé',
       emptyTitle: 'Aucun mode de paiement',
       emptyDescription: 'Ajoutez votre premier mode de paiement pour les rendez-vous.',
@@ -1029,10 +1034,12 @@ export default {
       },
       form: {
         titleCreate: 'Ajouter un mode de paiement',
-        titleEdit: 'Modifier le mode de paiement',
+        titleEdit: 'Modifier',
         name: 'Nom',
         namePlaceholder: 'Ex. : Carte',
         color: 'Couleur',
+        active: 'Actif',
+        activeDescription: 'Afficher ce mode lors de l’ajout d’un paiement.',
         preview: 'Aperçu du mode',
         submitCreate: 'Ajouter',
         submitEdit: 'Enregistrer',
