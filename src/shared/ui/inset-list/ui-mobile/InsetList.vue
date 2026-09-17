@@ -11,18 +11,31 @@ import { IonList } from '@ionic/vue'
 //
 // Kept out of the shared/ui barrel (index.ts, which pulls Nuxt UI) — import via
 // @shared/ui/inset-list/index.mobile in the Ionic build target only.
-defineProps<{
+interface Props {
   // Section title shown above the card. Omit (and don't pass the `header` slot)
   // for a headerless group.
   header?: string
-}>()
+  // Keep the native section-header style while pinning it to the top of the
+  // content viewport. The page-colored background prevents rows from showing
+  // through as the group scrolls underneath it.
+  stickyHeader?: boolean
+  // Expand the list card to the content edges and remove its corner radius.
+  // The default inset appearance remains unchanged for existing consumers.
+  fullWidth?: boolean
+}
+
+withDefaults(defineProps<Props>(), { stickyHeader: false, fullWidth: false })
 
 const slots = useSlots()
 </script>
 
 <template>
-  <div class="se-inset-list">
-    <div v-if="header || slots.header" class="se-inset-list__header">
+  <div class="se-inset-list" :class="{ 'se-inset-list--full-width': fullWidth }">
+    <div
+      v-if="header || slots.header"
+      class="se-inset-list__header"
+      :class="{ 'se-inset-list__header--sticky': stickyHeader }"
+    >
       <slot name="header">{{ header }}</slot>
     </div>
 
@@ -58,12 +71,36 @@ const slots = useSlots()
   margin-block-end: 0;
 }
 
+.se-inset-list--full-width {
+  --se-list-inset-x: 0px;
+  --se-list-radius: 0px;
+}
+
 .se-inset-list__header {
   padding: 0 16px 7px;
   color: var(--se-list-header-color);
   font-size: var(--se-list-header-size);
   font-weight: 400;
   line-height: 1.3;
+}
+
+.se-inset-list__header--sticky {
+  position: sticky;
+  top: var(--se-sticky-header-top, 0px);
+  z-index: 4;
+  margin-inline: calc(var(--se-list-inset-x) * -1);
+  padding-inline: calc(var(--se-list-inset-x) + 16px);
+  background: var(--se-surface-page, #f2f2f7);
+}
+
+.se-inset-list__header--sticky::before {
+  position: absolute;
+  bottom: 100%;
+  inset-inline: 0;
+  height: var(--se-sticky-header-cover, 0px);
+  background: var(--se-surface-page, #f2f2f7);
+  content: '';
+  pointer-events: none;
 }
 
 .se-inset-list__card {

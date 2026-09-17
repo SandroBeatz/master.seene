@@ -1077,6 +1077,10 @@ export default {
       favorites: 'Избранные',
       others: 'Остальные',
     },
+    actions: {
+      edit: 'Редактировать клиента',
+      booking: 'Записать клиента',
+    },
     table: {
       name: 'Имя',
       phone: 'Телефон',
