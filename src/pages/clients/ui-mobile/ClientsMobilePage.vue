@@ -27,6 +27,10 @@ import { ClientFormMobile } from '@features/client-form/index.mobile'
 import { useSessionStore } from '@entities/session'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
+interface ClosableSlidingItem extends HTMLElement {
+  close: () => Promise<void>
+}
+
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
@@ -38,7 +42,8 @@ const { data: clients, isPending } = useClientsQuery(userId)
 const toggleFavorite = useToggleFavoriteClientMutation(userId)
 
 const query = ref('')
-const favoriteLoadingId = ref<string | null>(null)
+const pendingFavoriteClientId = ref<string | null>(null)
+const isFavoriteUpdatePending = computed(() => pendingFavoriteClientId.value !== null)
 const isFormOpen = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
 const editing = ref<Client | null>(null)
@@ -89,15 +94,19 @@ function goToClient(c: Client) {
 }
 
 async function onToggleFavorite(c: Client) {
-  if (favoriteLoadingId.value) return
-  favoriteLoadingId.value = c.id
+  if (isFavoriteUpdatePending.value) return
+  pendingFavoriteClientId.value = c.id
   try {
     await toggleFavorite.mutateAsync({ id: c.id, is_favorite: !c.is_favorite })
   } catch {
     // Keep the current favorite state when the request fails.
   } finally {
-    favoriteLoadingId.value = null
+    pendingFavoriteClientId.value = null
   }
+}
+
+function isFavoritePending(clientId: string): boolean {
+  return pendingFavoriteClientId.value === clientId
 }
 
 function openCreate() {
@@ -113,9 +122,9 @@ function openEdit(client: Client) {
 }
 
 async function closeSlidingItem(event: Event) {
-  const sliding = (event.currentTarget as HTMLElement | null)?.closest('ion-item-sliding') as
-    | (HTMLElement & { close: () => Promise<void> })
-    | null
+  const sliding = (event.currentTarget as HTMLElement | null)?.closest(
+    'ion-item-sliding',
+  ) as ClosableSlidingItem | null
   await sliding?.close()
 }
 
@@ -185,12 +194,12 @@ async function onSwipeBooking(event: Event) {
                     ? $t('clients.card.removeFavorite')
                     : $t('clients.card.addFavorite')
                 "
-                :aria-busy="favoriteLoadingId === client.id"
-                :disabled="favoriteLoadingId !== null"
+                :aria-busy="isFavoritePending(client.id)"
+                :disabled="isFavoriteUpdatePending"
                 @click.stop="onToggleFavorite(client)"
               >
                 <ion-spinner
-                  v-if="favoriteLoadingId === client.id"
+                  v-if="isFavoritePending(client.id)"
                   slot="icon-only"
                   class="favorite-spinner"
                   name="crescent"

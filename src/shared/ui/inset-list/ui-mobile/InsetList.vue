@@ -11,21 +11,20 @@ import { IonList } from '@ionic/vue'
 //
 // Kept out of the shared/ui barrel (index.ts, which pulls Nuxt UI) — import via
 // @shared/ui/inset-list/index.mobile in the Ionic build target only.
-withDefaults(
-  defineProps<{
-    // Section title shown above the card. Omit (and don't pass the `header` slot)
-    // for a headerless group.
-    header?: string
-    // Keep the native section-header style while pinning it to the top of the
-    // content viewport. The page-colored background prevents rows from showing
-    // through as the group scrolls underneath it.
-    stickyHeader?: boolean
-    // Expand the list card to the content edges and remove its corner radius.
-    // The default inset appearance remains unchanged for existing consumers.
-    fullWidth?: boolean
-  }>(),
-  { stickyHeader: false, fullWidth: false },
-)
+interface Props {
+  // Section title shown above the card. Omit (and don't pass the `header` slot)
+  // for a headerless group.
+  header?: string
+  // Keep the native section-header style while pinning it to the top of the
+  // content viewport. The page-colored background prevents rows from showing
+  // through as the group scrolls underneath it.
+  stickyHeader?: boolean
+  // Expand the list card to the content edges and remove its corner radius.
+  // The default inset appearance remains unchanged for existing consumers.
+  fullWidth?: boolean
+}
+
+withDefaults(defineProps<Props>(), { stickyHeader: false, fullWidth: false })
 
 const slots = useSlots()
 </script>
@@ -96,9 +95,8 @@ const slots = useSlots()
 
 .se-inset-list__header--sticky::before {
   position: absolute;
-  right: 0;
   bottom: 100%;
-  left: 0;
+  inset-inline: 0;
   height: var(--se-sticky-header-cover, 0px);
   background: var(--se-surface-page, #f2f2f7);
   content: '';
