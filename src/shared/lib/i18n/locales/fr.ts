@@ -1091,6 +1091,10 @@ export default {
       favorites: 'Favoris',
       others: 'Autres',
     },
+    actions: {
+      edit: 'Modifier le client',
+      booking: 'Réserver pour le client',
+    },
     table: {
       name: 'Nom',
       phone: 'Téléphone',
