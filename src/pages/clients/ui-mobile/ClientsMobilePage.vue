@@ -148,54 +148,62 @@ async function onSwipeBooking(event: Event) {
       </div>
 
       <template v-else>
-        <inset-list v-for="section in clientSections" :key="section.key" :header="section.title">
-          <ion-item-sliding v-for="client in section.clients" :key="client.id">
-            <ion-item class="client-item" button detail @click="goToClient(client)">
-              <ion-avatar slot="start" class="client-avatar">
-                <span v-if="client.emoji" class="client-avatar__emoji">{{ client.emoji }}</span>
-                <span v-else>{{ initials(client) }}</span>
-              </ion-avatar>
-              <ion-label class="client-copy">
-                <h2>{{ clientName(client) }}</h2>
-                <p>{{ client.phone }}</p>
-              </ion-label>
-              <ion-button
-                slot="end"
-                class="favorite-btn"
-                fill="clear"
-                :color="client.is_favorite ? 'warning' : 'medium'"
-                :aria-label="
-                  client.is_favorite
-                    ? $t('clients.card.removeFavorite')
-                    : $t('clients.card.addFavorite')
-                "
-                @click.stop="onToggleFavorite(client)"
-              >
-                <ion-icon
-                  slot="icon-only"
-                  :icon="client.is_favorite ? star : starOutline"
-                  aria-hidden="true"
-                />
-              </ion-button>
-            </ion-item>
-            <ion-item-options side="end">
-              <ion-item-option
-                color="medium"
-                :aria-label="$t('clients.actions.edit')"
-                @click="onSwipeEdit(client, $event)"
-              >
-                <ion-icon slot="icon-only" :icon="createOutline" aria-hidden="true" />
-              </ion-item-option>
-              <ion-item-option
-                color="primary"
-                :aria-label="$t('clients.actions.booking')"
-                @click="onSwipeBooking($event)"
-              >
-                <ion-icon slot="icon-only" :icon="calendarOutline" aria-hidden="true" />
-              </ion-item-option>
-            </ion-item-options>
-          </ion-item-sliding>
-        </inset-list>
+        <section v-for="section in clientSections" :key="section.key" class="client-section">
+          <div class="client-section__sticky">
+            <div class="client-section__title">{{ section.title }}</div>
+          </div>
+
+          <inset-list>
+            <ion-item-sliding v-for="client in section.clients" :key="client.id">
+              <ion-item class="client-item" button detail @click="goToClient(client)">
+                <ion-avatar slot="start" class="client-avatar">
+                  <span v-if="client.emoji" class="client-avatar__emoji">{{ client.emoji }}</span>
+                  <span v-else>{{ initials(client) }}</span>
+                </ion-avatar>
+                <ion-label class="client-copy">
+                  <h2>{{ clientName(client) }}</h2>
+                  <p>{{ client.phone }}</p>
+                </ion-label>
+                <ion-button
+                  slot="end"
+                  class="favorite-btn"
+                  fill="clear"
+                  :color="client.is_favorite ? 'warning' : 'medium'"
+                  :aria-label="
+                    client.is_favorite
+                      ? $t('clients.card.removeFavorite')
+                      : $t('clients.card.addFavorite')
+                  "
+                  @click.stop="onToggleFavorite(client)"
+                >
+                  <ion-icon
+                    slot="icon-only"
+                    :icon="client.is_favorite ? star : starOutline"
+                    aria-hidden="true"
+                  />
+                </ion-button>
+              </ion-item>
+              <ion-item-options side="start">
+                <ion-item-option
+                  color="medium"
+                  :aria-label="$t('clients.actions.edit')"
+                  @click="onSwipeEdit(client, $event)"
+                >
+                  <ion-icon slot="icon-only" :icon="createOutline" aria-hidden="true" />
+                </ion-item-option>
+              </ion-item-options>
+              <ion-item-options side="end">
+                <ion-item-option
+                  color="primary"
+                  :aria-label="$t('clients.actions.booking')"
+                  @click="onSwipeBooking($event)"
+                >
+                  <ion-icon slot="icon-only" :icon="calendarOutline" aria-hidden="true" />
+                </ion-item-option>
+              </ion-item-options>
+            </ion-item-sliding>
+          </inset-list>
+        </section>
       </template>
 
       <ion-fab v-if="!isPending" slot="fixed" vertical="bottom" horizontal="end">
@@ -259,6 +267,32 @@ ion-header ion-toolbar {
   color: var(--ion-color-medium);
   font-size: 0.85rem;
   line-height: 1.4;
+}
+
+.client-section:not(:last-child) {
+  padding-bottom: 22px;
+}
+
+.client-section__sticky {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 0 16px 8px;
+  background: var(--se-surface-page, #f2f2f7);
+}
+
+.client-section__title {
+  padding: 9px 12px;
+  border: 1px solid var(--se-separator, rgb(0 0 0 / 11%));
+  border-radius: 10px;
+  background: var(--se-surface-card, #fff);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 ion-item-sliding {
