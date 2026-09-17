@@ -38,6 +38,7 @@ const { data: clients, isPending } = useClientsQuery(userId)
 const toggleFavorite = useToggleFavoriteClientMutation(userId)
 
 const query = ref('')
+const favoriteLoadingId = ref<string | null>(null)
 const isFormOpen = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
 const editing = ref<Client | null>(null)
@@ -87,8 +88,16 @@ function goToClient(c: Client) {
   ionRouter.push(`/clients/${c.id}`)
 }
 
-function onToggleFavorite(c: Client) {
-  toggleFavorite.mutate({ id: c.id, is_favorite: !c.is_favorite })
+async function onToggleFavorite(c: Client) {
+  if (favoriteLoadingId.value) return
+  favoriteLoadingId.value = c.id
+  try {
+    await toggleFavorite.mutateAsync({ id: c.id, is_favorite: !c.is_favorite })
+  } catch {
+    // Keep the current favorite state when the request fails.
+  } finally {
+    favoriteLoadingId.value = null
+  }
 }
 
 function openCreate() {
@@ -153,6 +162,7 @@ async function onSwipeBooking(event: Event) {
           :key="section.key"
           class="clients-list"
           :header="section.title"
+          full-width
           sticky-header
         >
           <ion-item-sliding v-for="client in section.clients" :key="client.id">
@@ -175,9 +185,18 @@ async function onSwipeBooking(event: Event) {
                     ? $t('clients.card.removeFavorite')
                     : $t('clients.card.addFavorite')
                 "
+                :aria-busy="favoriteLoadingId === client.id"
+                :disabled="favoriteLoadingId !== null"
                 @click.stop="onToggleFavorite(client)"
               >
+                <ion-spinner
+                  v-if="favoriteLoadingId === client.id"
+                  slot="icon-only"
+                  class="favorite-spinner"
+                  name="crescent"
+                />
                 <ion-icon
+                  v-else
                   slot="icon-only"
                   :icon="client.is_favorite ? star : starOutline"
                   aria-hidden="true"
@@ -243,6 +262,7 @@ ion-header ion-toolbar {
 
 .clients-list {
   --se-sticky-header-cover: 16px;
+  --se-sticky-header-top: -8px;
 }
 
 .loading-state {
@@ -336,6 +356,11 @@ ion-item-sliding:not(:last-child) {
 
 .favorite-btn {
   margin-inline-start: 8px;
+}
+
+.favorite-spinner {
+  width: 20px;
+  height: 20px;
 }
 
 ion-fab {
