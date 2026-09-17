@@ -86,6 +86,17 @@ const slots = useSlots()
   background: var(--se-surface-page, #f2f2f7);
 }
 
+.se-inset-list__header--sticky::before {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: var(--se-sticky-header-cover, 0px);
+  background: var(--se-surface-page, #f2f2f7);
+  content: '';
+  pointer-events: none;
+}
+
 .se-inset-list__card {
   padding: 0;
   border-radius: var(--se-list-radius);

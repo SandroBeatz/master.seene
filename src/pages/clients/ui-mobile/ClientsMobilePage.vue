@@ -151,6 +151,7 @@ async function onSwipeBooking(event: Event) {
         <inset-list
           v-for="section in clientSections"
           :key="section.key"
+          class="clients-list"
           :header="section.title"
           sticky-header
         >
@@ -238,6 +239,10 @@ ion-header ion-toolbar {
 
 .clients-content {
   --padding-bottom: 84px;
+}
+
+.clients-list {
+  --se-sticky-header-cover: 16px;
 }
 
 .loading-state {
