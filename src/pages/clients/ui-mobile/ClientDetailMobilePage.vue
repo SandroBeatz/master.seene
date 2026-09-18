@@ -14,11 +14,11 @@ import {
   IonContent,
   IonItem,
   IonLabel,
-  IonBadge,
   IonSkeletonText,
   IonSpinner,
   isPlatform,
   useIonRouter,
+  actionSheetController,
   alertController,
   toastController,
 } from '@ionic/vue'
@@ -26,6 +26,8 @@ import {
   arrowBackOutline,
   calendarOutline,
   callOutline,
+  closeOutline,
+  ellipsisHorizontal,
   logoWhatsapp,
   pencilOutline,
   trashOutline,
@@ -151,6 +153,34 @@ async function openBooking() {
   await showToast(t('clients.details.bookingSoon'), 'medium')
 }
 
+async function openActions() {
+  if (!client.value || removeClient.isLoading.value) return
+  const sheet = await actionSheetController.create({
+    header: fullName.value,
+    buttons: [
+      {
+        text: t('clients.details.editButton'),
+        icon: pencilOutline,
+        role: 'edit',
+      },
+      {
+        text: t('clients.details.deleteButton'),
+        icon: trashOutline,
+        role: 'destructive',
+      },
+      {
+        text: t('common.cancel'),
+        icon: closeOutline,
+        role: 'cancel',
+      },
+    ],
+  })
+  await sheet.present()
+  const { role } = await sheet.onDidDismiss()
+  if (role === 'edit') isEditOpen.value = true
+  if (role === 'destructive') await onDelete()
+}
+
 async function onDelete() {
   if (!client.value || removeClient.isLoading.value) return
   const target = client.value
@@ -187,31 +217,20 @@ async function onDelete() {
             color="dark"
           />
         </ion-buttons>
-        <ion-title
-          class="client-toolbar-title"
-          :class="{ 'client-toolbar-title--visible': showHeaderTitle }"
-        >
-          {{ fullName }}
-        </ion-title>
+        <Transition name="client-toolbar-title">
+          <ion-title v-if="showHeaderTitle">{{ fullName }}</ion-title>
+        </Transition>
         <ion-buttons v-if="client" slot="end">
-          <ion-button
-            fill="clear"
-            color="dark"
-            :aria-label="$t('clients.details.editButton')"
-            @click="isEditOpen = true"
-          >
-            <ion-icon slot="icon-only" :icon="pencilOutline" aria-hidden="true" />
-          </ion-button>
           <ion-button
             fill="clear"
             color="dark"
             :disabled="removeClient.isLoading.value"
             :aria-busy="removeClient.isLoading.value"
-            :aria-label="$t('clients.details.deleteButton')"
-            @click="onDelete"
+            :aria-label="$t('clients.details.moreActions')"
+            @click="openActions"
           >
             <ion-spinner v-if="removeClient.isLoading.value" :name="spinnerName" />
-            <ion-icon v-else slot="icon-only" :icon="trashOutline" aria-hidden="true" />
+            <ion-icon v-else slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -307,9 +326,12 @@ async function onDelete() {
                 <p>{{ formats.dateTime(appointment.start_at) }}</p>
               </ion-label>
               <div slot="end" class="appointment-meta">
-                <ion-badge :color="statusColor(appointment)">
+                <span
+                  class="appointment-status"
+                  :class="`appointment-status--${statusColor(appointment)}`"
+                >
                   {{ $t(statusView(appointment).labelKey) }}
-                </ion-badge>
+                </span>
                 <span>{{ formats.price(appointmentTotal(appointment)) }}</span>
               </div>
             </ion-item>
@@ -344,18 +366,17 @@ ion-header ion-toolbar {
   --background: var(--se-surface-page, #f2f2f7);
 }
 
-.client-toolbar-title {
-  opacity: 0;
-  transform: translateY(4px);
+.client-toolbar-title-enter-active,
+.client-toolbar-title-leave-active {
   transition:
     opacity 160ms ease,
     transform 160ms ease;
-  pointer-events: none;
 }
 
-.client-toolbar-title--visible {
-  opacity: 1;
-  transform: translateY(0);
+.client-toolbar-title-enter-from,
+.client-toolbar-title-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
 .client-detail-content {
@@ -460,9 +481,9 @@ ion-header ion-toolbar {
 }
 
 .appointment-item {
-  --min-height: 68px;
-  --padding-top: 7px;
-  --padding-bottom: 7px;
+  --min-height: 74px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
 }
 
 .appointment-copy {
@@ -500,11 +521,37 @@ ion-header ion-toolbar {
   font-weight: 500;
 }
 
-.appointment-meta ion-badge {
+.appointment-status {
+  --status-color: var(--ion-color-medium);
+
   max-width: 100%;
+  padding: 5px 9px;
   overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-color) 14%, transparent);
+  color: var(--status-color);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.appointment-status--primary {
+  --status-color: var(--ion-color-primary);
+}
+
+.appointment-status--success {
+  --status-color: var(--ion-color-success);
+}
+
+.appointment-status--warning {
+  --status-color: var(--ion-color-warning-shade, var(--ion-color-warning));
+}
+
+.appointment-status--danger {
+  --status-color: var(--ion-color-danger);
 }
 
 .appointments-empty {
@@ -513,7 +560,8 @@ ion-header ion-toolbar {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .client-toolbar-title {
+  .client-toolbar-title-enter-active,
+  .client-toolbar-title-leave-active {
     transition: none;
   }
 }
