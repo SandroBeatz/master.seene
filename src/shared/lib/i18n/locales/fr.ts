@@ -10,6 +10,27 @@ export default {
     logout: 'Déconnexion',
     profile: 'Profil',
     actions: 'Actions',
+    menu: 'Menu',
+    account: 'Compte',
+  },
+  appearance: {
+    title: 'Apparence',
+    theme: {
+      label: 'Thème',
+      light: 'Clair',
+      dark: 'Sombre',
+      system: 'Système',
+    },
+    color: {
+      label: 'Couleur d’accentuation',
+    },
+    colors: {
+      amber: 'Ambre',
+      blue: 'Bleu',
+      emerald: 'Émeraude',
+      violet: 'Violet',
+      rose: 'Rose',
+    },
   },
   formats: {
     duration: {
@@ -41,6 +62,8 @@ export default {
     discard: 'Annuler',
     saveChanges: 'Enregistrer',
     saving: 'Enregistrement…',
+    done: 'Terminé',
+    search: 'Rechercher',
     unsavedChangesConfirm:
       'Vous avez des modifications non enregistrées. Quitter sans enregistrer ?',
     validation: {
@@ -272,6 +295,9 @@ export default {
   services: {
     title: 'Services',
     subtitle: 'Gérez les services que vous proposez à vos clients.',
+    mobileInfo:
+      'Ajoutez des services pour les utiliser dans les réservations, calculer la durée des rendez-vous et suivre les revenus.',
+    filterLabel: 'Filtrer les services par catégorie',
     description:
       "Bon retour sur votre tableau de bord. Voici ce qui se passe avec vos projets aujourd'hui.",
     addService: 'Ajouter un service',
@@ -285,18 +311,24 @@ export default {
     filterAll: 'Tous',
     durationHours: '{n} h',
     toggleAvailabilityAria: 'Basculer la disponibilité',
+    reorder: 'Réorganiser',
+    reorderDone: 'Terminé',
     deleteConfirmTitle: 'Supprimer le service',
     deleteConfirmBody:
       'Supprimer le service «\u00a0{name}\u00a0»\u00a0? Cette action est irréversible.',
     deleteAction: 'Supprimer',
+    deleteSuccess: 'Service supprimé',
+    deleteError: 'Échec de la suppression du service',
     form: {
       createTitle: 'Ajouter un service',
       editTitle: 'Modifier le service',
+      editTitleMobile: 'Modifier',
       name: 'Nom du service',
       namePlaceholder: 'ex. Coupe de cheveux',
       description: 'Description',
       descriptionPlaceholder: 'Décrivez le service…',
       duration: 'Durée',
+      durationPlaceholder: 'Choisissez une durée',
       price: 'Prix',
       pricePlaceholder: '0',
       category: 'Catégorie',
@@ -307,8 +339,11 @@ export default {
       categoryCreateError: 'Échec de la création de la catégorie',
       color: 'Couleur',
       isActive: 'Actif',
+      isActiveDescription:
+        'Les services inactifs ne peuvent pas être sélectionnés lors de la création d’une réservation.',
       minutesLabel: '{n} min',
       save: 'Enregistrer',
+      saveSuccess: 'Service enregistré',
       cancel: 'Annuler',
       errorTitle: "Échec de l'enregistrement du service",
     },
@@ -360,6 +395,7 @@ export default {
       signIn: 'Se connecter',
       successTitle: 'Compte créé avec succès',
       errorTitle: "Échec de l'inscription",
+      checkEmail: 'Vérifiez votre e-mail pour confirmer votre compte.',
     },
     validation: {
       emailRequired: "L'adresse e-mail est requise",
@@ -379,6 +415,12 @@ export default {
     },
   },
   onboarding: {
+    mobilePlaceholder: {
+      title: 'Presque terminé',
+      description:
+        'Terminez la configuration de votre profil dans l’application de bureau pour utiliser Seene sur mobile.',
+      signOut: 'Se déconnecter',
+    },
     step1: {
       title: 'Choisissez vos spécialisations',
       subtitle:
@@ -598,6 +640,9 @@ export default {
       last8Weeks: '8 dernières semaines',
     },
     serviceAppointments: '{count} rendez-vous',
+    loadError: 'Impossible de charger les statistiques',
+    retry: 'Réessayer',
+    noData: 'Aucune donnée pour cette période',
   },
   settings: {
     title: 'Paramètres',
@@ -607,13 +652,13 @@ export default {
       groupSystem: 'Système',
       groupWorkspace: 'Espace de travail',
       profile: 'Profil',
-      contacts: 'Contacts et réseaux',
+      contacts: 'Contacts et adresse',
       workingHours: 'Heures de travail',
       booking: 'Réservation',
       paymentMethods: 'Modes de paiement',
       serviceCategories: 'Catégories de services',
       notifications: 'Notifications',
-      systemRegion: 'Système et région',
+      systemRegion: 'Système et langue',
       account: 'Compte',
       services: 'Services',
       clients: 'Clients',
@@ -621,7 +666,8 @@ export default {
     },
     about: {
       title: 'À propos',
-      description: "Informations sur l'application et détails de version.",
+      description: 'Votre assistant personnel pour vos clients et rendez-vous.',
+      body: 'Seene aide les professionnels de la beauté à gérer leur planning, leurs rendez-vous, leurs clients et leurs revenus — tout le nécessaire au quotidien dans une seule application.',
       version: 'Version',
     },
     profile: {
@@ -629,6 +675,7 @@ export default {
       subtitle: 'Voici comment les clients vous voient sur votre page de réservation publique.',
       avatar: {
         upload: 'Téléverser',
+        change: 'Changer la photo',
         remove: 'Supprimer',
         hint: 'JPG ou PNG, au moins 400×400px.',
         invalidType: 'Veuillez choisir une image JPG ou PNG.',
@@ -642,6 +689,10 @@ export default {
       firstNamePlaceholder: 'Karina',
       lastName: 'Nom',
       lastNamePlaceholder: 'Mi',
+      fullName: 'Nom complet',
+      fullNamePlaceholder: 'Votre nom',
+      phone: 'Téléphone',
+      phonePlaceholder: 'Saisissez un numéro',
       specialization: 'Spécialisation',
       specializationHint: 'Choisissez tout ce que vous proposez — affiché en tags sur votre page.',
       bio: 'Bio',
@@ -652,18 +703,24 @@ export default {
       usernameAvailable: 'Disponible',
       usernameTaken: 'Pris',
       usernameInvalid: 'Lettres, chiffres, points, tirets et underscores uniquement.',
+      phoneInvalid: 'Saisissez un numéro de téléphone valide.',
       requiredField: 'Ce champ est obligatoire.',
       specializationRequired: 'Choisissez au moins une spécialisation.',
+      yourPage: 'Votre page de réservation',
       openPage: 'Ouvrir ma page',
       copyLink: 'Copier le lien',
       linkCopied: 'Lien copié',
+      view: 'Voir',
+      copy: 'Copier',
+      share: 'Partager',
+      qrCode: 'QR code',
       saveSuccess: 'Profil mis à jour',
       saveError: "Échec de l'enregistrement du profil",
     },
     contacts: {
-      title: 'Contacts et réseaux',
-      subtitle:
-        'Comment vos clients peuvent vous joindre. Affiché sur votre page et dans les confirmations.',
+      title: 'Contacts et adresse',
+      subtitle: 'Coordonnées et adresse visibles par vos clients sur votre page de réservation.',
+      waysToContact: 'Moyens de contact',
       phone: 'Numéros de téléphone',
       phonePlaceholder: 'Saisissez un numéro',
       whatsapp: 'WhatsApp',
@@ -679,13 +736,13 @@ export default {
       emailPlaceholder: "vous{'@'}exemple.com",
       emailInvalid: 'Saisissez une adresse e-mail valide.',
       address: {
-        title: 'Studio / adresse',
+        title: 'Adresse',
         subtitle: 'Où les clients viennent pour leurs rendez-vous.',
         country: 'Pays',
         countryPlaceholder: 'Sélectionnez un pays',
         street: 'Adresse',
         streetPlaceholder: 'Rue',
-        houseNumber: 'N°',
+        houseNumber: 'Numéro de rue',
         houseNumberPlaceholder: 'Numéro',
         zipCode: 'Code postal',
         zipCodePlaceholder: 'Code postal',
@@ -703,6 +760,7 @@ export default {
       subtitle:
         'Votre disponibilité hebdomadaire. Les clients ne peuvent réserver que pendant ces heures.',
       dayOff: 'Jour de repos',
+      hours: 'Horaires',
       from: 'De',
       to: 'À',
       break: 'Pause',
@@ -738,6 +796,9 @@ export default {
       onlineOn: 'Réservation en ligne activée',
       onlineOff: 'Réservation en ligne désactivée',
       onlineToggleAria: 'Activer la réservation en ligne',
+      autoConfirm: 'Confirmer automatiquement les nouvelles réservations',
+      autoConfirmDescription:
+        'Les nouvelles réservations sont confirmées automatiquement, sans votre validation.',
       defaultStatus: 'Statut par défaut des nouvelles réservations',
       defaultStatusDescription: 'Comment les demandes en ligne arrivent dans votre agenda.',
       statusAutoConfirmed: 'Confirmé automatiquement',
@@ -887,8 +948,11 @@ export default {
         'Ce compte est programmé pour suppression. La connexion est désactivée. Contactez le support pour le restaurer sous 30 jours.',
     },
     systemRegion: {
-      title: 'Système et région',
+      title: 'Système et langue',
       subtitle: 'Langue, apparence et formats régionaux de votre tableau de bord.',
+      sectionInterface: 'Interface',
+      sectionFormats: 'Région et formats',
+      sectionCalendar: 'Calendrier',
       language: "Langue de l'interface",
       languageDescription: "Choisissez la langue utilisée dans l'interface.",
       theme: 'Thème',
@@ -896,6 +960,10 @@ export default {
       themeSystem: 'Système',
       themeLight: 'Clair',
       themeDark: 'Sombre',
+      accentColor: "Couleur d'accentuation",
+      accentColorDescription: "La couleur de mise en avant utilisée dans l'application.",
+      appearance: 'Apparence',
+      appearanceDescription: "La couleur principale utilisée dans l'application.",
       currency: 'Devise',
       currencyDescription: "Utilisée pour afficher les prix dans l'application.",
       timeFormat: "Format de l'heure",
@@ -948,7 +1016,12 @@ export default {
     },
     paymentTypes: {
       title: 'Modes de paiement',
-      subtitle: 'Indiquez à vos clients comment vous régler. Les bascules s’appliquent aussitôt.',
+      subtitle:
+        'Utilisez les modes de paiement pour savoir où se trouve votre argent et tenir un budget précis.',
+      featureToggle: {
+        label: 'Suivre les modes de paiement',
+        description: 'Répartir les revenus par mode de paiement dans votre budget.',
+      },
       addCustomButton: 'Ajouter un mode personnalisé',
       emptyTitle: 'Aucun mode de paiement',
       emptyDescription: 'Ajoutez votre premier mode de paiement pour les rendez-vous.',
@@ -973,10 +1046,12 @@ export default {
       },
       form: {
         titleCreate: 'Ajouter un mode de paiement',
-        titleEdit: 'Modifier le mode de paiement',
+        titleEdit: 'Modifier',
         name: 'Nom',
         namePlaceholder: 'Ex. : Carte',
         color: 'Couleur',
+        active: 'Actif',
+        activeDescription: 'Afficher ce mode lors de l’ajout d’un paiement.',
         preview: 'Aperçu du mode',
         submitCreate: 'Ajouter',
         submitEdit: 'Enregistrer',
@@ -1016,6 +1091,10 @@ export default {
       favorites: 'Favoris',
       others: 'Autres',
     },
+    actions: {
+      edit: 'Modifier le client',
+      booking: 'Réserver pour le client',
+    },
     table: {
       name: 'Nom',
       phone: 'Téléphone',
@@ -1042,6 +1121,9 @@ export default {
       errorTitle: "Échec de l'enregistrement du client",
       successCreate: 'Client ajouté',
       successEdit: 'Client mis à jour',
+      firstNameRequired: 'Le prénom est requis',
+      phoneRequired: 'Entrez un numéro de téléphone valide',
+      emailInvalid: 'E-mail invalide',
     },
     delete: {
       title: 'Supprimer le client',
