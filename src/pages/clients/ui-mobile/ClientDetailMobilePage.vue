@@ -12,18 +12,24 @@ import {
   IonTitle,
   IonIcon,
   IonContent,
-  IonList,
-  IonListHeader,
   IonItem,
   IonLabel,
   IonBadge,
   IonSkeletonText,
   IonSpinner,
+  isPlatform,
   useIonRouter,
   alertController,
   toastController,
 } from '@ionic/vue'
-import { create, trash } from 'ionicons/icons'
+import {
+  arrowBackOutline,
+  calendarOutline,
+  callOutline,
+  logoWhatsapp,
+  pencilOutline,
+  trashOutline,
+} from 'ionicons/icons'
 import { useClientsQuery, useRemoveClientMutation, type Client } from '@entities/client'
 import {
   useClientAppointmentsQuery,
@@ -35,6 +41,7 @@ import { ClientFormMobile } from '@features/client-form/index.mobile'
 import { useSessionStore } from '@entities/session'
 import { useFormats } from '@shared/lib/formats'
 import { useNowMinute } from '@shared/lib/now'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -44,33 +51,46 @@ const formats = useFormats()
 const now = useNowMinute()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const removeClient = useRemoveClientMutation(userId)
+const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // Detail is derived from the shared clients list (already cached from the list
 // screen) — no extra fetch, just a lookup by the route param.
 const { data: clients, isPending } = useClientsQuery(userId)
-
 const isEditOpen = ref(false)
 
-// The tab's router outlet is the "presenting element" so the edit sheet renders
-// as an iOS card (page scaled behind it) — same pattern as the list screen.
+// The root router outlet is the presenting element so the edit modal uses the
+// same iOS card transition as the Services and Payment Methods forms.
 const presentingElement = ref<HTMLElement | null>(null)
 onMounted(() => {
   presentingElement.value = document.querySelector('ion-router-outlet')
 })
 
-// Guard against `route.params.id` being absent while navigating away: coercing
-// `undefined` with String() yields the truthy string "undefined", which would
-// keep the appointments query enabled and refetch with client_id=undefined.
 const clientId = computed(() => (route.params.id ? String(route.params.id) : ''))
 const client = computed<Client | null>(
-  () => clients.value?.find((c) => c.id === clientId.value) ?? null,
+  () => clients.value?.find((item) => item.id === clientId.value) ?? null,
 )
 
-// Appointment history — same queries the web ClientDetailsPanel uses; the API
-// already returns them newest-first. Services resolve the service names/prices.
-const { data: appointments, isPending: appointmentsPending } =
-  useClientAppointmentsQuery(clientId)
+const { data: appointments, isPending: appointmentsPending } = useClientAppointmentsQuery(clientId)
 const { data: services } = useServicesQuery(userId)
+
+const fullName = computed(() =>
+  client.value ? [client.value.first_name, client.value.last_name].filter(Boolean).join(' ') : '',
+)
+const phoneDigits = computed(() => client.value?.phone.replace(/\D/g, '') ?? '')
+const whatsappHref = computed(() =>
+  phoneDigits.value ? `https://wa.me/${phoneDigits.value}` : undefined,
+)
+const callHref = computed(() => (client.value?.phone ? `tel:${client.value.phone}` : undefined))
+
+function initials(value: Client): string {
+  const parts = [value.first_name, value.last_name].filter(Boolean) as string[]
+  return (
+    parts
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('')
+      .slice(0, 2) || '?'
+  )
+}
 
 function serviceNames(appointment: Appointment): string {
   const list = services.value ?? []
@@ -84,7 +104,7 @@ function appointmentTotal(appointment: Appointment): number {
   if (appointment.price != null) return appointment.price
   const list = services.value ?? []
   return appointment.service_ids.reduce((sum, id) => {
-    const service = list.find((s: Service) => s.id === id)
+    const service = list.find((item: Service) => item.id === id)
     return sum + (service?.price ?? 0)
   }, 0)
 }
@@ -93,8 +113,6 @@ function statusView(appointment: Appointment) {
   return getEffectiveAppointmentStatusView(appointment, now.value)
 }
 
-// The shared status config uses Nuxt UI color names; map them to Ionic's badge
-// palette so the mobile bundle stays free of Nuxt UI.
 const STATUS_ION_COLOR: Record<string, string> = {
   primary: 'primary',
   success: 'success',
@@ -107,50 +125,34 @@ function statusColor(appointment: Appointment): string {
   return STATUS_ION_COLOR[String(statusView(appointment).color)] ?? 'medium'
 }
 
-const fullName = computed(() =>
-  client.value ? [client.value.first_name, client.value.last_name].filter(Boolean).join(' ') : '',
-)
-
-function initials(c: Client): string {
-  const parts = [c.first_name, c.last_name].filter(Boolean) as string[]
-  return (
-    parts
-      .map((p) => p[0]?.toUpperCase() ?? '')
-      .join('')
-      .slice(0, 2) || '?'
-  )
-}
-
-async function showToast(message: string, color: 'success' | 'danger') {
+async function showToast(message: string, color: 'success' | 'danger' | 'medium') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
   await toast.present()
 }
 
+async function openBooking() {
+  // The Ionic bundle doesn't have a create-appointment wizard yet. Keep this
+  // entry point visible without duplicating the desktop appointment flow.
+  await showToast(t('clients.details.bookingSoon'), 'medium')
+}
+
 async function onDelete() {
-  if (!client.value) return
+  if (!client.value || removeClient.isLoading.value) return
   const target = client.value
   const alert = await alertController.create({
     header: t('clients.delete.title'),
     message: t('clients.delete.message', { name: fullName.value }),
     buttons: [
       { text: t('clients.delete.cancel'), role: 'cancel' },
-      {
-        text: t('clients.delete.confirm'),
-        role: 'destructive',
-        handler: () => {
-          void deleteAndLeave(target)
-        },
-      },
+      { text: t('clients.delete.confirm'), role: 'destructive' },
     ],
   })
   await alert.present()
-}
+  if ((await alert.onDidDismiss()).role !== 'destructive') return
 
-async function deleteAndLeave(target: Client) {
   try {
     await removeClient.mutateAsync(target.id)
     await showToast(t('clients.deleteSuccess'), 'success')
-    // Client is gone — return to the list rather than a stale detail view.
     ionRouter.navigate('/tabs/clients', 'back', 'pop')
   } catch {
     await showToast(t('clients.deleteError'), 'danger')
@@ -160,115 +162,144 @@ async function deleteAndLeave(target: Client) {
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header :translucent="true" class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/clients" />
+          <ion-back-button
+            default-href="/tabs/clients"
+            text=""
+            :icon="arrowBackOutline"
+            color="dark"
+          />
         </ion-buttons>
         <ion-title>{{ fullName }}</ion-title>
-        <ion-buttons slot="end">
+        <ion-buttons v-if="client" slot="end">
           <ion-button
-            v-if="client"
+            fill="clear"
+            color="dark"
             :aria-label="$t('clients.details.editButton')"
             @click="isEditOpen = true"
           >
-            <ion-icon slot="icon-only" :icon="create" />
+            <ion-icon slot="icon-only" :icon="pencilOutline" aria-hidden="true" />
           </ion-button>
           <ion-button
-            v-if="client"
-            color="danger"
+            fill="clear"
+            color="dark"
+            :disabled="removeClient.isLoading.value"
+            :aria-busy="removeClient.isLoading.value"
             :aria-label="$t('clients.details.deleteButton')"
             @click="onDelete"
           >
-            <ion-icon slot="icon-only" :icon="trash" />
+            <ion-spinner v-if="removeClient.isLoading.value" :name="spinnerName" />
+            <ion-icon v-else slot="icon-only" :icon="trashOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <div v-if="isPending" class="flex justify-center py-10">
-        <ion-spinner />
+    <ion-content :fullscreen="true" class="client-detail-content ion-padding-bottom">
+      <ion-header v-if="client" collapse="condense">
+        <ion-toolbar class="ion-background-transparent">
+          <ion-title size="large">{{ fullName }}</ion-title>
+        </ion-toolbar>
+      </ion-header>
+
+      <div v-if="isPending" class="loading-state" aria-live="polite">
+        <ion-spinner name="crescent" />
       </div>
 
-      <div v-else-if="!client" class="px-6 py-16 text-center">
-        <p class="text-lg font-semibold">{{ $t('clients.details.notFoundTitle') }}</p>
+      <div v-else-if="!client" class="empty-page-state">
+        <p>{{ $t('clients.details.notFoundTitle') }}</p>
       </div>
 
       <template v-else>
-        <div class="flex flex-col items-center gap-3 py-6">
-          <div
-            class="flex size-20 items-center justify-center rounded-full bg-gray-100 text-2xl font-semibold text-gray-700"
-          >
-            <span v-if="client.emoji">{{ client.emoji }}</span>
+        <section class="client-hero">
+          <div class="client-avatar" aria-hidden="true">
+            <span v-if="client.emoji" class="client-avatar__emoji">{{ client.emoji }}</span>
             <span v-else>{{ initials(client) }}</span>
           </div>
-          <h1 class="text-xl font-bold">{{ fullName }}</h1>
-        </div>
 
-        <ion-list inset>
-          <ion-item>
-            <ion-label>
-              <p>{{ $t('clients.form.phoneLabel') }}</p>
-              <h3>{{ client.phone }}</h3>
-            </ion-label>
-          </ion-item>
-          <ion-item>
-            <ion-label>
-              <p>{{ $t('clients.form.emailLabel') }}</p>
-              <h3>{{ client.email || $t('clients.details.noEmail') }}</h3>
-            </ion-label>
-          </ion-item>
-        </ion-list>
+          <div class="client-actions">
+            <ion-button
+              class="client-action"
+              fill="clear"
+              :href="whatsappHref"
+              target="_blank"
+              rel="noopener noreferrer"
+              :disabled="!whatsappHref"
+              :aria-label="$t('clients.details.whatsapp')"
+            >
+              <ion-icon slot="icon-only" :icon="logoWhatsapp" aria-hidden="true" />
+            </ion-button>
+            <ion-button
+              class="client-action"
+              fill="clear"
+              :href="callHref"
+              :disabled="!callHref"
+              :aria-label="$t('clients.details.call')"
+            >
+              <ion-icon slot="icon-only" :icon="callOutline" aria-hidden="true" />
+            </ion-button>
+            <ion-button
+              class="client-action"
+              fill="clear"
+              :aria-label="$t('clients.details.booking')"
+              @click="openBooking"
+            >
+              <ion-icon slot="icon-only" :icon="calendarOutline" aria-hidden="true" />
+            </ion-button>
+          </div>
+        </section>
 
-        <ion-list inset>
-          <ion-item>
+        <inset-list :header="$t('clients.details.notes')">
+          <ion-item lines="none" class="notes-item">
             <ion-label class="ion-text-wrap">
-              <p>{{ $t('clients.details.notes') }}</p>
-              <h3>{{ client.notes || $t('clients.details.noNotes') }}</h3>
+              <p :class="{ 'notes-empty': !client.notes }">
+                {{ client.notes || $t('clients.details.noNotes') }}
+              </p>
             </ion-label>
           </ion-item>
-        </ion-list>
+        </inset-list>
 
-        <ion-list inset>
-          <ion-list-header>
-            <ion-label>{{ $t('clients.details.appointments') }}</ion-label>
-          </ion-list-header>
-
+        <inset-list :header="$t('clients.details.appointments')">
           <template v-if="appointmentsPending">
-            <ion-item v-for="n in 3" :key="`skeleton-${n}`" lines="full">
+            <ion-item v-for="n in 3" :key="`skeleton-${n}`" class="appointment-item">
               <ion-label>
-                <h3><ion-skeleton-text :animated="true" style="width: 60%" /></h3>
-                <p><ion-skeleton-text :animated="true" style="width: 40%" /></p>
+                <h2><ion-skeleton-text :animated="true" style="width: 60%" /></h2>
+                <p><ion-skeleton-text :animated="true" style="width: 42%" /></p>
               </ion-label>
-              <div slot="end" class="flex flex-col items-end gap-1">
-                <ion-skeleton-text :animated="true" style="width: 56px; height: 18px" />
-                <ion-skeleton-text :animated="true" style="width: 44px" />
+              <div slot="end" class="appointment-meta">
+                <ion-skeleton-text :animated="true" style="width: 58px; height: 18px" />
+                <ion-skeleton-text :animated="true" style="width: 46px" />
               </div>
             </ion-item>
           </template>
 
           <template v-else>
-            <ion-item v-for="appt in appointments" :key="appt.id" lines="full">
-              <ion-label class="ion-text-wrap">
-                <h3>{{ serviceNames(appt) }}</h3>
-                <p>{{ formats.dateTime(appt.start_at) }}</p>
+            <ion-item
+              v-for="appointment in appointments"
+              :key="appointment.id"
+              class="appointment-item"
+            >
+              <ion-label class="appointment-copy">
+                <h2>{{ serviceNames(appointment) }}</h2>
+                <p>{{ formats.dateTime(appointment.start_at) }}</p>
               </ion-label>
-              <div slot="end" class="flex flex-col items-end gap-1">
-                <ion-badge :color="statusColor(appt)">
-                  {{ $t(statusView(appt).labelKey) }}
+              <div slot="end" class="appointment-meta">
+                <ion-badge :color="statusColor(appointment)">
+                  {{ $t(statusView(appointment).labelKey) }}
                 </ion-badge>
-                <span class="text-sm font-medium">{{ formats.price(appointmentTotal(appt)) }}</span>
+                <span>{{ formats.price(appointmentTotal(appointment)) }}</span>
               </div>
             </ion-item>
 
-            <ion-item v-if="!appointments?.length" lines="none">
+            <ion-item v-if="!appointments?.length" lines="none" class="appointments-empty">
               <ion-label class="ion-text-center ion-text-wrap">
                 <p>{{ $t('clients.details.noAppointments') }}</p>
               </ion-label>
             </ion-item>
           </template>
-        </ion-list>
+        </inset-list>
       </template>
 
       <client-form-mobile
@@ -281,3 +312,160 @@ async function deleteAndLeave(target: Client) {
     </ion-content>
   </ion-page>
 </template>
+
+<style scoped>
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 8px;
+}
+
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+.ion-background-transparent {
+  --background: transparent;
+}
+
+.client-detail-content {
+  --padding-bottom: 24px;
+}
+
+.loading-state,
+.empty-page-state {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-page-state p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.client-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px 30px;
+}
+
+.client-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--ion-color-step-100, #e8e8ed);
+  color: var(--ion-text-color);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.client-avatar__emoji {
+  font-size: 2.4rem;
+}
+
+.client-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  gap: 14px;
+}
+
+.client-action {
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  color: var(--ion-color-primary);
+  --padding-start: 0;
+  --padding-end: 0;
+  --border-radius: 14px;
+  --background: var(--se-surface-card, #fff);
+  --background-activated: var(--ion-color-step-150, #dedede);
+  --box-shadow: none;
+}
+
+.client-action::part(native) {
+  border: 1px solid var(--se-separator, rgb(0 0 0 / 11%));
+}
+
+.client-action ion-icon {
+  font-size: 24px;
+}
+
+.notes-item {
+  --padding-top: 11px;
+  --padding-bottom: 11px;
+}
+
+.notes-item p {
+  margin: 0;
+  color: var(--ion-text-color);
+  font-size: 0.94rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.notes-item .notes-empty,
+.appointments-empty p {
+  color: var(--ion-color-medium);
+}
+
+.appointment-item {
+  --min-height: 68px;
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+}
+
+.appointment-copy {
+  min-width: 0;
+}
+
+.appointment-copy h2,
+.appointment-copy p {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appointment-copy h2 {
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.appointment-copy p {
+  margin-top: 4px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+}
+
+.appointment-meta {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  max-width: 42%;
+  margin-inline-start: 12px;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.appointment-meta ion-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appointments-empty {
+  --padding-top: 18px;
+  --padding-bottom: 18px;
+}
+</style>
