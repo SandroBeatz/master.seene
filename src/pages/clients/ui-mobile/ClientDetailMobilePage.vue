@@ -10,6 +10,7 @@ import {
   IonButton,
   IonBackButton,
   IonTitle,
+  IonModal,
   IonIcon,
   IonContent,
   IonItem,
@@ -18,7 +19,6 @@ import {
   IonSpinner,
   isPlatform,
   useIonRouter,
-  actionSheetController,
   alertController,
   toastController,
 } from '@ionic/vue'
@@ -59,9 +59,9 @@ const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 // screen) — no extra fetch, just a lookup by the route param.
 const { data: clients, isPending } = useClientsQuery(userId)
 const isEditOpen = ref(false)
+const isActionsOpen = ref(false)
+const pendingAction = ref<'edit' | 'delete' | null>(null)
 const showHeaderTitle = ref(false)
-const headerElement = ref<HTMLElement | null>(null)
-const contentTitleElement = ref<HTMLElement | null>(null)
 
 // The root router outlet is the presenting element so the edit modal uses the
 // same iOS card transition as the Services and Payment Methods forms.
@@ -87,16 +87,10 @@ const whatsappHref = computed(() =>
 )
 const callHref = computed(() => (client.value?.phone ? `tel:${client.value.phone}` : undefined))
 
-function onContentScroll(event: CustomEvent<{ scrollTop: number }>) {
-  const titleBottom = contentTitleElement.value?.getBoundingClientRect().bottom
-  const headerBottom = headerElement.value?.getBoundingClientRect().bottom
+const HEADER_TITLE_SCROLL_THRESHOLD = 96
 
-  // Compare the actual elements because the title may wrap and toolbar/safe-area
-  // heights differ between iOS and Android.
-  showHeaderTitle.value =
-    titleBottom != null && headerBottom != null
-      ? titleBottom <= headerBottom + 4
-      : event.detail.scrollTop > 96
+function onContentScroll(event: CustomEvent<{ scrollTop: number }>) {
+  showHeaderTitle.value = event.detail.scrollTop >= HEADER_TITLE_SCROLL_THRESHOLD
 }
 
 function initials(value: Client): string {
@@ -155,30 +149,25 @@ async function openBooking() {
 
 async function openActions() {
   if (!client.value || removeClient.isLoading.value) return
-  const sheet = await actionSheetController.create({
-    header: fullName.value,
-    buttons: [
-      {
-        text: t('clients.details.editButton'),
-        icon: pencilOutline,
-        role: 'edit',
-      },
-      {
-        text: t('clients.details.deleteButton'),
-        icon: trashOutline,
-        role: 'destructive',
-      },
-      {
-        text: t('common.cancel'),
-        icon: closeOutline,
-        role: 'cancel',
-      },
-    ],
-  })
-  await sheet.present()
-  const { role } = await sheet.onDidDismiss()
-  if (role === 'edit') isEditOpen.value = true
-  if (role === 'destructive') await onDelete()
+  isActionsOpen.value = true
+}
+
+function selectAction(action: 'edit' | 'delete') {
+  pendingAction.value = action
+  isActionsOpen.value = false
+}
+
+function closeActions() {
+  pendingAction.value = null
+  isActionsOpen.value = false
+}
+
+function onActionsDidDismiss() {
+  isActionsOpen.value = false
+  const action = pendingAction.value
+  pendingAction.value = null
+  if (action === 'edit') isEditOpen.value = true
+  if (action === 'delete') void onDelete()
 }
 
 async function onDelete() {
@@ -207,7 +196,7 @@ async function onDelete() {
 
 <template>
   <ion-page>
-    <ion-header ref="headerElement" :translucent="true" class="ion-no-border">
+    <ion-header :translucent="true" class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-back-button
@@ -257,7 +246,7 @@ async function onDelete() {
             <span v-else>{{ initials(client) }}</span>
           </div>
 
-          <h1 ref="contentTitleElement" class="client-name">{{ fullName }}</h1>
+          <h1 class="client-name">{{ fullName }}</h1>
 
           <div class="client-actions">
             <ion-button
@@ -352,6 +341,50 @@ async function onDelete() {
         :client="client"
         :presenting-element="presentingElement"
       />
+
+      <ion-modal
+        :is-open="isActionsOpen"
+        class="client-actions-modal"
+        :breakpoints="[0, 1]"
+        :initial-breakpoint="1"
+        :handle="true"
+        @did-dismiss="onActionsDidDismiss"
+      >
+        <ion-header class="ion-no-border">
+          <ion-toolbar>
+            <ion-buttons slot="start">
+              <ion-button
+                fill="clear"
+                color="dark"
+                :aria-label="$t('common.close')"
+                @click="closeActions"
+              >
+                <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
+              </ion-button>
+            </ion-buttons>
+            <ion-title>{{ $t('clients.details.actionsTitle') }}</ion-title>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content class="client-actions-modal__content">
+          <inset-list class="client-actions-modal__list">
+            <ion-item button :detail="false" @click="selectAction('edit')">
+              <ion-icon slot="start" :icon="pencilOutline" aria-hidden="true" />
+              <ion-label>{{ $t('clients.details.editButton') }}</ion-label>
+            </ion-item>
+            <ion-item
+              button
+              :detail="false"
+              lines="none"
+              class="client-actions-modal__delete"
+              @click="selectAction('delete')"
+            >
+              <ion-icon slot="start" :icon="trashOutline" aria-hidden="true" />
+              <ion-label>{{ $t('clients.details.deleteButton') }}</ion-label>
+            </ion-item>
+          </inset-list>
+        </ion-content>
+      </ion-modal>
     </ion-content>
   </ion-page>
 </template>
@@ -412,11 +445,12 @@ ion-header ion-toolbar {
   width: 88px;
   height: 88px;
   border-radius: 50%;
-  background: var(--ion-color-step-100, #e8e8ed);
+  background: var(--ion-background-color-step-100, var(--se-surface-card, #fff));
   color: var(--ion-text-color);
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  box-shadow: inset 0 0 0 1px var(--se-separator, rgb(0 0 0 / 11%));
 }
 
 .client-avatar__emoji {
@@ -557,6 +591,28 @@ ion-header ion-toolbar {
 .appointments-empty {
   --padding-top: 18px;
   --padding-bottom: 18px;
+}
+
+.client-actions-modal {
+  --height: 238px;
+  --border-radius: 20px 20px 0 0;
+}
+
+.client-actions-modal ion-toolbar,
+.client-actions-modal__content {
+  --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.client-actions-modal__list {
+  margin-top: 8px;
+}
+
+.client-actions-modal__delete {
+  --color: var(--ion-color-danger);
+}
+
+.client-actions-modal__delete ion-icon {
+  color: var(--ion-color-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {
