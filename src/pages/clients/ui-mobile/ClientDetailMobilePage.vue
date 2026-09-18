@@ -57,6 +57,9 @@ const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 // screen) — no extra fetch, just a lookup by the route param.
 const { data: clients, isPending } = useClientsQuery(userId)
 const isEditOpen = ref(false)
+const showHeaderTitle = ref(false)
+const headerElement = ref<HTMLElement | null>(null)
+const contentTitleElement = ref<HTMLElement | null>(null)
 
 // The root router outlet is the presenting element so the edit modal uses the
 // same iOS card transition as the Services and Payment Methods forms.
@@ -81,6 +84,18 @@ const whatsappHref = computed(() =>
   phoneDigits.value ? `https://wa.me/${phoneDigits.value}` : undefined,
 )
 const callHref = computed(() => (client.value?.phone ? `tel:${client.value.phone}` : undefined))
+
+function onContentScroll(event: CustomEvent<{ scrollTop: number }>) {
+  const titleBottom = contentTitleElement.value?.getBoundingClientRect().bottom
+  const headerBottom = headerElement.value?.getBoundingClientRect().bottom
+
+  // Compare the actual elements because the title may wrap and toolbar/safe-area
+  // heights differ between iOS and Android.
+  showHeaderTitle.value =
+    titleBottom != null && headerBottom != null
+      ? titleBottom <= headerBottom + 4
+      : event.detail.scrollTop > 96
+}
 
 function initials(value: Client): string {
   const parts = [value.first_name, value.last_name].filter(Boolean) as string[]
@@ -162,7 +177,7 @@ async function onDelete() {
 
 <template>
   <ion-page>
-    <ion-header :translucent="true" class="ion-no-border">
+    <ion-header ref="headerElement" :translucent="true" class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-back-button
@@ -172,7 +187,12 @@ async function onDelete() {
             color="dark"
           />
         </ion-buttons>
-        <ion-title>{{ fullName }}</ion-title>
+        <ion-title
+          class="client-toolbar-title"
+          :class="{ 'client-toolbar-title--visible': showHeaderTitle }"
+        >
+          {{ fullName }}
+        </ion-title>
         <ion-buttons v-if="client" slot="end">
           <ion-button
             fill="clear"
@@ -197,13 +217,12 @@ async function onDelete() {
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" class="client-detail-content ion-padding-bottom">
-      <ion-header v-if="client" collapse="condense">
-        <ion-toolbar class="ion-background-transparent">
-          <ion-title size="large">{{ fullName }}</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
+    <ion-content
+      :fullscreen="true"
+      :scroll-events="true"
+      class="client-detail-content ion-padding-bottom"
+      @ion-scroll="onContentScroll"
+    >
       <div v-if="isPending" class="loading-state" aria-live="polite">
         <ion-spinner name="crescent" />
       </div>
@@ -218,6 +237,8 @@ async function onDelete() {
             <span v-if="client.emoji" class="client-avatar__emoji">{{ client.emoji }}</span>
             <span v-else>{{ initials(client) }}</span>
           </div>
+
+          <h1 ref="contentTitleElement" class="client-name">{{ fullName }}</h1>
 
           <div class="client-actions">
             <ion-button
@@ -323,8 +344,18 @@ ion-header ion-toolbar {
   --background: var(--se-surface-page, #f2f2f7);
 }
 
-.ion-background-transparent {
-  --background: transparent;
+.client-toolbar-title {
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  pointer-events: none;
+}
+
+.client-toolbar-title--visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .client-detail-content {
@@ -349,8 +380,8 @@ ion-header ion-toolbar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  padding: 10px 16px 30px;
+  gap: 12px;
+  padding: 24px 16px 30px;
 }
 
 .client-avatar {
@@ -371,10 +402,22 @@ ion-header ion-toolbar {
   font-size: 2.4rem;
 }
 
+.client-name {
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ion-text-color);
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .client-actions {
   display: grid;
   grid-template-columns: repeat(3, 56px);
   gap: 14px;
+  margin-top: 8px;
 }
 
 .client-action {
@@ -467,5 +510,11 @@ ion-header ion-toolbar {
 .appointments-empty {
   --padding-top: 18px;
   --padding-bottom: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-toolbar-title {
+    transition: none;
+  }
 }
 </style>
