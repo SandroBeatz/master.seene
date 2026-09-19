@@ -445,8 +445,8 @@ ion-header ion-toolbar {
   width: 88px;
   height: 88px;
   border-radius: 50%;
-  background: var(--ion-color-light);
-  color: var(--ion-color-light-contrast);
+  background: var(--se-avatar-surface);
+  color: var(--se-avatar-foreground);
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.02em;
