@@ -2,26 +2,28 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IonItem, IonLabel, IonInput, IonIcon } from '@ionic/vue'
-import { chevronDownOutline } from 'ionicons/icons'
-import {
-  AsYouType,
-  getCountryCallingCode,
-  isSupportedCountry,
-  parsePhoneNumber,
-  type CountryCode,
-} from 'libphonenumber-js'
-import { COUNTRIES } from '@shared/lib/countries'
+import { chevronDownOutline, globeOutline } from 'ionicons/icons'
+import { getCountryCallingCode, isSupportedCountry, type CountryCode } from 'libphonenumber-js'
+import { COUNTRIES, detectCountry } from '@shared/lib/countries'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
+import {
+  applyCountrySelection,
+  resolveInitialCountry,
+  resolvePhoneInput,
+  toSupportedCountry,
+  type PhoneFieldState,
+} from '../model/phone-field'
 
 // Native Ionic phone field. Uses `ion-input` for the UI (so it inherits the
 // list/theme/keyboard exactly like every other row) while the phone *logic* —
 // live "as-you-type" formatting, validation and E.164 normalization — comes
 // straight from `libphonenumber-js` (the same engine vue-tel-input wraps).
 //
-// v-model is the stored E.164 string ('+79991234567'); the field keeps the
-// national number + selected country internally and rebuilds E.164 from them.
-// A leading button opens a country picker (reusing ListPickerModal), which sets
-// the dial code used for formatting/validation.
+// v-model is the normalized international string ('+79991234567'). The field
+// also keeps the formatted draft locally so incomplete input is never lost.
+// A leading button opens a country picker (reusing ListPickerModal); when no
+// country can be derived from the value, profile country, or locale it shows a
+// neutral globe instead of guessing.
 //
 // Mobile-only: exposed via @shared/ui/phone-field/index.mobile — never import
 // the plain index from the desktop (Nuxt UI) build.
@@ -30,7 +32,7 @@ const props = withDefaults(
     /** Stored value in E.164 form, e.g. '+79991234567'. */
     modelValue: string
     /** Country used to format/validate a number typed without a '+' prefix. */
-    defaultCountry?: CountryCode
+    defaultCountry?: string
     placeholder?: string
     /** Optional label rendered on the left, matching the other list rows. */
     label?: string
@@ -39,7 +41,7 @@ const props = withDefaults(
     /** Card modal presenting element; auto-resolved to ion-router-outlet if omitted. */
     presentingElement?: HTMLElement | null
   }>(),
-  { defaultCountry: 'RU', placeholder: '', label: '', invalid: false, presentingElement: null },
+  { placeholder: '', label: '', invalid: false, presentingElement: null },
 )
 
 const emit = defineEmits<{
@@ -49,66 +51,36 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-// Source of truth held by the field: selected country + the raw national digits.
-const country = ref<CountryCode>(props.defaultCountry)
-const nationalDigits = ref('')
-
-const callingCode = computed(() => getCountryCallingCode(country.value))
+const localeCountry = detectCountry()
+const country = ref<CountryCode | undefined>(
+  resolveInitialCountry(props.modelValue, props.defaultCountry, localeCountry),
+)
+const display = ref('')
+const hasUserSelectedCountry = ref(false)
 
 // flag-icons class for the selected country, e.g. 'fi-ru' (codes are lowercase).
-const flagClass = computed(() => `fi-${country.value.toLowerCase()}`)
-
-// International number rebuilt from the two pieces, e.g. '+79991234567'.
-const e164 = computed(() =>
-  nationalDigits.value ? `+${callingCode.value}${nationalDigits.value}` : '',
-)
-
-// What the input shows: the full international number, formatted as-you-type,
-// e.g. '+7 999 123 45 67'. The calling code is part of the value so the number
-// always reads complete (the flag button on the left only picks the country).
-const display = computed(() => {
-  if (!nationalDigits.value) return ''
-  return new AsYouType(country.value).input(e164.value)
-})
-
-function isValid(): boolean {
-  if (!e164.value) return false
-  try {
-    return parsePhoneNumber(e164.value)?.isValid() ?? false
-  } catch {
-    return false
-  }
-}
+const flagClass = computed(() => (country.value ? `fi-${country.value.toLowerCase()}` : ''))
 
 // Guards the modelValue watcher against echoing our own emit back into a reseed.
 let lastEmitted = ''
 
-function emitChange() {
-  lastEmitted = e164.value
-  emit('update:modelValue', e164.value)
-  emit('validate', { valid: isValid() })
+function applyState(state: PhoneFieldState, shouldEmit = true) {
+  country.value = state.country
+  display.value = state.displayValue
+
+  if (!shouldEmit) {
+    emit('validate', { valid: state.valid })
+    return
+  }
+
+  lastEmitted = state.modelValue
+  emit('update:modelValue', state.modelValue)
+  emit('validate', { valid: state.valid })
 }
 
 function onInput(event: CustomEvent) {
   const value = (event.detail as { value?: string | null }).value ?? ''
-  // The field shows the full international number, so what comes back carries the
-  // calling code. Let AsYouType parse it: it detects the country from the '+code'
-  // prefix and yields the national digits, keeping country + number in sync.
-  const typer = new AsYouType(country.value)
-  typer.input(value)
-  const number = typer.getNumber()
-  if (number) {
-    if (number.country) country.value = number.country
-    nationalDigits.value = number.nationalNumber
-    emitChange()
-    return
-  }
-  // Incomplete number: fall back to raw digits, dropping a leading calling code
-  // so we don't fold it into the national part.
-  let digits = value.replace(/\D/g, '')
-  if (digits.startsWith(callingCode.value)) digits = digits.slice(callingCode.value.length)
-  nationalDigits.value = digits
-  emitChange()
+  applyState(resolvePhoneInput(value, country.value))
 }
 
 // --- Country picker -----------------------------------------------------------
@@ -124,9 +96,10 @@ const countryItems = computed(() =>
 )
 
 function onCountrySelected(value: string | number) {
-  country.value = String(value) as CountryCode
-  // Dial code changed, so the E.164 changed even if the digits didn't.
-  emitChange()
+  const nextCountry = toSupportedCountry(String(value))
+  if (!nextCountry) return
+  hasUserSelectedCountry.value = true
+  applyState(applyCountrySelection(display.value, country.value, nextCountry))
 }
 
 // The tab's router outlet makes the picker animate as an iOS card modal.
@@ -142,23 +115,19 @@ watch(
   () => props.modelValue,
   (value) => {
     if (value === lastEmitted) return
-    if (!value) {
-      nationalDigits.value = ''
-      return
-    }
-    try {
-      const parsed = parsePhoneNumber(value)
-      if (parsed) {
-        country.value = parsed.country ?? country.value
-        nationalDigits.value = parsed.nationalNumber
-        return
-      }
-    } catch {
-      /* fall through to raw digits */
-    }
-    nationalDigits.value = value.replace(/\D/g, '')
+    hasUserSelectedCountry.value = false
+    const initialCountry = resolveInitialCountry(value, props.defaultCountry, localeCountry)
+    applyState(resolvePhoneInput(value, initialCountry), false)
   },
   { immediate: true },
+)
+
+watch(
+  () => props.defaultCountry,
+  (value) => {
+    if (props.modelValue || display.value || hasUserSelectedCountry.value) return
+    country.value = resolveInitialCountry('', value, localeCountry)
+  },
 )
 </script>
 
@@ -172,7 +141,8 @@ watch(
       :aria-label="t('settings.contacts.address.country')"
       @click="isPickerOpen = true"
     >
-      <span class="fi fis pf-flag-icon" :class="flagClass" />
+      <span v-if="country" class="fi fis pf-flag-icon" :class="flagClass" />
+      <ion-icon v-else class="pf-neutral-icon" :icon="globeOutline" aria-hidden="true" />
       <ion-icon :icon="chevronDownOutline" aria-hidden="true" />
     </button>
 
@@ -190,7 +160,7 @@ watch(
       v-model:is-open="isPickerOpen"
       :title="t('settings.contacts.address.country')"
       :items="countryItems"
-      :model-value="country"
+      :model-value="country ?? ''"
       searchable
       :presenting-element="resolvedPresenting"
       @update:model-value="onCountrySelected"
@@ -231,6 +201,12 @@ watch(
 .pf-flag ion-icon {
   font-size: 13px;
   color: var(--ion-color-medium);
+}
+
+.pf-flag .pf-neutral-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 22px;
 }
 
 .pf-flag:active {
