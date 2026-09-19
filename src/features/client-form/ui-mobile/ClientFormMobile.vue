@@ -10,15 +10,19 @@ import {
   IonButtons,
   IonButton,
   IonContent,
-  IonList,
+  IonFooter,
   IonItem,
   IonInput,
   IonTextarea,
   IonLabel,
   IonNote,
+  IonIcon,
   IonSpinner,
+  alertController,
+  isPlatform,
   toastController,
 } from '@ionic/vue'
+import { closeOutline } from 'ionicons/icons'
 import {
   useCreateClientMutation,
   useUpdateClientMutation,
@@ -26,31 +30,31 @@ import {
   type CreateClientDto,
 } from '@entities/client'
 import { useSessionStore } from '@entities/session'
+import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { PhoneField } from '@shared/ui/phone-field/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
   mode: 'create' | 'edit'
   client?: Client | null
-  // The list/detail page passes its router outlet so the modal renders as an
-  // iOS card (page scaled behind the sheet). Optional — plain sheet otherwise.
   presentingElement?: HTMLElement | null
 }>()
 
 const emit = defineEmits<{
   'update:isOpen': [boolean]
-  // The created/updated client is passed so callers can react (e.g. navigate).
   saved: [client: Client]
 }>()
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
-
 const isEdit = computed(() => props.mode === 'edit')
+const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 interface FormState {
   firstName: string
   lastName: string
+  phone: string
   email: string
   birthday: string
   notes: string
@@ -59,52 +63,72 @@ interface FormState {
 const state = reactive<FormState>({
   firstName: '',
   lastName: '',
+  phone: '',
   email: '',
   birthday: '',
   notes: '',
 })
-
-const phone = ref('')
+const initialState = ref<FormState>({ ...state })
 const phoneValid = ref(false)
-
-// Field-level errors keyed by form field; populated on submit attempt.
 const errors = reactive<Record<string, string>>({})
 const submitted = ref(false)
+const isSubmitting = ref(false)
+const allowDismiss = ref(false)
 
-function onPhoneValidate(obj: { valid?: boolean }) {
-  phoneValid.value = !!obj.valid
-  if (submitted.value && phoneValid.value) delete errors.phone
+const selfModal = ref<{ $el: HTMLElement } | null>(null)
+const selfModalEl = computed(() => selfModal.value?.$el ?? null)
+
+function currentState(): FormState {
+  return { ...state }
+}
+
+function clearErrors() {
+  for (const key of Object.keys(errors)) delete errors[key]
 }
 
 function resetForm() {
   submitted.value = false
-  for (const key of Object.keys(errors)) delete errors[key]
+  allowDismiss.value = false
+  clearErrors()
+
   if (isEdit.value && props.client) {
     state.firstName = props.client.first_name
     state.lastName = props.client.last_name ?? ''
+    state.phone = props.client.phone
     state.email = props.client.email ?? ''
     state.birthday = props.client.birthday ?? ''
     state.notes = props.client.notes ?? ''
-    phone.value = props.client.phone
     phoneValid.value = true
   } else {
     state.firstName = ''
     state.lastName = ''
+    state.phone = ''
     state.email = ''
     state.birthday = ''
     state.notes = ''
-    phone.value = ''
     phoneValid.value = false
   }
+
+  initialState.value = currentState()
 }
 
-// Re-seed the fields every time the sheet opens so a reused component instance
-// never shows a previous client's data.
 watch(
   () => props.isOpen,
   (open) => {
     if (open) resetForm()
   },
+)
+
+const isDirty = computed(() =>
+  (Object.keys(state) as (keyof FormState)[]).some((key) => state[key] !== initialState.value[key]),
+)
+const isFormValid = computed(
+  () =>
+    state.firstName.trim().length > 0 &&
+    state.firstName.trim().length <= 100 &&
+    state.lastName.length <= 100 &&
+    state.notes.length <= 2000 &&
+    phoneValid.value,
 )
 
 const schema = Joi.object({
@@ -117,25 +141,19 @@ const schema = Joi.object({
   notes: Joi.string().max(2000).allow('', null),
 })
 
+function onPhoneValidate({ valid }: { valid: boolean }) {
+  phoneValid.value = valid
+  if (submitted.value && valid) delete errors.phone
+}
+
 function validate(): boolean {
-  for (const key of Object.keys(errors)) delete errors[key]
-  const { error } = schema.validate(
-    {
-      firstName: state.firstName,
-      lastName: state.lastName,
-      email: state.email,
-      birthday: state.birthday,
-      notes: state.notes,
-    },
-    { abortEarly: false },
-  )
-  if (error) {
-    for (const detail of error.details) {
-      const field = String(detail.path[0])
-      if (errors[field]) continue
-      if (field === 'firstName') errors.firstName = t('clients.form.firstNameRequired')
-      else if (field === 'email') errors.email = t('clients.form.emailInvalid')
-    }
+  clearErrors()
+  const { error } = schema.validate(state, { abortEarly: false, stripUnknown: true })
+  for (const detail of error?.details ?? []) {
+    const field = String(detail.path[0])
+    if (errors[field]) continue
+    if (field === 'firstName') errors.firstName = t('clients.form.firstNameRequired')
+    else if (field === 'email') errors.email = t('clients.form.emailInvalid')
   }
   if (!phoneValid.value) errors.phone = t('clients.form.phoneRequired')
   return Object.keys(errors).length === 0
@@ -144,26 +162,55 @@ function validate(): boolean {
 const createMutation = useCreateClientMutation(userId)
 const updateMutation = useUpdateClientMutation(userId)
 const isLoading = computed(
-  () => createMutation.isLoading.value || updateMutation.isLoading.value,
+  () => isSubmitting.value || createMutation.isLoading.value || updateMutation.isLoading.value,
 )
+const canSubmit = computed(() => isFormValid.value && isDirty.value && !isLoading.value)
 
 async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
   await toast.present()
 }
 
-function close() {
+async function confirmDiscard(): Promise<boolean> {
+  const alert = await alertController.create({
+    header: t('common.unsavedChanges'),
+    message: t('common.unsavedChangesConfirm'),
+    buttons: [
+      { text: t('common.cancel'), role: 'cancel' },
+      { text: t('common.discard'), role: 'destructive' },
+    ],
+  })
+  await alert.present()
+  return (await alert.onDidDismiss()).role === 'destructive'
+}
+
+function canDismiss(): boolean | Promise<boolean> {
+  if (isLoading.value) return false
+  if (allowDismiss.value || !isDirty.value) return true
+  return confirmDiscard()
+}
+
+async function close() {
+  if (isLoading.value) return
+  if (!allowDismiss.value && isDirty.value && !(await confirmDiscard())) return
+  allowDismiss.value = true
+  emit('update:isOpen', false)
+}
+
+function onDidDismiss() {
+  allowDismiss.value = false
   emit('update:isOpen', false)
 }
 
 async function onSubmit() {
   submitted.value = true
-  if (!validate()) return
+  if (!validate() || !canSubmit.value) return
+  isSubmitting.value = true
 
   const dto: CreateClientDto = {
     first_name: state.firstName.trim(),
     last_name: state.lastName.trim() || null,
-    phone: phone.value,
+    phone: state.phone,
     email: state.email.trim() || null,
     birthday: state.birthday || null,
     notes: state.notes.trim() || null,
@@ -179,146 +226,216 @@ async function onSubmit() {
       isEdit.value ? t('clients.form.successEdit') : t('clients.form.successCreate'),
       'success',
     )
+    initialState.value = currentState()
+    allowDismiss.value = true
     emit('saved', saved)
-    close()
-  } catch (err: unknown) {
-    const code = (err as { code?: string })?.code
+    emit('update:isOpen', false)
+  } catch (error: unknown) {
+    const code = (error as { code?: string })?.code
     await showToast(
       code === '23505' ? t('clients.form.duplicatePhone') : t('clients.form.errorTitle'),
       'danger',
     )
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
 
 <template>
   <ion-modal
+    ref="selfModal"
     :is-open="isOpen"
     :presenting-element="presentingElement ?? undefined"
-    @did-dismiss="close"
+    :can-dismiss="canDismiss"
+    @did-dismiss="onDidDismiss"
   >
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-button :disabled="isLoading" @click="close">
-            {{ $t('clients.form.cancel') }}
+          <ion-button
+            fill="clear"
+            color="dark"
+            :disabled="isLoading"
+            :aria-label="$t('common.close')"
+            @click="close"
+          >
+            <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
         <ion-title>
           {{ isEdit ? $t('clients.form.titleEdit') : $t('clients.form.titleCreate') }}
         </ion-title>
-        <ion-buttons slot="end">
-          <ion-button strong :disabled="isLoading" @click="onSubmit">
-            <ion-spinner v-if="isLoading" name="crescent" />
-            <span v-else>
-              {{ isEdit ? $t('clients.form.submitEdit') : $t('clients.form.submitCreate') }}
-            </span>
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding-vertical">
-      <form @submit.prevent="onSubmit">
-        <ion-list inset>
-          <ion-item>
+    <ion-content :fullscreen="true" class="ion-padding-vertical">
+      <form id="client-form" @submit.prevent="onSubmit">
+        <inset-list>
+          <ion-item :class="{ 'ion-invalid': errors.firstName, 'ion-touched': submitted }">
+            <ion-label class="field-label">{{ $t('clients.form.firstNameLabel') }}</ion-label>
             <ion-input
               v-model="state.firstName"
-              label-placement="stacked"
-              :label="$t('clients.form.firstNameLabel')"
-              :class="{ 'ion-invalid': errors.firstName, 'ion-touched': submitted }"
-              :error-text="errors.firstName"
+              class="value-input"
+              :maxlength="100"
               autocapitalize="words"
               enterkeyhint="next"
             />
           </ion-item>
           <ion-item>
+            <ion-label class="field-label">{{ $t('clients.form.lastNameLabel') }}</ion-label>
             <ion-input
               v-model="state.lastName"
-              label-placement="stacked"
-              :label="$t('clients.form.lastNameLabel')"
+              class="value-input"
+              :maxlength="100"
               autocapitalize="words"
               enterkeyhint="next"
             />
           </ion-item>
-        </ion-list>
+          <phone-field
+            v-model="state.phone"
+            :label="$t('clients.form.phoneLabel')"
+            :placeholder="$t('clients.form.phonePlaceholder')"
+            :invalid="Boolean(errors.phone)"
+            :presenting-element="selfModalEl"
+            @validate="onPhoneValidate"
+          />
+        </inset-list>
+        <ion-note v-if="errors.firstName" color="danger" class="field-hint">
+          {{ errors.firstName }}
+        </ion-note>
+        <ion-note v-if="errors.phone" color="danger" class="field-hint">
+          {{ errors.phone }}
+        </ion-note>
 
-        <ion-list inset>
-          <ion-item lines="none">
-            <ion-label position="stacked">{{ $t('clients.form.phoneLabel') }}</ion-label>
-            <vue-tel-input
-              v-model="phone"
-              class="client-phone"
-              mode="international"
-              :input-options="{
-                placeholder: $t('clients.form.phonePlaceholder'),
-                showDialCode: true,
-              }"
-              @validate="onPhoneValidate"
-            />
-          </ion-item>
-          <ion-note v-if="errors.phone" color="danger" class="client-phone-error">
-            {{ errors.phone }}
-          </ion-note>
-        </ion-list>
-
-        <ion-list inset>
-          <ion-item>
+        <inset-list>
+          <ion-item :class="{ 'ion-invalid': errors.email, 'ion-touched': submitted }">
+            <ion-label class="field-label">{{ $t('clients.form.emailLabel') }}</ion-label>
             <ion-input
               v-model="state.email"
+              class="value-input"
               type="email"
               inputmode="email"
               autocapitalize="off"
-              label-placement="stacked"
-              :label="$t('clients.form.emailLabel')"
-              :class="{ 'ion-invalid': errors.email, 'ion-touched': submitted }"
-              :error-text="errors.email"
+              enterkeyhint="next"
             />
           </ion-item>
-          <ion-item>
-            <ion-input
-              v-model="state.birthday"
-              type="date"
-              label-placement="stacked"
-              :label="$t('clients.form.birthdayLabel')"
-            />
+          <ion-item lines="none">
+            <ion-label class="field-label">{{ $t('clients.form.birthdayLabel') }}</ion-label>
+            <ion-input v-model="state.birthday" class="value-input" type="date" />
           </ion-item>
-        </ion-list>
+        </inset-list>
+        <ion-note v-if="errors.email" color="danger" class="field-hint">
+          {{ errors.email }}
+        </ion-note>
 
-        <ion-list inset>
-          <ion-item>
+        <inset-list :header="$t('clients.form.notesLabel')">
+          <ion-item lines="none" class="notes-item">
             <ion-textarea
               v-model="state.notes"
               :auto-grow="true"
-              :rows="3"
-              label-placement="stacked"
-              :label="$t('clients.form.notesLabel')"
+              :rows="4"
+              :maxlength="2000"
+              :counter="true"
             />
           </ion-item>
-        </ion-list>
+        </inset-list>
 
-        <!-- Lets the keyboard "go" action submit the form. -->
         <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true" />
       </form>
     </ion-content>
+
+    <ion-footer class="ion-no-border">
+      <ion-toolbar>
+        <ion-button
+          class="save-button"
+          expand="block"
+          :disabled="!canSubmit"
+          :aria-busy="isLoading"
+          @click="onSubmit"
+        >
+          <span :class="{ 'save-button-label--hidden': isLoading }">
+            {{ isEdit ? $t('clients.form.submitEdit') : $t('clients.form.submitCreate') }}
+          </span>
+          <ion-spinner v-if="isLoading" class="save-button-spinner" :name="spinnerName" />
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
   </ion-modal>
 </template>
 
 <style scoped>
-/* vue-tel-input is a light-DOM component, so it needs to be nudged to match the
-   Ionic list items it sits between. */
-.client-phone {
-  width: 100%;
-  margin-top: 6px;
-  border-radius: 8px;
-  --vti-border-radius: 8px;
+ion-header ion-toolbar.ios {
+  --padding-start: 16px;
+  --padding-end: 16px;
 }
 
-.client-phone-error {
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+form ion-item {
+  --padding-top: 7px;
+  --padding-bottom: 7px;
+}
+
+.field-label {
+  flex: 0 0 auto;
+  margin-inline-end: 12px;
+  color: var(--ion-color-medium);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.value-input {
+  flex: 1 1 auto;
+  text-align: end;
+  --color: var(--ion-text-color);
+  --padding-start: 0;
+  --padding-end: 0;
+  --placeholder-color: var(--ion-color-medium);
+  --placeholder-opacity: 1;
+}
+
+.field-hint {
   display: block;
-  padding-inline: 16px;
-  padding-top: 4px;
+  margin-top: -14px;
+  margin-bottom: 22px;
+  padding-inline: 32px;
   font-size: 0.75rem;
+}
+
+.notes-item {
+  --padding-top: 8px;
+  --padding-bottom: 4px;
+}
+
+.notes-item ion-textarea {
+  margin: 0;
+  font-size: 0.94rem;
+}
+
+ion-footer ion-toolbar {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 10px;
+  --padding-bottom: calc(10px + var(--safe-area-bottom));
+  --background: var(--se-surface-page, #f2f2f7);
+}
+
+.save-button {
+  min-height: 48px;
+  margin: 0;
+  font-weight: 600;
+  --border-radius: 12px;
+}
+
+.save-button-label--hidden {
+  visibility: hidden;
+}
+
+.save-button-spinner {
+  position: absolute;
 }
 
 .sr-only {

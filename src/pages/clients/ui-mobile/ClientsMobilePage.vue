@@ -327,8 +327,8 @@ ion-item-sliding:not(:last-child) {
   width: 44px;
   height: 44px;
   margin-inline-end: 12px;
-  background: var(--ion-color-step-100, #e8e8ed);
-  color: var(--ion-text-color);
+  background: var(--se-avatar-surface);
+  color: var(--se-avatar-foreground);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.02em;
