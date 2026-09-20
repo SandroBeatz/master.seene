@@ -133,6 +133,9 @@ export default {
     },
     nextUp: {
       title: 'À traiter',
+      carouselLabel: 'Rendez-vous à traiter',
+      loadError: 'Impossible de charger les rendez-vous',
+      retry: 'Réessayer',
       noAppointments: 'Tout est à jour — rien à traiter pour le moment.',
       needAction: '{n} en attente',
       statusPending: 'À confirmer',

@@ -20,6 +20,10 @@ import { useAppointmentPreview } from '@widgets/appointment-preview-panel'
 import { Typography, useConfirm } from '@shared/ui'
 import MobileNextUpActionsDrawer from './shared/MobileNextUpActionsDrawer.vue'
 import MobileNextUpCard from './shared/MobileNextUpCard.vue'
+import {
+  groupHomeActionableAppointments,
+  hasAppointmentSlotEnded,
+} from '../model/home-actionable-appointments'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -56,34 +60,14 @@ const activeIndex = ref(0)
 // waiting on, pending requests whose slot has already passed (the master never
 // replied — they need a decision, not just a tap), and past confirmed
 // appointments that still need a checkout.
-const byStartAsc = (a: Appointment, b: Appointment) =>
-  new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
-
 function slotEnded(appointment: Appointment): boolean {
-  return new Date(appointment.start_at).getTime() + appointment.duration * 60_000 <= Date.now()
+  return hasAppointmentSlotEnded(appointment)
 }
 
-const requests = computed(
-  () =>
-    appointments.value
-      ?.filter((a) => a.status === 'pending' && !slotEnded(a))
-      .slice()
-      .sort(byStartAsc) ?? [],
-)
-const needsDecision = computed(
-  () =>
-    appointments.value
-      ?.filter((a) => a.status === 'pending' && slotEnded(a))
-      .slice()
-      .sort(byStartAsc) ?? [],
-)
-const toFinish = computed(
-  () =>
-    appointments.value
-      ?.filter((a) => a.status !== 'pending')
-      .slice()
-      .sort(byStartAsc) ?? [],
-)
+const actionableGroups = computed(() => groupHomeActionableAppointments(appointments.value ?? []))
+const requests = computed(() => actionableGroups.value.requests)
+const needsDecision = computed(() => actionableGroups.value.needsDecision)
+const toFinish = computed(() => actionableGroups.value.toFinish)
 
 const sections = computed(() =>
   [

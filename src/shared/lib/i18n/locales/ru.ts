@@ -132,6 +132,9 @@ export default {
     },
     nextUp: {
       title: 'Требуют внимания',
+      carouselLabel: 'Записи, требующие внимания',
+      loadError: 'Не удалось загрузить записи',
+      retry: 'Повторить',
       noAppointments: 'Всё разобрано — сейчас ничего не требует действий.',
       needAction: '{n} ждут вас',
       statusPending: 'Нужно подтвердить',
