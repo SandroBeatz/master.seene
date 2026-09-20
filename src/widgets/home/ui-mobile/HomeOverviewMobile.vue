@@ -247,7 +247,6 @@ ion-card-content {
 .metric-label {
   display: -webkit-box;
   overflow: hidden;
-  min-height: 2.2em;
   color: var(--ion-color-medium);
   font-size: 0.7rem;
   font-weight: 600;
@@ -258,7 +257,7 @@ ion-card-content {
 
 .metric-value {
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 4px;
   color: var(--ion-text-color);
   font-size: clamp(0.88rem, 3.8vw, 1.08rem);
   font-weight: 700;
@@ -270,7 +269,7 @@ ion-card-content {
 .metric-skeleton {
   width: 72%;
   height: 20px;
-  margin-top: 8px;
+  margin-top: 4px;
   border-radius: 5px;
 }
 
