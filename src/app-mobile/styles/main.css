@@ -82,6 +82,7 @@
  * Semantic surface roles, derived from the grid above — never hardcoded:
  *   --se-surface-page  the app background every page sits on
  *   --se-surface-card  an elevated surface on top of the page (cards, inset lists)
+ *   --se-surface-muted a subtly contrasting inset surface (controls, nested cards)
  *   --se-separator     hairline between rows
  *   --se-avatar-surface / --se-avatar-foreground  neutral avatar color pair
  * The light/dark direction flips: in light the page is a soft gray step and
@@ -92,6 +93,7 @@
 :root {
   --se-surface-page: var(--ion-background-color-step-50);
   --se-surface-card: var(--ion-background-color);
+  --se-surface-muted: var(--ion-background-color-step-100);
   --se-separator: var(--ion-background-color-step-150);
   --se-avatar-surface: var(--ion-color-light);
   --se-avatar-foreground: var(--ion-color-light-contrast);
@@ -100,6 +102,7 @@
 .ion-palette-dark {
   --se-surface-page: var(--ion-background-color);
   --se-surface-card: var(--ion-background-color-step-100);
+  --se-surface-muted: var(--ion-background-color-step-50);
   --se-separator: var(--ion-background-color-step-200);
 }
 
