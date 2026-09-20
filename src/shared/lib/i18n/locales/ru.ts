@@ -80,6 +80,7 @@ export default {
   home: {
     title: 'Главная',
     description: 'Добро пожаловать на ваш дашборд.',
+    userFallback: 'Пользователь',
     greeting: {
       morning: 'Доброе утро!',
       afternoon: 'Добрый день!',

@@ -81,6 +81,7 @@ export default {
   home: {
     title: 'Accueil',
     description: 'Bon retour sur votre tableau de bord.',
+    userFallback: 'Utilisateur',
     greeting: {
       morning: 'Bonjour !',
       afternoon: 'Bon après-midi !',
