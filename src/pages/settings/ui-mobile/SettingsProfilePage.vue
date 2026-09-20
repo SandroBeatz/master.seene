@@ -430,6 +430,7 @@ async function comingSoon() {
 
         <phone-field
           v-model="state.phone"
+          :default-country="profileData?.country"
           :label="$t('settings.profile.phone')"
           :placeholder="$t('settings.profile.phonePlaceholder')"
           :invalid="Boolean(phoneError)"

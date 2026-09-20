@@ -29,6 +29,7 @@ import {
   type Client,
   type CreateClientDto,
 } from '@entities/client'
+import { useMasterProfileQuery } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { PhoneField } from '@shared/ui/phone-field/index.mobile'
@@ -48,6 +49,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
+const { data: masterProfile } = useMasterProfileQuery(userId)
 const isEdit = computed(() => props.mode === 'edit')
 const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
@@ -294,6 +296,7 @@ async function onSubmit() {
           </ion-item>
           <phone-field
             v-model="state.phone"
+            :default-country="masterProfile?.country"
             :label="$t('clients.form.phoneLabel')"
             :placeholder="$t('clients.form.phonePlaceholder')"
             :invalid="Boolean(errors.phone)"
