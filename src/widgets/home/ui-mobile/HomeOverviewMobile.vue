@@ -1,29 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  IonButton,
-  IonCard,
-  IonCardContent,
-  IonContent,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonModal,
-  IonSkeletonText,
-} from '@ionic/vue'
+import { IonButton, IonCard, IonCardContent, IonIcon, IonSkeletonText } from '@ionic/vue'
 import {
   alertCircleOutline,
+  calendarOutline,
   calendarClearOutline,
   cashOutline,
-  checkmark,
   chevronDownOutline,
+  todayOutline,
   timeOutline,
 } from 'ionicons/icons'
 import { useAnalyticsQueryV2 } from '@entities/analytics'
 import { useFormats } from '@shared/lib/formats'
+import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
 import { workingHoursLabel } from '@widgets/analytics/lib/stat-format'
 import {
   createHomeOverviewPeriod,
@@ -46,6 +36,11 @@ const periodLabel = computed(() =>
   formatHomeOverviewPeriodLabel(activePeriod.value, anchorDate, formats),
 )
 const activePeriodLabel = computed(() => t(`home.overview.period.${activePeriod.value}`))
+const periodItems = computed(() => [
+  { value: 'day', label: t('home.overview.period.day'), icon: todayOutline },
+  { value: 'week', label: t('home.overview.period.week'), icon: calendarClearOutline },
+  { value: 'month', label: t('home.overview.period.month'), icon: calendarOutline },
+])
 
 const cards = computed(() => {
   const metrics = data.value?.current
@@ -78,6 +73,12 @@ const cards = computed(() => {
 function selectPeriod(period: HomeOverviewPeriod) {
   activePeriod.value = period
   isPeriodSheetOpen.value = false
+}
+
+function onPeriodSelected(value: string | number) {
+  if (HOME_OVERVIEW_PERIODS.includes(value as HomeOverviewPeriod)) {
+    selectPeriod(value as HomeOverviewPeriod)
+  }
 }
 
 function retry() {
@@ -136,35 +137,15 @@ function retry() {
     </ion-card-content>
   </ion-card>
 
-  <ion-modal
+  <list-picker-modal
     :is-open="isPeriodSheetOpen"
-    :breakpoints="[0, 0.32]"
-    :initial-breakpoint="0.32"
-    :handle="true"
-    @did-dismiss="isPeriodSheetOpen = false"
-  >
-    <ion-content>
-      <ion-list lines="inset">
-        <ion-list-header>{{ t('home.overview.periodLabel') }}</ion-list-header>
-        <ion-item
-          v-for="period in HOME_OVERVIEW_PERIODS"
-          :key="period"
-          button
-          :detail="false"
-          @click="selectPeriod(period)"
-        >
-          <ion-label>{{ t(`home.overview.period.${period}`) }}</ion-label>
-          <ion-icon
-            v-if="period === activePeriod"
-            slot="end"
-            :icon="checkmark"
-            color="primary"
-            aria-hidden="true"
-          />
-        </ion-item>
-      </ion-list>
-    </ion-content>
-  </ion-modal>
+    :title="t('home.overview.periodLabel')"
+    :items="periodItems"
+    :model-value="activePeriod"
+    sheet
+    @update:is-open="isPeriodSheetOpen = $event"
+    @update:model-value="onPeriodSelected"
+  />
 </template>
 
 <style scoped>
@@ -213,6 +194,7 @@ function retry() {
 }
 
 .period-button ion-icon {
+  margin-inline-start: 6px;
   font-size: 0.9rem;
 }
 
@@ -234,10 +216,9 @@ ion-card-content {
 .metric-card {
   display: flex;
   min-width: 0;
-  min-height: 112px;
   flex-direction: column;
   align-items: flex-start;
-  padding: 9px 8px;
+  padding: 10px 8px 11px;
   border-radius: 11px;
   background: var(--se-surface-page);
 }
@@ -277,7 +258,7 @@ ion-card-content {
 
 .metric-value {
   overflow: hidden;
-  margin-top: auto;
+  margin-top: 8px;
   color: var(--ion-text-color);
   font-size: clamp(0.88rem, 3.8vw, 1.08rem);
   font-weight: 700;
@@ -289,7 +270,7 @@ ion-card-content {
 .metric-skeleton {
   width: 72%;
   height: 20px;
-  margin-top: auto;
+  margin-top: 8px;
   border-radius: 5px;
 }
 

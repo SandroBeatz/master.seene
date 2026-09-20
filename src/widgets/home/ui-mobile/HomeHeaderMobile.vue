@@ -60,6 +60,7 @@ const greeting = computed(() => {
 
 <style scoped>
 .home-header ion-toolbar {
+  --background: var(--se-surface-page, var(--ion-background-color));
   --min-height: 72px;
   --padding-start: max(16px, var(--safe-area-left));
   --padding-end: max(8px, var(--safe-area-right));

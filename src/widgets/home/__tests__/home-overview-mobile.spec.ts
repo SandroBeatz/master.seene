@@ -35,6 +35,22 @@ const stubs = {
     template: '<div v-if="isOpen" class="ion-modal-stub"><slot /></div>',
   },
   IonSkeletonText: { template: '<span class="ion-skeleton-text-stub" />' },
+  ListPickerModal: {
+    props: ['isOpen', 'items', 'modelValue'],
+    emits: ['update:isOpen', 'update:modelValue'],
+    template: `
+      <div v-if="isOpen" class="list-picker-stub">
+        <button
+          v-for="item in items"
+          :key="item.value"
+          class="list-picker-option"
+          @click="$emit('update:modelValue', item.value)"
+        >
+          {{ item.label }}
+        </button>
+      </div>
+    `,
+  },
 }
 
 function analyticsData(overrides: Partial<AnalyticsResultV2['current']> = {}): AnalyticsResultV2 {
@@ -114,7 +130,7 @@ describe('HomeOverviewMobile', () => {
       .findAll('button')
       .find((button) => button.text().includes('Today'))
       ?.trigger('click')
-    const week = wrapper.findAll('.ion-item-stub').find((item) => item.text() === 'This week')
+    const week = wrapper.findAll('.list-picker-option').find((item) => item.text() === 'This week')
     expect(week).toBeTruthy()
 
     await week?.trigger('click')
@@ -125,7 +141,9 @@ describe('HomeOverviewMobile', () => {
       .findAll('button')
       .find((button) => button.text().includes('This week'))
       ?.trigger('click')
-    const month = wrapper.findAll('.ion-item-stub').find((item) => item.text() === 'This month')
+    const month = wrapper
+      .findAll('.list-picker-option')
+      .find((item) => item.text() === 'This month')
     await month?.trigger('click')
 
     expect(analyticsMock.period?.value).toEqual({ kind: 'month', date: '2026-06-08' })
