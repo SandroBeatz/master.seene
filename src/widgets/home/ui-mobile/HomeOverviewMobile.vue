@@ -220,7 +220,12 @@ ion-card-content {
   align-items: flex-start;
   padding: 10px 8px 11px;
   border-radius: 11px;
-  background: var(--se-surface-page);
+  background: var(--ion-background-color-step-100);
+  background: color-mix(
+    in srgb,
+    var(--se-surface-page, var(--ion-background-color)) 93%,
+    var(--ion-text-color) 7%
+  );
 }
 
 .metric-icon {
