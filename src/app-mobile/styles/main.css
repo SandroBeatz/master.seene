@@ -93,7 +93,7 @@
 :root {
   --se-surface-page: var(--ion-background-color-step-50);
   --se-surface-card: var(--ion-background-color);
-  --se-surface-muted: var(--ion-background-color-step-100);
+  --se-surface-muted: var(--ion-background-color-step-50);
   --se-separator: var(--ion-background-color-step-150);
   --se-avatar-surface: var(--ion-color-light);
   --se-avatar-foreground: var(--ion-color-light-contrast);
