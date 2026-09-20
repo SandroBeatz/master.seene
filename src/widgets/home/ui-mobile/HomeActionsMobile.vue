@@ -212,13 +212,15 @@ function retry() {
 <style scoped>
 .actions-block {
   position: relative;
+  width: calc(100% + 28px);
   min-width: 0;
+  margin-inline: -14px;
 }
 
 .actions-block__accent {
   position: absolute;
   inset-block: 12px;
-  inset-inline-start: -14px;
+  inset-inline-start: 0;
   width: 78%;
   opacity: 0.3;
   pointer-events: none;
@@ -233,8 +235,9 @@ function retry() {
   grid-auto-columns: 85%;
   grid-auto-flow: column;
   gap: 10px;
+  padding-inline: 14px;
   overscroll-behavior-inline: contain;
-  scroll-padding-inline: 0;
+  scroll-padding-inline: 14px;
   scroll-snap-type: inline mandatory;
   scrollbar-width: none;
   touch-action: pan-x pan-y;
@@ -246,7 +249,7 @@ function retry() {
 }
 
 .actions-carousel--single {
-  grid-auto-columns: 100%;
+  grid-auto-columns: calc(100% - 28px);
 }
 
 .actions-carousel__slide {
@@ -260,7 +263,7 @@ function retry() {
 }
 
 .action-skeleton {
-  min-height: 246px;
+  min-height: 190px;
   margin: 0;
   padding: 14px;
   border-radius: 16px;
@@ -310,7 +313,7 @@ function retry() {
 .action-skeleton__button {
   width: 42%;
   height: 34px;
-  margin-top: 92px !important;
+  margin-top: 36px !important;
   border-radius: 999px !important;
 }
 
@@ -324,6 +327,7 @@ function retry() {
   justify-content: center;
   gap: 5px;
   padding: 16px;
+  margin-inline: 14px;
   border-radius: 16px;
   background: var(--se-surface-card);
   color: var(--ion-color-medium);

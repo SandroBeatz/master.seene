@@ -45,7 +45,9 @@ const stubs = {
   IonAvatar: { template: '<div class="ion-avatar-stub"><slot /></div>' },
   IonBadge: { template: '<span class="ion-badge-stub"><slot /></span>' },
   IonButton: {
-    template: '<button><slot name="start" /><slot /><slot name="icon-only" /></button>',
+    props: ['color'],
+    template:
+      '<button :data-color="color"><slot name="start" /><slot /><slot name="icon-only" /></button>',
   },
   IonCard: { template: '<section><slot /></section>' },
   IonIcon: { template: '<span class="ion-icon-stub" />' },
@@ -192,8 +194,11 @@ describe('HomeActionsMobile', () => {
     expect(cards[0]?.text()).toContain('Waiting 30m for your reply')
     expect(cards[0]?.text()).toContain('Please call before the appointment')
     expect(cards[0]?.findAll('.ion-badge-stub')).toHaveLength(2)
+    expect(cards[0]?.find('.action-card__primary').attributes('data-color')).toBe('secondary')
     expect(cards[1]?.text()).toContain('This request’s time slot has passed')
     expect(cards[2]?.text()).toContain('Complete')
+    expect(cards[2]?.find('.action-card__primary').attributes('data-color')).toBe('primary')
+    expect(wrapper.find('.action-card__open-icon').exists()).toBe(false)
   })
 
   it('uses full width for one card and forwards typed card events', async () => {

@@ -6,7 +6,6 @@ import {
   alertCircleOutline,
   checkmarkCircleOutline,
   checkmarkDoneOutline,
-  chevronForwardOutline,
   closeCircleOutline,
   ellipsisHorizontal,
   globeOutline,
@@ -83,6 +82,7 @@ const primaryLabel = computed(() =>
 const primaryIcon = computed(() =>
   isPending.value ? checkmarkCircleOutline : checkmarkDoneOutline,
 )
+const primaryColor = computed(() => (isPending.value ? 'secondary' : 'primary'))
 
 const initials = computed(() => {
   const parts = [props.client?.first_name, props.client?.last_name].filter(Boolean) as string[]
@@ -156,8 +156,6 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
             {{ attentionLabel }}
           </p>
         </div>
-
-        <ion-icon class="action-card__open-icon" :icon="chevronForwardOutline" aria-hidden="true" />
       </div>
 
       <p v-if="appointment.notes" class="action-card__notes">
@@ -168,6 +166,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
         <ion-button
           class="action-card__primary"
           size="small"
+          :color="primaryColor"
           :disabled="primaryLoading"
           :aria-busy="primaryLoading"
           @click.stop="emit('primary')"
@@ -195,7 +194,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 246px;
+  min-height: 190px;
   margin: 0;
   overflow: hidden;
   border-radius: 16px;
@@ -226,7 +225,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
   position: relative;
   z-index: 1;
   display: flex;
-  min-height: 246px;
+  min-height: 190px;
   flex-direction: column;
   padding: 14px;
   outline: none;
@@ -363,13 +362,6 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
 
 .action-card__attention--error {
   color: var(--ion-color-danger);
-}
-
-.action-card__open-icon {
-  flex: 0 0 auto;
-  align-self: center;
-  color: var(--ion-color-medium);
-  font-size: 17px;
 }
 
 .action-card__notes {
