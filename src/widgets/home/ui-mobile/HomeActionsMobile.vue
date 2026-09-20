@@ -234,7 +234,7 @@ function retry() {
   overflow: auto hidden;
   grid-auto-columns: 85%;
   grid-auto-flow: column;
-  gap: 10px;
+  gap: 14px;
   padding-inline: 14px;
   overscroll-behavior-inline: contain;
   scroll-padding-inline: 14px;
