@@ -81,6 +81,7 @@ export default {
   home: {
     title: 'Home',
     description: 'Welcome back to your dashboard.',
+    userFallback: 'User',
     greeting: {
       morning: 'Good morning!',
       afternoon: 'Good afternoon!',
