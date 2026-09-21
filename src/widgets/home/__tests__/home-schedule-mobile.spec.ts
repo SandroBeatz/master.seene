@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { ref } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -180,6 +180,13 @@ function mountSchedule(
         IonButton: { template: '<button><slot /></button>' },
         IonCard: { template: '<section><slot /></section>' },
         IonIcon: { template: '<span class="ion-icon-stub" />' },
+        IonItem: { template: '<button class="ion-item-stub"><slot /></button>' },
+        IonLabel: { template: '<span><slot /></span>' },
+        IonList: { template: '<div><slot /></div>' },
+        IonPopover: {
+          props: ['isOpen'],
+          template: '<div v-if="isOpen" class="ion-popover-stub"><slot /></div>',
+        },
         IonSkeletonText: { template: '<span class="ion-skeleton-stub" />' },
       },
     },
@@ -189,6 +196,10 @@ function mountSchedule(
 describe('HomeScheduleMobile', () => {
   beforeEach(() => {
     queryMock.now = new Date('2026-09-21T12:00:00.000Z')
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders loading and empty states', () => {
@@ -241,6 +252,26 @@ describe('HomeScheduleMobile', () => {
     await flushPromises()
 
     expect(wrapper.emitted('select')?.[0]).toEqual([item])
+  })
+
+  it('opens the anchored action menu on hold and suppresses the following tap', async () => {
+    vi.useFakeTimers()
+    const item = appointment('a1', '2026-09-21T09:00:00.000Z')
+    const wrapper = mountSchedule({ appointments: [item] })
+    const card = wrapper.find('.schedule-appointment')
+
+    await card.trigger('pointerdown')
+    await vi.advanceTimersByTimeAsync(550)
+
+    expect(card.classes()).toContain('schedule-appointment--active')
+    expect(wrapper.find('.ion-popover-stub').exists()).toBe(true)
+
+    await card.trigger('pointerup')
+    await card.trigger('click')
+    expect(wrapper.emitted('select')).toBeUndefined()
+
+    await wrapper.findAll('.ion-item-stub')[1]?.trigger('click')
+    expect(wrapper.emitted('action')?.[0]).toEqual([item, 'edit'])
   })
 
   it('shows a retry state for a core query failure', async () => {

@@ -111,6 +111,7 @@ export default {
       options: 'Параметры',
       loadError: 'Не удалось загрузить расписание',
       retry: 'Повторить',
+      details: 'Детали записи',
     },
     overview: {
       title: 'Обзор',

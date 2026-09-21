@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IonButton, IonCard, IonIcon, IonSkeletonText } from '@ionic/vue'
+import {
+  IonButton,
+  IonCard,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonPopover,
+  IonSkeletonText,
+} from '@ionic/vue'
 import {
   alertCircleOutline,
   banOutline,
   calendarOutline,
   checkmarkCircleOutline,
   checkmarkDoneOutline,
+  createOutline,
   ellipsisVertical,
+  eyeOutline,
   hourglassOutline,
+  trashOutline,
   timeOutline,
 } from 'ionicons/icons'
 import {
@@ -41,6 +53,7 @@ import { buildTimelineLayout, type TimelineConstants } from '../model/timeline-l
 
 const emit = defineEmits<{
   select: [appointment: Appointment]
+  action: [appointment: Appointment, action: 'details' | 'edit' | 'delete']
 }>()
 
 const { t, locale } = useI18n()
@@ -271,6 +284,84 @@ const subtitle = computed(() =>
   }),
 )
 
+const HOLD_DELAY_MS = 550
+const HOLD_MOVE_TOLERANCE_PX = 10
+const pressedAppointmentId = ref<string | null>(null)
+const actionAppointment = ref<Appointment | null>(null)
+const actionAnchor = ref<Event | undefined>()
+let holdTimer: ReturnType<typeof setTimeout> | undefined
+let holdStartX = 0
+let holdStartY = 0
+let suppressClickId: string | null = null
+
+function clearHoldTimer() {
+  if (holdTimer) clearTimeout(holdTimer)
+  holdTimer = undefined
+}
+
+function cancelAppointmentHold() {
+  clearHoldTimer()
+  if (!actionAppointment.value) pressedAppointmentId.value = null
+}
+
+function startAppointmentHold(event: PointerEvent, appointment: Appointment) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  clearHoldTimer()
+  suppressClickId = null
+  pressedAppointmentId.value = appointment.id
+  holdStartX = event.clientX
+  holdStartY = event.clientY
+
+  holdTimer = setTimeout(() => {
+    holdTimer = undefined
+    suppressClickId = appointment.id
+    actionAnchor.value = event
+    actionAppointment.value = appointment
+  }, HOLD_DELAY_MS)
+}
+
+function trackAppointmentHold(event: PointerEvent) {
+  if (!holdTimer) return
+  const movedX = Math.abs(event.clientX - holdStartX)
+  const movedY = Math.abs(event.clientY - holdStartY)
+  if (movedX > HOLD_MOVE_TOLERANCE_PX || movedY > HOLD_MOVE_TOLERANCE_PX) {
+    cancelAppointmentHold()
+  }
+}
+
+function openAppointment(appointment: Appointment) {
+  clearHoldTimer()
+  pressedAppointmentId.value = null
+  if (suppressClickId === appointment.id) {
+    suppressClickId = null
+    return
+  }
+  emit('select', appointment)
+}
+
+function openActionsFromContextMenu(event: MouseEvent, appointment: Appointment) {
+  clearHoldTimer()
+  suppressClickId = appointment.id
+  pressedAppointmentId.value = appointment.id
+  actionAnchor.value = event
+  actionAppointment.value = appointment
+}
+
+function closeActionMenu() {
+  actionAppointment.value = null
+  actionAnchor.value = undefined
+  pressedAppointmentId.value = null
+  suppressClickId = null
+}
+
+function selectAction(action: 'details' | 'edit' | 'delete') {
+  const appointment = actionAppointment.value
+  if (!appointment) return
+  closeActionMenu()
+  emit('action', appointment, action)
+}
+
 function retry() {
   void Promise.allSettled([
     appointmentQuery.refetch(),
@@ -279,6 +370,8 @@ function retry() {
     serviceQuery.refetch(),
   ])
 }
+
+onBeforeUnmount(clearHoldTimer)
 </script>
 
 <template>
@@ -360,18 +453,24 @@ function retry() {
             :class="{
               'schedule-appointment--group': block.isGroup,
               'schedule-appointment--compact': block.compact,
+              'schedule-appointment--active':
+                pressedAppointmentId === block.appointment.id ||
+                actionAppointment?.id === block.appointment.id,
             }"
             :style="{
               top: `${block.top}px`,
               height: `${block.height}px`,
               left: `${LABEL_WIDTH + 10}px`,
               '--schedule-accent': block.accentColor || 'var(--se-separator)',
-              '--schedule-tint': block.accentColor
-                ? `${block.accentColor}14`
-                : 'var(--se-surface-muted)',
             }"
             :aria-label="`${block.clientName}, ${block.timeRange}`"
-            @click="emit('select', block.appointment)"
+            @click="openAppointment(block.appointment)"
+            @pointerdown="startAppointmentHold($event, block.appointment)"
+            @pointermove="trackAppointmentHold"
+            @pointerup="cancelAppointmentHold"
+            @pointercancel="cancelAppointmentHold"
+            @pointerleave="cancelAppointmentHold"
+            @contextmenu.prevent="openActionsFromContextMenu($event, block.appointment)"
           >
             <span class="schedule-appointment__rail" aria-hidden="true" />
 
@@ -445,6 +544,32 @@ function retry() {
             <i aria-hidden="true" />
           </div>
         </div>
+
+        <ion-popover
+          :is-open="Boolean(actionAppointment)"
+          :event="actionAnchor"
+          reference="event"
+          side="auto"
+          alignment="center"
+          :show-backdrop="false"
+          class="schedule-action-popover"
+          @did-dismiss="closeActionMenu"
+        >
+          <ion-list lines="none" class="schedule-action-menu">
+            <ion-item button :detail="false" @click="selectAction('details')">
+              <ion-icon slot="start" :icon="eyeOutline" color="medium" aria-hidden="true" />
+              <ion-label>{{ t('home.schedule.details') }}</ion-label>
+            </ion-item>
+            <ion-item button :detail="false" @click="selectAction('edit')">
+              <ion-icon slot="start" :icon="createOutline" color="medium" aria-hidden="true" />
+              <ion-label>{{ t('common.edit') }}</ion-label>
+            </ion-item>
+            <ion-item button :detail="false" @click="selectAction('delete')">
+              <ion-icon slot="start" :icon="trashOutline" color="danger" aria-hidden="true" />
+              <ion-label color="danger">{{ t('common.delete') }}</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-popover>
       </template>
     </div>
   </ion-card>
@@ -623,14 +748,25 @@ function retry() {
 }
 
 .schedule-appointment {
+  z-index: 2;
+  display: flex;
   width: auto;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex-direction: column;
   padding: 5px 10px 5px 12px;
   border: 0;
-  background: var(--schedule-tint);
+  background: var(--se-surface-card);
+  background: color-mix(in srgb, var(--schedule-accent) 14%, var(--se-surface-card));
   color: var(--ion-text-color);
   font: inherit;
   text-align: start;
   touch-action: manipulation;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .schedule-appointment--group {
@@ -641,6 +777,12 @@ function retry() {
 .schedule-appointment:focus-visible {
   outline: 2px solid var(--ion-color-primary);
   outline-offset: -2px;
+}
+
+.schedule-appointment--active {
+  z-index: 4;
+  transform: scale(1.025);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
 }
 
 .schedule-appointment__rail,
@@ -665,8 +807,8 @@ function retry() {
 
 .schedule-appointment__compact-row {
   min-width: 0;
+  align-items: flex-start;
   gap: 7px;
-  height: 100%;
 }
 
 .schedule-appointment__compact-row strong,
@@ -772,10 +914,12 @@ function retry() {
 }
 
 .timed-time-off {
+  z-index: 1;
   padding: 7px 10px 5px 12px;
   border: 1px solid var(--se-separator);
   background: var(--se-surface-muted);
   color: var(--ion-text-color);
+  pointer-events: none;
 }
 
 .timed-time-off__rail {
@@ -832,5 +976,32 @@ function retry() {
   border-radius: 999px;
   background: var(--ion-color-success);
   flex: 1;
+}
+
+:global(.schedule-action-popover) {
+  --width: 190px;
+  --max-width: calc(100vw - 32px);
+  --background: var(--se-surface-card);
+  --box-shadow: 0 10px 32px rgb(0 0 0 / 22%);
+  --backdrop-opacity: 0;
+}
+
+.schedule-action-menu {
+  padding: 6px;
+  background: var(--se-surface-card);
+}
+
+.schedule-action-menu ion-item {
+  --min-height: 44px;
+  --padding-start: 10px;
+  --inner-padding-end: 10px;
+  --background: transparent;
+  --border-radius: 9px;
+  font-size: 0.86rem;
+}
+
+.schedule-action-menu ion-icon {
+  margin-inline-end: 10px;
+  font-size: 18px;
 }
 </style>

@@ -15,6 +15,7 @@ const queryMock = vi.hoisted(() => ({
   services: null as Record<string, unknown> | null,
   paymentTypes: null as Record<string, unknown> | null,
   update: vi.fn<(payload: unknown) => Promise<unknown>>(),
+  remove: vi.fn<(id: string) => Promise<unknown>>(),
   complete: vi.fn<(payload: unknown) => Promise<unknown>>(),
   alertRole: 'cancel' as 'cancel' | 'destructive',
   alertCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -40,6 +41,10 @@ vi.mock('@entities/appointment', () => ({
   useUpdateAppointmentMutation: () => ({
     isLoading: ref(false),
     mutateAsync: queryMock.update,
+  }),
+  useRemoveAppointmentMutation: () => ({
+    isLoading: ref(false),
+    mutateAsync: queryMock.remove,
   }),
   getEffectiveAppointmentStatus: (appointment: Appointment, now: Date) => {
     const end = new Date(appointment.start_at).getTime() + appointment.duration * 60_000
@@ -230,6 +235,8 @@ describe('HomeActionsMobile', () => {
     queryMock.paymentTypes = { data: ref([]) }
     queryMock.update.mockReset()
     queryMock.update.mockImplementation(async (payload) => payload)
+    queryMock.remove.mockReset()
+    queryMock.remove.mockResolvedValue(undefined)
     queryMock.complete.mockReset()
     queryMock.complete.mockResolvedValue('sale-1')
     queryMock.alertRole = 'cancel'
@@ -368,6 +375,20 @@ describe('HomeActionsMobile', () => {
     await flushPromises()
 
     expect(wrapper.find('.edit-mobile-stub').exists()).toBe(true)
+  })
+
+  it('exposes deletion for schedule events with destructive confirmation', async () => {
+    queryMock.alertRole = 'destructive'
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    const exposed = wrapper.vm as unknown as {
+      deleteAppointment: (appointment: Appointment) => Promise<void>
+    }
+    await exposed.deleteAppointment(item)
+
+    expect(queryMock.alertCreate).toHaveBeenCalledOnce()
+    expect(queryMock.remove).toHaveBeenCalledWith('request')
   })
 
   it('marks a confirmed appointment as no-show after confirmation', async () => {
