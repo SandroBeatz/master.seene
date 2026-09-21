@@ -159,13 +159,16 @@ export default {
       declineConfirmTitle: 'Refuser le rendez-vous ?',
       declineConfirmDescription:
         'Le rendez-vous avec {name} sera annulé. Cette action est irréversible.',
+      declineSuccess: 'Demande refusée',
       confirm: 'Confirmer',
+      confirmSuccess: 'Rendez-vous confirmé',
       complete: 'Terminer',
       noShow: 'Absent',
       noShowConfirmTitle: 'Marquer comme absent ?',
       noShowConfirmDescription:
         'Nous noterons que {name} ne s’est pas présenté(e). Aucun paiement ne sera enregistré.',
       noShowConfirm: 'Confirmer l’absence',
+      noShowSuccess: 'Absence enregistrée',
       today: "Aujourd'hui",
       tomorrow: 'Demain',
       minutesLabel: '{n} min',

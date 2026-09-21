@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount, type VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { ref } from 'vue'
 import { createI18n } from 'vue-i18n'
 import type { Appointment, AppointmentStatus } from '@entities/appointment/model/types'
@@ -13,10 +13,39 @@ const queryMock = vi.hoisted(() => ({
   appointments: null as Record<string, unknown> | null,
   clients: null as Record<string, unknown> | null,
   services: null as Record<string, unknown> | null,
+  paymentTypes: null as Record<string, unknown> | null,
+  update: vi.fn<(payload: unknown) => Promise<unknown>>(),
+  complete: vi.fn<(payload: unknown) => Promise<unknown>>(),
+  actionResult: undefined as 'edit' | 'decline' | 'no_show' | undefined,
+  alertRole: 'cancel' as 'cancel' | 'destructive',
+  actionCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  alertCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  toastCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  toastPresent: vi.fn<() => Promise<void>>(),
 }))
+
+vi.mock('@ionic/vue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@ionic/vue')>()
+  return {
+    ...actual,
+    actionSheetController: {
+      create: queryMock.actionCreate,
+    },
+    alertController: {
+      create: queryMock.alertCreate,
+    },
+    toastController: {
+      create: queryMock.toastCreate,
+    },
+  }
+})
 
 vi.mock('@entities/appointment', () => ({
   useActionableAppointmentsQuery: () => queryMock.appointments,
+  useUpdateAppointmentMutation: () => ({
+    isLoading: ref(false),
+    mutateAsync: queryMock.update,
+  }),
   getEffectiveAppointmentStatus: (appointment: Appointment, now: Date) => {
     const end = new Date(appointment.start_at).getTime() + appointment.duration * 60_000
     if (appointment.status === 'confirmed' && end <= now.getTime()) return 'past'
@@ -30,6 +59,21 @@ vi.mock('@entities/client', () => ({
 
 vi.mock('@entities/service', () => ({
   useServicesQuery: () => queryMock.services,
+}))
+
+vi.mock('@entities/payment-type', () => ({
+  usePaymentTypesQuery: () => queryMock.paymentTypes,
+}))
+
+vi.mock('@entities/sale', () => ({
+  useCompleteSaleMutation: () => ({
+    isLoading: ref(false),
+    mutateAsync: queryMock.complete,
+  }),
+}))
+
+vi.mock('@entities/master', () => ({
+  useMasterPreferencesStore: () => ({ timeZone: 'UTC' }),
 }))
 
 vi.mock('@entities/session', () => ({
@@ -52,6 +96,7 @@ const stubs = {
   IonButtons: passthrough,
   IonCard: { template: '<section><slot /></section>' },
   IonContent: passthrough,
+  IonFooter: passthrough,
   IonHeader: passthrough,
   IonIcon: { template: '<span class="ion-icon-stub" />' },
   IonModal: {
@@ -62,6 +107,22 @@ const stubs = {
   IonSpinner: passthrough,
   IonTitle: passthrough,
   IonToolbar: passthrough,
+  AppointmentDetailsMobile: { template: '<div class="details-mobile-stub" />' },
+  AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
+  AppointmentCheckoutMobile: {
+    props: ['isOpen'],
+    emits: ['confirm', 'update:isOpen'],
+    data: () => ({
+      payload: {
+        appointment_id: 'finish',
+        amount: 100,
+        payment_type_id: 'cash',
+        items: [{ service_id: 'service-finish', name: 'Service finish', price: 100 }],
+      },
+    }),
+    template:
+      '<button v-if="isOpen" class="checkout-mobile-stub" @click="$emit(\'confirm\', payload)">Checkout</button>',
+  },
 }
 
 function appointment(
@@ -160,6 +221,31 @@ describe('HomeActionsMobile', () => {
     queryMock.appointments = null
     queryMock.clients = null
     queryMock.services = null
+    queryMock.paymentTypes = { data: ref([]) }
+    queryMock.update.mockReset()
+    queryMock.update.mockImplementation(async (payload) => payload)
+    queryMock.complete.mockReset()
+    queryMock.complete.mockResolvedValue('sale-1')
+    queryMock.actionResult = undefined
+    queryMock.alertRole = 'cancel'
+    queryMock.actionCreate.mockReset()
+    queryMock.actionCreate.mockImplementation(async () => ({
+      present: vi.fn<() => Promise<void>>(),
+      onDidDismiss: vi.fn<() => Promise<{ data: typeof queryMock.actionResult }>>(async () => ({
+        data: queryMock.actionResult,
+      })),
+    }))
+    queryMock.alertCreate.mockReset()
+    queryMock.alertCreate.mockImplementation(async () => ({
+      present: vi.fn<() => Promise<void>>(),
+      onDidDismiss: vi.fn<() => Promise<{ role: typeof queryMock.alertRole }>>(async () => ({
+        role: queryMock.alertRole,
+      })),
+    }))
+    queryMock.toastCreate.mockReset()
+    queryMock.toastCreate.mockImplementation(async () => ({ present: queryMock.toastPresent }))
+    queryMock.toastPresent.mockReset()
+    queryMock.toastPresent.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -222,12 +308,93 @@ describe('HomeActionsMobile', () => {
     expect(wrapper.find('.actions-carousel--single').exists()).toBe(true)
 
     await wrapper.find('.action-card__content').trigger('click')
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
     await wrapper.find('.action-card__primary').trigger('click')
     await wrapper.find('.action-card__more').trigger('click')
+    await flushPromises()
 
     expect(wrapper.emitted('open')?.[0]).toEqual([item])
     expect(wrapper.emitted('primary')?.[0]).toEqual([item])
     expect(wrapper.emitted('more')?.[0]).toEqual([item])
+  })
+
+  it('confirms a pending appointment once', async () => {
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    const button = wrapper.find('.action-card__primary')
+    await button.trigger('click')
+    await button.trigger('click')
+    await flushPromises()
+
+    expect(queryMock.update).toHaveBeenCalledTimes(1)
+    expect(queryMock.update).toHaveBeenCalledWith({ id: 'request', status: 'confirmed' })
+  })
+
+  it('declines a pending appointment only after destructive confirmation', async () => {
+    queryMock.actionResult = 'decline'
+    queryMock.alertRole = 'destructive'
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__more').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.alertCreate).toHaveBeenCalledOnce()
+    expect(queryMock.update).toHaveBeenCalledWith({ id: 'request', status: 'cancelled' })
+  })
+
+  it('opens the reusable Ionic edit flow from the action sheet', async () => {
+    queryMock.actionResult = 'edit'
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__more').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.edit-mobile-stub').exists()).toBe(true)
+  })
+
+  it('marks a confirmed appointment as no-show after confirmation', async () => {
+    queryMock.actionResult = 'no_show'
+    queryMock.alertRole = 'destructive'
+    const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__more').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.update).toHaveBeenCalledWith({ id: 'finish', status: 'no_show' })
+  })
+
+  it('opens Ionic checkout for a past confirmed appointment and submits its payload', async () => {
+    const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__primary').trigger('click')
+    await wrapper.find('.checkout-mobile-stub').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.complete).toHaveBeenCalledWith({
+      appointment_id: 'finish',
+      amount: 100,
+      payment_type_id: 'cash',
+      items: [{ service_id: 'service-finish', name: 'Service finish', price: 100 }],
+    })
+  })
+
+  it('keeps the card available and shows an Ionic error toast when a mutation fails', async () => {
+    queryMock.update.mockRejectedValueOnce(new Error('network'))
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__primary').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.action-card').exists()).toBe(true)
+    expect(queryMock.toastCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'danger', position: 'top' }),
+    )
   })
 
   it('shows a retry state when the actionable query fails', async () => {
