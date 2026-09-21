@@ -184,8 +184,9 @@ function mountSchedule(
         IonLabel: { template: '<span><slot /></span>' },
         IonList: { template: '<div><slot /></div>' },
         IonPopover: {
-          props: ['isOpen'],
-          template: '<div v-if="isOpen" class="ion-popover-stub"><slot /></div>',
+          props: ['isOpen', 'trigger'],
+          template:
+            '<div v-if="isOpen" class="ion-popover-stub" :data-trigger="trigger"><slot /></div>',
         },
         IonSkeletonText: { template: '<span class="ion-skeleton-stub" />' },
       },
@@ -265,6 +266,9 @@ describe('HomeScheduleMobile', () => {
 
     expect(card.classes()).toContain('schedule-appointment--active')
     expect(wrapper.find('.ion-popover-stub').exists()).toBe(true)
+    expect(wrapper.find('.ion-popover-stub').attributes('data-trigger')).toBe(
+      'schedule-appointment-a1',
+    )
 
     await card.trigger('pointerup')
     await card.trigger('click')

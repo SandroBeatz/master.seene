@@ -288,7 +288,7 @@ const HOLD_DELAY_MS = 550
 const HOLD_MOVE_TOLERANCE_PX = 10
 const pressedAppointmentId = ref<string | null>(null)
 const actionAppointment = ref<Appointment | null>(null)
-const actionAnchor = ref<Event | undefined>()
+const actionTriggerId = ref<string | undefined>()
 let holdTimer: ReturnType<typeof setTimeout> | undefined
 let holdStartX = 0
 let holdStartY = 0
@@ -312,11 +312,12 @@ function startAppointmentHold(event: PointerEvent, appointment: Appointment) {
   pressedAppointmentId.value = appointment.id
   holdStartX = event.clientX
   holdStartY = event.clientY
+  const triggerId = (event.currentTarget as HTMLElement).id
 
   holdTimer = setTimeout(() => {
     holdTimer = undefined
     suppressClickId = appointment.id
-    actionAnchor.value = event
+    actionTriggerId.value = triggerId
     actionAppointment.value = appointment
   }, HOLD_DELAY_MS)
 }
@@ -344,13 +345,13 @@ function openActionsFromContextMenu(event: MouseEvent, appointment: Appointment)
   clearHoldTimer()
   suppressClickId = appointment.id
   pressedAppointmentId.value = appointment.id
-  actionAnchor.value = event
+  actionTriggerId.value = (event.currentTarget as HTMLElement).id
   actionAppointment.value = appointment
 }
 
 function closeActionMenu() {
   actionAppointment.value = null
-  actionAnchor.value = undefined
+  actionTriggerId.value = undefined
   pressedAppointmentId.value = null
   suppressClickId = null
 }
@@ -449,6 +450,7 @@ onBeforeUnmount(clearHoldTimer)
             v-for="block in appointmentBlocks"
             :key="block.appointment.id"
             type="button"
+            :id="`schedule-appointment-${block.appointment.id}`"
             class="schedule-appointment"
             :class="{
               'schedule-appointment--group': block.isGroup,
@@ -547,11 +549,13 @@ onBeforeUnmount(clearHoldTimer)
 
         <ion-popover
           :is-open="Boolean(actionAppointment)"
-          :event="actionAnchor"
-          reference="event"
+          :trigger="actionTriggerId"
+          trigger-action="context-menu"
+          reference="trigger"
           side="auto"
           alignment="center"
-          :show-backdrop="false"
+          :show-backdrop="true"
+          :backdrop-dismiss="true"
           class="schedule-action-popover"
           @did-dismiss="closeActionMenu"
         >
@@ -981,14 +985,22 @@ onBeforeUnmount(clearHoldTimer)
 :global(.schedule-action-popover) {
   --width: 190px;
   --max-width: calc(100vw - 32px);
-  --background: var(--se-surface-card);
+  --background: var(
+    --se-surface-card,
+    var(--ion-card-background, var(--ion-background-color, #fff))
+  );
   --box-shadow: 0 10px 32px rgb(0 0 0 / 22%);
-  --backdrop-opacity: 0;
+  --backdrop-opacity: 0.12;
 }
 
 .schedule-action-menu {
+  --ion-item-background: transparent;
+  color: var(--ion-text-color, #111);
   padding: 6px;
-  background: var(--se-surface-card);
+  background: var(
+    --se-surface-card,
+    var(--ion-card-background, var(--ion-background-color, #fff))
+  );
 }
 
 .schedule-action-menu ion-item {
