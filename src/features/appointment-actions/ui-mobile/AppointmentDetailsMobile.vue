@@ -23,7 +23,6 @@ import {
   checkmarkCircleOutline,
   checkmarkDoneOutline,
   closeOutline,
-  ellipsisHorizontal,
   timeOutline,
   walletOutline,
 } from 'ionicons/icons'
@@ -110,7 +109,7 @@ function close() {
             :aria-label="t('appointments.preview.actions')"
             @click="emit('more')"
           >
-            <ion-icon slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
+            {{ t('appointments.preview.actions') }}
           </ion-button>
         </ion-buttons>
       </ion-toolbar>

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  actionSheetController,
   alertController,
   IonButton,
   IonButtons,
@@ -15,15 +14,8 @@ import {
   IonTitle,
   IonToolbar,
   toastController,
-  type ActionSheetButton,
 } from '@ionic/vue'
-import {
-  alertCircleOutline,
-  closeOutline,
-  closeCircleOutline,
-  createOutline,
-  personRemoveOutline,
-} from 'ionicons/icons'
+import { alertCircleOutline, closeOutline } from 'ionicons/icons'
 import {
   useActionableAppointmentsQuery,
   useUpdateAppointmentMutation,
@@ -38,9 +30,9 @@ import { useCompleteSaleMutation, type CompleteSaleDto } from '@entities/sale'
 import { useServicesQuery, type Service } from '@entities/service'
 import { useSessionStore } from '@entities/session'
 import {
+  AppointmentActionsDrawerMobile,
   AppointmentDetailsMobile,
   AppointmentEditMobile,
-  getMobileAppointmentMoreActions,
   type MobileAppointmentMoreAction,
 } from '@features/appointment-actions/index.mobile'
 import { AppointmentCheckoutMobile } from '@features/appointment-checkout/index.mobile'
@@ -58,7 +50,6 @@ import HomeActionAppointmentCardMobile from './HomeActionAppointmentCardMobile.v
 const emit = defineEmits<{
   open: [appointment: Appointment]
   primary: [appointment: Appointment]
-  more: [appointment: Appointment]
 }>()
 
 const { t } = useI18n()
@@ -89,8 +80,11 @@ const serviceById = computed(
 const activeIndex = ref(0)
 const noteAppointment = ref<Appointment | null>(null)
 const detailsAppointment = ref<Appointment | null>(null)
+const actionsAppointment = ref<Appointment | null>(null)
+const actionsOpen = ref(false)
 const editingAppointment = ref<Appointment | null>(null)
 const checkoutAppointment = ref<Appointment | null>(null)
+const checkoutOpen = ref(false)
 const processingIds = ref<Set<string>>(new Set())
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
@@ -291,10 +285,12 @@ function openDetails(appointment: Appointment) {
   detailsAppointment.value = appointment
 }
 
-function openCheckout(appointment: Appointment) {
+async function openCheckout(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   detailsAppointment.value = null
   checkoutAppointment.value = appointment
+  await nextTick()
+  checkoutOpen.value = true
 }
 
 function handlePrimary(appointment: Appointment) {
@@ -302,7 +298,7 @@ function handlePrimary(appointment: Appointment) {
     void handleConfirm(appointment)
     return
   }
-  openCheckout(appointment)
+  void openCheckout(appointment)
 }
 
 function handleCardOpen(appointment: Appointment) {
@@ -313,11 +309,6 @@ function handleCardOpen(appointment: Appointment) {
 function handleCardPrimary(appointment: Appointment) {
   emit('primary', appointment)
   handlePrimary(appointment)
-}
-
-function handleCardMore(appointment: Appointment) {
-  emit('more', appointment)
-  void openActions(appointment)
 }
 
 function openEdit(appointment: Appointment) {
@@ -347,12 +338,12 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   setProcessing(appointment.id, true)
   try {
     await completeSaleMutation.mutateAsync(payload)
-    checkoutAppointment.value = null
+    checkoutOpen.value = false
     await showToast(t('checkout.successTitle'), 'success')
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
     if (message.includes('already_completed')) {
-      checkoutAppointment.value = null
+      checkoutOpen.value = false
       await showToast(t('checkout.alreadyCompleted'), 'warning')
     } else {
       await showToast(t('checkout.errorTitle'), 'danger')
@@ -362,42 +353,32 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   }
 }
 
-function actionSheetButton(action: MobileAppointmentMoreAction): ActionSheetButton {
-  if (action === 'edit') {
-    return { text: t('common.edit'), icon: createOutline, data: action }
-  }
-  if (action === 'decline') {
-    return {
-      text: t('home.nextUp.decline'),
-      icon: closeCircleOutline,
-      role: 'destructive',
-      data: action,
-    }
-  }
-  return {
-    text: t('home.nextUp.noShow'),
-    icon: personRemoveOutline,
-    role: 'destructive',
-    data: action,
-  }
-}
-
 async function openActions(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  const buttons: ActionSheetButton[] = [
-    ...getMobileAppointmentMoreActions(appointment.status).map(actionSheetButton),
-    { text: t('common.cancel'), role: 'cancel' },
-  ]
-  const sheet = await actionSheetController.create({
-    header: getClientName(appointment),
-    subHeader: `${formats.dateDay(appointment.start_at)} · ${formatTime(appointment.start_at)}`,
-    buttons,
-  })
-  await sheet.present()
-  const result = await sheet.onDidDismiss<MobileAppointmentMoreAction>()
-  if (result.data === 'edit') openEdit(appointment)
-  else if (result.data === 'decline') await handleDecline(appointment)
-  else if (result.data === 'no_show') await handleNoShow(appointment)
+  detailsAppointment.value = null
+  actionsAppointment.value = appointment
+  await nextTick()
+  actionsOpen.value = true
+}
+
+async function handleDrawerAction(action: MobileAppointmentMoreAction) {
+  const appointment = actionsAppointment.value
+  if (!appointment) return
+  actionsOpen.value = false
+  actionsAppointment.value = null
+
+  if (action === 'edit') openEdit(appointment)
+  else if (action === 'decline') await handleDecline(appointment)
+  else await handleNoShow(appointment)
+}
+
+function closeCheckout() {
+  checkoutOpen.value = false
+}
+
+function finishCheckoutDismiss() {
+  checkoutOpen.value = false
+  checkoutAppointment.value = null
 }
 </script>
 
@@ -458,7 +439,7 @@ async function openActions(appointment: Appointment) {
           :now="now"
           @open="handleCardOpen(appointment)"
           @primary="handleCardPrimary(appointment)"
-          @more="handleCardMore(appointment)"
+          @actions="openActions(appointment)"
           @note="openNote(appointment)"
         />
       </div>
@@ -521,15 +502,27 @@ async function openActions(appointment: Appointment) {
     @update:is-open="editingAppointment = null"
   />
 
+  <appointment-actions-drawer-mobile
+    v-if="actionsAppointment"
+    :is-open="actionsOpen"
+    :appointment="actionsAppointment"
+    :client-name="getClientName(actionsAppointment)"
+    :date-label="formats.dateDay(actionsAppointment.start_at)"
+    :time-label="formatTime(actionsAppointment.start_at)"
+    @update:is-open="actionsOpen = $event"
+    @select="handleDrawerAction"
+  />
+
   <appointment-checkout-mobile
     v-if="checkoutAppointment"
-    :is-open="Boolean(checkoutAppointment)"
+    :is-open="checkoutOpen"
     :appointment="checkoutAppointment"
     :client="getClient(checkoutAppointment)"
     :services="getServices(checkoutAppointment)"
     :payment-types="paymentTypes ?? []"
     :loading="isProcessing(checkoutAppointment.id)"
-    @update:is-open="checkoutAppointment = null"
+    @update:is-open="closeCheckout"
+    @did-dismiss="finishCheckoutDismiss"
     @confirm="handleCheckoutConfirm"
   />
 </template>

@@ -42,6 +42,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:isOpen': [value: boolean]
   confirm: [payload: CompleteSaleDto]
+  'did-dismiss': []
 }>()
 
 const { t } = useI18n()
@@ -96,6 +97,11 @@ function submit() {
   commitPaymentUsage()
   emit('confirm', buildPayload())
 }
+
+function onDidDismiss() {
+  emit('update:isOpen', false)
+  emit('did-dismiss')
+}
 </script>
 
 <template>
@@ -106,7 +112,7 @@ function submit() {
     :initial-breakpoint="0.86"
     :handle="!loading"
     :can-dismiss="!loading"
-    @did-dismiss="emit('update:isOpen', false)"
+    @did-dismiss="onDidDismiss"
   >
     <ion-header class="ion-no-border">
       <ion-toolbar>
