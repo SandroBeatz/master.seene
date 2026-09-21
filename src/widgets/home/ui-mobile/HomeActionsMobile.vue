@@ -380,6 +380,10 @@ function finishCheckoutDismiss() {
   checkoutOpen.value = false
   checkoutAppointment.value = null
 }
+
+defineExpose({
+  openAppointment: openDetails,
+})
 </script>
 
 <template>

@@ -1,6 +1,23 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { IonContent, IonPage } from '@ionic/vue'
-import { HomeActionsMobile, HomeHeaderMobile, HomeOverviewMobile } from '@widgets/home/index.mobile'
+import type { Appointment } from '@entities/appointment'
+import {
+  HomeActionsMobile,
+  HomeHeaderMobile,
+  HomeOverviewMobile,
+  HomeScheduleMobile,
+} from '@widgets/home/index.mobile'
+
+interface HomeActionsExpose {
+  openAppointment: (appointment: Appointment) => void
+}
+
+const actions = ref<HomeActionsExpose | null>(null)
+
+function openAppointment(appointment: Appointment) {
+  actions.value?.openAppointment(appointment)
+}
 </script>
 
 <template>
@@ -9,7 +26,8 @@ import { HomeActionsMobile, HomeHeaderMobile, HomeOverviewMobile } from '@widget
     <ion-content :fullscreen="true">
       <main class="home-content">
         <home-overview-mobile />
-        <home-actions-mobile />
+        <home-actions-mobile ref="actions" />
+        <home-schedule-mobile @select="openAppointment" />
       </main>
     </ion-content>
   </ion-page>

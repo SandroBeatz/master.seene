@@ -109,6 +109,8 @@ export default {
       subtitle: '{date} · {n} записей',
       summary: '{date} · {n} записей',
       options: 'Параметры',
+      loadError: 'Не удалось загрузить расписание',
+      retry: 'Повторить',
     },
     overview: {
       title: 'Обзор',
