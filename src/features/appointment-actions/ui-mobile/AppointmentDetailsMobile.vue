@@ -46,6 +46,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:isOpen': [value: boolean]
+  'did-dismiss': []
   primary: []
   more: []
 }>()
@@ -88,6 +89,11 @@ function close() {
   if (props.primaryLoading) return
   emit('update:isOpen', false)
 }
+
+function onDidDismiss() {
+  emit('update:isOpen', false)
+  emit('did-dismiss')
+}
 </script>
 
 <template>
@@ -98,7 +104,7 @@ function close() {
     :initial-breakpoint="0.82"
     :handle="!primaryLoading"
     :can-dismiss="!primaryLoading"
-    @did-dismiss="emit('update:isOpen', false)"
+    @did-dismiss="onDidDismiss"
   >
     <ion-header class="ion-no-border">
       <ion-toolbar>

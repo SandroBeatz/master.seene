@@ -108,10 +108,11 @@ const stubs = {
   IonTitle: passthrough,
   IonToolbar: passthrough,
   AppointmentDetailsMobile: {
+    name: 'AppointmentDetailsMobile',
     props: ['isOpen'],
-    emits: ['more', 'primary', 'update:isOpen'],
+    emits: ['more', 'primary', 'update:isOpen', 'did-dismiss'],
     template:
-      '<button v-if="isOpen" class="details-mobile-stub" @click="$emit(\'more\')">Actions</button>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub" @click="$emit(\'more\'); $emit(\'did-dismiss\')">Actions</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -122,7 +123,7 @@ const stubs = {
   },
   AppointmentCheckoutMobile: {
     props: ['isOpen'],
-    emits: ['confirm', 'update:isOpen'],
+    emits: ['confirm', 'update:isOpen', 'did-dismiss'],
     data: () => ({
       payload: {
         appointment_id: 'finish',
@@ -132,7 +133,7 @@ const stubs = {
       },
     }),
     template:
-      '<button v-if="isOpen" class="checkout-mobile-stub" @click="$emit(\'confirm\', payload)">Checkout</button>',
+      '<div v-if="isOpen"><button class="checkout-mobile-stub" @click="$emit(\'confirm\', payload)">Checkout</button><button class="checkout-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button></div>',
   },
 }
 
@@ -321,6 +322,43 @@ describe('HomeActionsMobile', () => {
 
     expect(wrapper.emitted('open')?.[0]).toEqual([item])
     expect(wrapper.emitted('primary')?.[0]).toEqual([item])
+  })
+
+  it('can dismiss and reopen appointment details repeatedly', async () => {
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    const exposed = wrapper.vm as unknown as {
+      openAppointment: (appointment: Appointment) => Promise<void>
+    }
+    await exposed.openAppointment(item)
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+
+    await wrapper.find('.details-close-stub').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(false)
+
+    await exposed.openAppointment(item)
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+  })
+
+  it('waits for details to dismiss before opening checkout and can reopen it', async () => {
+    const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__content').trigger('click')
+    const details = wrapper.findComponent({ name: 'AppointmentDetailsMobile' })
+    await wrapper.find('.details-primary-stub').trigger('click')
+    details.vm.$emit('did-dismiss')
+    await flushPromises()
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(false)
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(true)
+
+    await wrapper.find('.checkout-close-stub').trigger('click')
+    await flushPromises()
+    await wrapper.find('.action-card__primary').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(true)
   })
 
   it('confirms a pending appointment once', async () => {

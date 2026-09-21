@@ -183,11 +183,6 @@ function mountSchedule(
         IonItem: { template: '<button class="ion-item-stub"><slot /></button>' },
         IonLabel: { template: '<span><slot /></span>' },
         IonList: { template: '<div><slot /></div>' },
-        IonPopover: {
-          props: ['isOpen', 'trigger'],
-          template:
-            '<div v-if="isOpen" class="ion-popover-stub" :data-trigger="trigger"><slot /></div>',
-        },
         IonSkeletonText: { template: '<span class="ion-skeleton-stub" />' },
       },
     },
@@ -255,7 +250,7 @@ describe('HomeScheduleMobile', () => {
     expect(wrapper.emitted('select')?.[0]).toEqual([item])
   })
 
-  it('opens the anchored action menu on hold and suppresses the following tap', async () => {
+  it('opens the visible inline action menu on hold and suppresses the following tap', async () => {
     vi.useFakeTimers()
     const item = appointment('a1', '2026-09-21T09:00:00.000Z')
     const wrapper = mountSchedule({ appointments: [item] })
@@ -265,10 +260,8 @@ describe('HomeScheduleMobile', () => {
     await vi.advanceTimersByTimeAsync(550)
 
     expect(card.classes()).toContain('schedule-appointment--active')
-    expect(wrapper.find('.ion-popover-stub').exists()).toBe(true)
-    expect(wrapper.find('.ion-popover-stub').attributes('data-trigger')).toBe(
-      'schedule-appointment-a1',
-    )
+    expect(wrapper.find('.schedule-action-menu-wrap').exists()).toBe(true)
+    expect(wrapper.find('.schedule-action-backdrop').exists()).toBe(true)
 
     await card.trigger('pointerup')
     await card.trigger('click')
@@ -276,6 +269,7 @@ describe('HomeScheduleMobile', () => {
 
     await wrapper.findAll('.ion-item-stub')[1]?.trigger('click')
     expect(wrapper.emitted('action')?.[0]).toEqual([item, 'edit'])
+    expect(wrapper.find('.schedule-action-menu-wrap').exists()).toBe(false)
   })
 
   it('shows a retry state for a core query failure', async () => {

@@ -82,11 +82,16 @@ const serviceById = computed(
 const activeIndex = ref(0)
 const noteAppointment = ref<Appointment | null>(null)
 const detailsAppointment = ref<Appointment | null>(null)
+const detailsOpen = ref(false)
 const actionsAppointment = ref<Appointment | null>(null)
 const actionsOpen = ref(false)
 const editingAppointment = ref<Appointment | null>(null)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
+const pendingAfterDetails = ref<{
+  type: 'checkout' | 'actions'
+  appointment: Appointment
+} | null>(null)
 const processingIds = ref<Set<string>>(new Set())
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
@@ -225,7 +230,7 @@ async function updateStatus(
   setProcessing(appointment.id, true)
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status })
-    detailsAppointment.value = null
+    detailsOpen.value = false
     await showToast(successMessage, 'success')
   } catch {
     await showToast(t('appointments.preview.statusUpdateError'), 'danger')
@@ -282,17 +287,27 @@ async function handleNoShow(appointment: Appointment) {
   await updateStatus(appointment, 'no_show', t('home.nextUp.noShowSuccess'))
 }
 
-function openDetails(appointment: Appointment) {
+async function openDetails(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   detailsAppointment.value = appointment
+  await nextTick()
+  detailsOpen.value = true
+}
+
+async function presentCheckout(appointment: Appointment) {
+  checkoutAppointment.value = appointment
+  await nextTick()
+  checkoutOpen.value = true
 }
 
 async function openCheckout(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  detailsAppointment.value = null
-  checkoutAppointment.value = appointment
-  await nextTick()
-  checkoutOpen.value = true
+  if (detailsOpen.value) {
+    pendingAfterDetails.value = { type: 'checkout', appointment }
+    detailsOpen.value = false
+    return
+  }
+  await presentCheckout(appointment)
 }
 
 function handlePrimary(appointment: Appointment) {
@@ -315,7 +330,7 @@ function handleCardPrimary(appointment: Appointment) {
 
 function openEdit(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  detailsAppointment.value = null
+  detailsOpen.value = false
   editingAppointment.value = appointment
 }
 
@@ -331,7 +346,7 @@ async function removeAppointment(appointment: Appointment) {
   setProcessing(appointment.id, true)
   try {
     await removeMutation.mutateAsync(appointment.id)
-    if (detailsAppointment.value?.id === appointment.id) detailsAppointment.value = null
+    if (detailsAppointment.value?.id === appointment.id) detailsOpen.value = false
     if (editingAppointment.value?.id === appointment.id) editingAppointment.value = null
     await showToast(t('appointments.form.successDelete'), 'success')
   } catch {
@@ -379,10 +394,25 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
 
 async function openActions(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  detailsAppointment.value = null
+  if (detailsOpen.value) {
+    pendingAfterDetails.value = { type: 'actions', appointment }
+    detailsOpen.value = false
+    return
+  }
   actionsAppointment.value = appointment
   await nextTick()
   actionsOpen.value = true
+}
+
+async function finishDetailsDismiss() {
+  detailsOpen.value = false
+  detailsAppointment.value = null
+
+  const pending = pendingAfterDetails.value
+  pendingAfterDetails.value = null
+  if (!pending) return
+  if (pending.type === 'checkout') await presentCheckout(pending.appointment)
+  else await openActions(pending.appointment)
 }
 
 async function handleDrawerAction(action: MobileAppointmentMoreAction) {
@@ -506,7 +536,7 @@ defineExpose({
 
   <appointment-details-mobile
     v-if="detailsAppointment"
-    :is-open="Boolean(detailsAppointment)"
+    :is-open="detailsOpen"
     :appointment="detailsAppointment"
     :client="getClient(detailsAppointment)"
     :client-name="getClientName(detailsAppointment)"
@@ -516,7 +546,8 @@ defineExpose({
     :duration-label="t('home.nextUp.minutesLabel', { n: detailsAppointment.duration })"
     :price-label="formats.price(detailsAppointment.price)"
     :primary-loading="isProcessing(detailsAppointment.id)"
-    @update:is-open="detailsAppointment = null"
+    @update:is-open="detailsOpen = $event"
+    @did-dismiss="finishDetailsDismiss"
     @primary="handlePrimary(detailsAppointment)"
     @more="openActions(detailsAppointment)"
   />

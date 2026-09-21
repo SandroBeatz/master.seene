@@ -8,7 +8,6 @@ import {
   IonItem,
   IonLabel,
   IonList,
-  IonPopover,
   IonSkeletonText,
 } from '@ionic/vue'
 import {
@@ -286,13 +285,33 @@ const subtitle = computed(() =>
 
 const HOLD_DELAY_MS = 550
 const HOLD_MOVE_TOLERANCE_PX = 10
+const ACTION_MENU_HEIGHT = 150
+const ACTION_MENU_GAP = 6
 const pressedAppointmentId = ref<string | null>(null)
 const actionAppointment = ref<Appointment | null>(null)
-const actionTriggerId = ref<string | undefined>()
 let holdTimer: ReturnType<typeof setTimeout> | undefined
 let holdStartX = 0
 let holdStartY = 0
 let suppressClickId: string | null = null
+
+const actionMenuStyle = computed(() => {
+  if (!actionAppointment.value) return undefined
+  const block = appointmentBlocks.value.find(
+    ({ appointment }) => appointment.id === actionAppointment.value?.id,
+  )
+  if (!block) return undefined
+
+  const below = block.top + block.height + ACTION_MENU_GAP
+  const top =
+    below + ACTION_MENU_HEIGHT <= totalHeight.value
+      ? below
+      : Math.max(0, block.top - ACTION_MENU_HEIGHT - ACTION_MENU_GAP)
+
+  return {
+    top: `${top}px`,
+    left: `${LABEL_WIDTH + 10}px`,
+  }
+})
 
 function clearHoldTimer() {
   if (holdTimer) clearTimeout(holdTimer)
@@ -312,12 +331,10 @@ function startAppointmentHold(event: PointerEvent, appointment: Appointment) {
   pressedAppointmentId.value = appointment.id
   holdStartX = event.clientX
   holdStartY = event.clientY
-  const triggerId = (event.currentTarget as HTMLElement).id
 
   holdTimer = setTimeout(() => {
     holdTimer = undefined
     suppressClickId = appointment.id
-    actionTriggerId.value = triggerId
     actionAppointment.value = appointment
   }, HOLD_DELAY_MS)
 }
@@ -333,25 +350,24 @@ function trackAppointmentHold(event: PointerEvent) {
 
 function openAppointment(appointment: Appointment) {
   clearHoldTimer()
-  pressedAppointmentId.value = null
   if (suppressClickId === appointment.id) {
     suppressClickId = null
     return
   }
+  if (actionAppointment.value) closeActionMenu()
+  pressedAppointmentId.value = null
   emit('select', appointment)
 }
 
-function openActionsFromContextMenu(event: MouseEvent, appointment: Appointment) {
+function openActionsFromContextMenu(appointment: Appointment) {
   clearHoldTimer()
   suppressClickId = appointment.id
   pressedAppointmentId.value = appointment.id
-  actionTriggerId.value = (event.currentTarget as HTMLElement).id
   actionAppointment.value = appointment
 }
 
 function closeActionMenu() {
   actionAppointment.value = null
-  actionTriggerId.value = undefined
   pressedAppointmentId.value = null
   suppressClickId = null
 }
@@ -472,7 +488,7 @@ onBeforeUnmount(clearHoldTimer)
             @pointerup="cancelAppointmentHold"
             @pointercancel="cancelAppointmentHold"
             @pointerleave="cancelAppointmentHold"
-            @contextmenu.prevent="openActionsFromContextMenu($event, block.appointment)"
+            @contextmenu.prevent="openActionsFromContextMenu(block.appointment)"
           >
             <span class="schedule-appointment__rail" aria-hidden="true" />
 
@@ -545,35 +561,38 @@ onBeforeUnmount(clearHoldTimer)
             <span>{{ nowLine.label }}</span>
             <i aria-hidden="true" />
           </div>
-        </div>
 
-        <ion-popover
-          :is-open="Boolean(actionAppointment)"
-          :trigger="actionTriggerId"
-          trigger-action="context-menu"
-          reference="trigger"
-          side="auto"
-          alignment="center"
-          :show-backdrop="true"
-          :backdrop-dismiss="true"
-          class="schedule-action-popover"
-          @did-dismiss="closeActionMenu"
-        >
-          <ion-list lines="none" class="schedule-action-menu">
-            <ion-item button :detail="false" @click="selectAction('details')">
-              <ion-icon slot="start" :icon="eyeOutline" color="medium" aria-hidden="true" />
-              <ion-label>{{ t('home.schedule.details') }}</ion-label>
-            </ion-item>
-            <ion-item button :detail="false" @click="selectAction('edit')">
-              <ion-icon slot="start" :icon="createOutline" color="medium" aria-hidden="true" />
-              <ion-label>{{ t('common.edit') }}</ion-label>
-            </ion-item>
-            <ion-item button :detail="false" @click="selectAction('delete')">
-              <ion-icon slot="start" :icon="trashOutline" color="danger" aria-hidden="true" />
-              <ion-label color="danger">{{ t('common.delete') }}</ion-label>
-            </ion-item>
-          </ion-list>
-        </ion-popover>
+          <button
+            v-if="actionAppointment"
+            type="button"
+            class="schedule-action-backdrop"
+            :aria-label="t('common.close')"
+            @click="closeActionMenu"
+          />
+          <div
+            v-if="actionAppointment"
+            class="schedule-action-menu-wrap"
+            :style="actionMenuStyle"
+            role="menu"
+            @click.stop
+            @pointerdown.stop
+          >
+            <ion-list lines="none" class="schedule-action-menu">
+              <ion-item button :detail="false" @click="selectAction('details')">
+                <ion-icon slot="start" :icon="eyeOutline" color="medium" aria-hidden="true" />
+                <ion-label>{{ t('home.schedule.details') }}</ion-label>
+              </ion-item>
+              <ion-item button :detail="false" @click="selectAction('edit')">
+                <ion-icon slot="start" :icon="createOutline" color="medium" aria-hidden="true" />
+                <ion-label>{{ t('common.edit') }}</ion-label>
+              </ion-item>
+              <ion-item button :detail="false" @click="selectAction('delete')">
+                <ion-icon slot="start" :icon="trashOutline" color="danger" aria-hidden="true" />
+                <ion-label color="danger">{{ t('common.delete') }}</ion-label>
+              </ion-item>
+            </ion-list>
+          </div>
+        </div>
       </template>
     </div>
   </ion-card>
@@ -982,25 +1001,31 @@ onBeforeUnmount(clearHoldTimer)
   flex: 1;
 }
 
-:global(.schedule-action-popover) {
-  --width: 190px;
-  --max-width: calc(100vw - 32px);
-  --background: var(
-    --se-surface-card,
-    var(--ion-card-background, var(--ion-background-color, #fff))
-  );
-  --box-shadow: 0 10px 32px rgb(0 0 0 / 22%);
-  --backdrop-opacity: 0.12;
+.schedule-action-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 8%);
+}
+
+.schedule-action-menu-wrap {
+  position: absolute;
+  right: 0;
+  z-index: 8;
+  overflow: hidden;
+  border: 1px solid var(--se-separator);
+  border-radius: 12px;
+  background: var(--se-surface-card, var(--ion-card-background, #fff));
+  box-shadow: 0 10px 32px rgb(0 0 0 / 24%);
 }
 
 .schedule-action-menu {
   --ion-item-background: transparent;
   color: var(--ion-text-color, #111);
   padding: 6px;
-  background: var(
-    --se-surface-card,
-    var(--ion-card-background, var(--ion-background-color, #fff))
-  );
+  background: var(--se-surface-card, var(--ion-card-background, #fff));
 }
 
 .schedule-action-menu ion-item {
