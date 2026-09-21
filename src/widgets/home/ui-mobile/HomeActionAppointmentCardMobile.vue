@@ -389,6 +389,11 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
   text-transform: none;
 }
 
+.action-card__primary ion-icon[slot='start'],
+.action-card__primary ion-spinner[slot='start'] {
+  margin-inline-end: 6px;
+}
+
 .action-card__more {
   --border-radius: 999px;
   --color: var(--ion-color-medium);
