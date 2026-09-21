@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IonAvatar, IonBadge, IonButton, IonCard, IonIcon, IonSpinner } from '@ionic/vue'
 import {
@@ -8,7 +8,6 @@ import {
   checkmarkCircleOutline,
   checkmarkDoneOutline,
   closeCircleOutline,
-  ellipsisHorizontal,
   globeOutline,
   hourglassOutline,
   personRemoveOutline,
@@ -44,8 +43,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   open: []
   primary: []
-  more: []
   note: []
+  actions: []
 }>()
 
 const { t } = useI18n()
@@ -104,6 +103,56 @@ const accentColor = computed(
       : 'var(--ion-color-tertiary)'),
 )
 const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value }))
+
+const HOLD_DELAY_MS = 550
+const HOLD_MOVE_TOLERANCE_PX = 10
+let holdTimer: ReturnType<typeof setTimeout> | undefined
+let holdStartX = 0
+let holdStartY = 0
+let suppressNextClick = false
+
+function clearHoldTimer() {
+  if (holdTimer) clearTimeout(holdTimer)
+  holdTimer = undefined
+}
+
+function startHold(event: PointerEvent) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  clearHoldTimer()
+  suppressNextClick = false
+  holdStartX = event.clientX
+  holdStartY = event.clientY
+  holdTimer = setTimeout(() => {
+    holdTimer = undefined
+    suppressNextClick = true
+    emit('actions')
+  }, HOLD_DELAY_MS)
+}
+
+function trackHold(event: PointerEvent) {
+  if (!holdTimer) return
+  const movedX = Math.abs(event.clientX - holdStartX)
+  const movedY = Math.abs(event.clientY - holdStartY)
+  if (movedX > HOLD_MOVE_TOLERANCE_PX || movedY > HOLD_MOVE_TOLERANCE_PX) clearHoldTimer()
+}
+
+function openPreview() {
+  clearHoldTimer()
+  if (suppressNextClick) {
+    suppressNextClick = false
+    return
+  }
+  emit('open')
+}
+
+function openActionsFromContextMenu() {
+  clearHoldTimer()
+  if (suppressNextClick) return
+  suppressNextClick = true
+  emit('actions')
+}
+
+onBeforeUnmount(clearHoldTimer)
 </script>
 
 <template>
@@ -113,8 +162,14 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
       role="button"
       tabindex="0"
       :aria-label="`${clientName}, ${dateLabel} ${timeLabel}`"
-      @click="emit('open')"
+      @click="openPreview"
       @keydown.enter.prevent="emit('open')"
+      @pointerdown="startHold"
+      @pointermove="trackHold"
+      @pointerup="clearHoldTimer"
+      @pointercancel="clearHoldTimer"
+      @pointerleave="clearHoldTimer"
+      @contextmenu.prevent="openActionsFromContextMenu"
     >
       <div class="action-card__topline">
         <span class="action-card__date">{{ dateLabel }} · {{ timeLabel }}</span>
@@ -160,7 +215,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
         </div>
       </div>
 
-      <div class="action-card__actions">
+      <div class="action-card__actions" @pointerdown.stop>
         <ion-button
           class="action-card__primary"
           size="small"
@@ -172,15 +227,6 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
           <ion-spinner v-if="primaryLoading" slot="start" name="crescent" />
           <ion-icon v-else slot="start" :icon="primaryIcon" aria-hidden="true" />
           {{ primaryLabel }}
-        </ion-button>
-        <ion-button
-          class="action-card__more"
-          fill="clear"
-          size="small"
-          :aria-label="t('nav.actions')"
-          @click.stop="emit('more')"
-        >
-          <ion-icon slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
         </ion-button>
         <ion-button
           v-if="appointment.notes"
@@ -209,6 +255,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
   border-radius: 16px;
   background: var(--se-surface-card);
   box-shadow: 0 1px 3px rgb(0 0 0 / 7%);
+  -webkit-touch-callout: none;
 }
 
 .action-card::before {
@@ -392,17 +439,6 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
 .action-card__primary ion-icon[slot='start'],
 .action-card__primary ion-spinner[slot='start'] {
   margin-inline-end: 6px;
-}
-
-.action-card__more {
-  --border-radius: 999px;
-  --color: var(--ion-color-medium);
-  --padding-start: 8px;
-  --padding-end: 8px;
-
-  min-width: 34px;
-  min-height: 34px;
-  margin: 0;
 }
 
 .action-card__note {

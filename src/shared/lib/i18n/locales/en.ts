@@ -159,13 +159,16 @@ export default {
       declineConfirmTitle: 'Decline appointment?',
       declineConfirmDescription:
         'The appointment with {name} will be cancelled. This cannot be undone.',
+      declineSuccess: 'Request declined',
       confirm: 'Confirm',
+      confirmSuccess: 'Appointment confirmed',
       complete: 'Complete',
       noShow: 'No-show',
       noShowConfirmTitle: 'Mark as no-show?',
       noShowConfirmDescription:
         'We’ll log that {name} didn’t show up. No payment will be recorded.',
       noShowConfirm: 'Mark no-show',
+      noShowSuccess: 'No-show recorded',
       today: 'Today',
       tomorrow: 'Tomorrow',
       minutesLabel: '{n} min',
