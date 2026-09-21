@@ -6,7 +6,9 @@ import type { CapacitorConfig } from '@capacitor/cli'
 const config: CapacitorConfig = {
   appId: 'com.seene.app',
   appName: 'Seene',
-  webDir: 'dist',
+  // Native app serves the mobile (Ionic) build. Produce it with
+  // `bun build:mobile` before `npx cap sync`.
+  webDir: 'dist-mobile',
   plugins: {
     SplashScreen: {
       launchShowDuration: 300,

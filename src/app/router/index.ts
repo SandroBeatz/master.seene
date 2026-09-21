@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
 import { useIsMobile } from '@shared/lib/viewport'
+import { resolveAuthDecision, type AuthArea } from '@shared/lib/auth'
 
 // Module-level singleton: set up the media-query listener once, reuse the same
 // reactive ref everywhere it's read (route guards included).
@@ -175,6 +176,14 @@ const router = createRouter({
 
 const authRoutes = ['/login', '/register']
 
+// Map a target path to the semantic auth area the shared decision helper works
+// in. Desktop maps the areas back to its own concrete paths below.
+function classifyArea(path: string): AuthArea {
+  if (authRoutes.includes(path)) return 'auth'
+  if (path.startsWith('/onboarding')) return 'onboarding'
+  return 'app'
+}
+
 router.beforeEach(async (to) => {
   const sessionStore = useSessionStore()
 
@@ -185,25 +194,29 @@ router.beforeEach(async (to) => {
   }
 
   const { session, profile } = sessionStore
-  const isAuthRoute = authRoutes.includes(to.path)
-  const isOnboarding = to.path.startsWith('/onboarding')
+  const decision = resolveAuthDecision(
+    {
+      hasSession: !!session,
+      hasProfile: !!profile,
+      isDeactivated: !!profile?.deactivated_at,
+    },
+    classifyArea(to.path),
+  )
 
-  // Soft-deleted account: sign the user out and block access. Real ban + data
-  // cleanup happens 30 days later via a scheduled Edge Function (master.seene-c5og).
-  if (session && profile?.deactivated_at) {
-    await supabase.auth.signOut()
-    return { path: '/login', query: { deactivated: '1' } }
-  }
-
-  // Unauthenticated → login (only auth routes are accessible without session)
-  if (!session && !isAuthRoute) return '/login'
-
-  if (session) {
-    // Auth routes: check if onboarding done to decide where to send
-    if (isAuthRoute) return profile ? '/home' : '/onboarding/step1'
-
-    // Dashboard routes: must have completed onboarding
-    if (!isOnboarding && !profile) return '/onboarding/step1'
+  switch (decision.action) {
+    case 'sign-out':
+      // Soft-deleted account: sign out and block access. Real ban + data cleanup
+      // happens 30 days later via a scheduled Edge Function (master.seene-c5og).
+      await supabase.auth.signOut()
+      return { path: '/login', query: { deactivated: '1' } }
+    case 'redirect':
+      return decision.to === 'auth'
+        ? '/login'
+        : decision.to === 'onboarding'
+          ? '/onboarding/step1'
+          : '/home'
+    case 'allow':
+      return
   }
 })
 

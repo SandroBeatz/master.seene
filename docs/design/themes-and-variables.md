@@ -1,12 +1,12 @@
 ---
-version: 1.3
-date: 2026-07-22
+version: 1.4
+date: 2026-09-07
 category: design
 ---
 
 # Themes and Variables (@nuxt/ui v4)
 
-> Version 1.3 · 2026-07-22 · [Design](../)
+> Version 1.4 · 2026-09-07 · [Design](../)
 
 ## Overview
 
@@ -243,6 +243,7 @@ Used like standard breakpoints: `3xl:grid-cols-4`.
 
 ## Cross-references
 
+- [Mobile Ionic Theming](./mobile-ionic-theming.md) — the **mobile** theming model (Ionic color grid + `--se-*` tokens); a separate system, this `--ui-*` one is desktop-only
 - [Nuxt UI Components](../ui/nuxt-ui-components.md) — component library that consumes these design tokens via `color`, `variant`, and `size` props
 - [Global Overlays](../ui/overlays.md) — overlay components affected by the global backdrop scrim override
 - [Analytics & Home Dashboard](../architecture/analytics-and-home.md) — dashboard widgets that use nested metric cards

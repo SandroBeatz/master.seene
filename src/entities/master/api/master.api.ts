@@ -111,6 +111,8 @@ export async function updateMasterProfile(
       username: payload.username,
       specializations: payload.specializations,
       bio: payload.bio,
+      // Written only when the caller edits it here (mobile Profile page).
+      ...(payload.phone !== undefined && { phone: payload.phone }),
     })
     .eq('user_id', userId)
     .select(MASTER_PROFILE_COLUMNS)
@@ -176,7 +178,9 @@ export async function updateMasterContacts(
   const { data, error } = await supabase
     .from('master_profile')
     .update({
-      phone: payload.phone,
+      // Written only when the caller edits it here (desktop Contacts form);
+      // the mobile Contacts page omits it since phone moved to the Profile page.
+      ...(payload.phone !== undefined && { phone: payload.phone }),
       whatsapp: payload.whatsapp,
       telegram: payload.telegram,
       instagram: payload.instagram,
