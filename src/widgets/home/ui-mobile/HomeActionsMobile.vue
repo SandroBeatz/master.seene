@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IonButton, IonCard, IonIcon, IonSkeletonText } from '@ionic/vue'
-import { alertCircleOutline } from 'ionicons/icons'
+import {
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonModal,
+  IonSkeletonText,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/vue'
+import { alertCircleOutline, closeOutline } from 'ionicons/icons'
 import { useActionableAppointmentsQuery, type Appointment } from '@entities/appointment'
 import { useClientsQuery, type Client } from '@entities/client'
 import { useServicesQuery, type Service } from '@entities/service'
@@ -45,6 +56,7 @@ const serviceById = computed(
 )
 
 const activeIndex = ref(0)
+const noteAppointment = ref<Appointment | null>(null)
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
   activeAppointment.value ? getServices(activeAppointment.value).map(({ color }) => color) : [],
@@ -144,6 +156,14 @@ function onCarouselScroll(event: Event) {
 function retry() {
   void refetch()
 }
+
+function openNote(appointment: Appointment) {
+  noteAppointment.value = appointment
+}
+
+function closeNote() {
+  noteAppointment.value = null
+}
 </script>
 
 <template>
@@ -203,9 +223,38 @@ function retry() {
           @open="emit('open', appointment)"
           @primary="emit('primary', appointment)"
           @more="emit('more', appointment)"
+          @note="openNote(appointment)"
         />
       </div>
     </div>
+
+    <ion-modal
+      :is-open="Boolean(noteAppointment)"
+      class="appointment-note-modal"
+      :breakpoints="[0, 1]"
+      :initial-breakpoint="1"
+      :handle="true"
+      @did-dismiss="closeNote"
+    >
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button
+              fill="clear"
+              color="dark"
+              :aria-label="t('common.close')"
+              @click="closeNote"
+            >
+              <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
+            </ion-button>
+          </ion-buttons>
+          <ion-title>{{ t('home.nextUp.noteTitle') }}</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="appointment-note-modal__content">
+        <p class="appointment-note-modal__text">{{ noteAppointment?.notes }}</p>
+      </ion-content>
+    </ion-modal>
   </section>
 </template>
 
@@ -342,6 +391,26 @@ function retry() {
 .actions-error ion-button {
   margin: 0;
   text-transform: none;
+}
+
+.appointment-note-modal {
+  --height: min(320px, 60vh);
+  --border-radius: 20px 20px 0 0;
+}
+
+.appointment-note-modal ion-toolbar,
+.appointment-note-modal__content {
+  --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.appointment-note-modal__text {
+  margin: 0;
+  padding: 18px;
+  color: var(--ion-text-color);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

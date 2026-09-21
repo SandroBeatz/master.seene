@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { IonAvatar, IonBadge, IonButton, IonCard, IonIcon, IonSpinner } from '@ionic/vue'
 import {
   alertCircleOutline,
+  chatbubbleEllipsesOutline,
   checkmarkCircleOutline,
   checkmarkDoneOutline,
   closeCircleOutline,
@@ -44,6 +45,7 @@ const emit = defineEmits<{
   open: []
   primary: []
   more: []
+  note: []
 }>()
 
 const { t } = useI18n()
@@ -158,10 +160,6 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
         </div>
       </div>
 
-      <p v-if="appointment.notes" class="action-card__notes">
-        {{ appointment.notes }}
-      </p>
-
       <div class="action-card__actions">
         <ion-button
           class="action-card__primary"
@@ -183,6 +181,17 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
           @click.stop="emit('more')"
         >
           <ion-icon slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
+        </ion-button>
+        <ion-button
+          v-if="appointment.notes"
+          class="action-card__note"
+          fill="clear"
+          size="small"
+          color="medium"
+          :aria-label="t('home.nextUp.viewNote')"
+          @click.stop="emit('note')"
+        >
+          <ion-icon slot="icon-only" :icon="chatbubbleEllipsesOutline" aria-hidden="true" />
         </ion-button>
       </div>
     </article>
@@ -312,8 +321,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
 .action-card__name,
 .action-card__services,
 .action-card__meta,
-.action-card__attention,
-.action-card__notes {
+.action-card__attention {
   margin: 0;
 }
 
@@ -333,8 +341,7 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
 }
 
 .action-card__services,
-.action-card__meta,
-.action-card__notes {
+.action-card__meta {
   color: var(--ion-color-medium);
   font-size: 0.75rem;
   line-height: 1.35;
@@ -364,17 +371,6 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
   color: var(--ion-color-danger);
 }
 
-.action-card__notes {
-  display: -webkit-box;
-  overflow: hidden;
-  margin-top: 12px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: var(--se-surface-muted, var(--ion-background-color-step-50));
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .action-card__actions {
   gap: 5px;
   margin-top: auto;
@@ -402,5 +398,15 @@ const cardStyle = computed(() => ({ '--appointment-accent': accentColor.value })
   min-width: 34px;
   min-height: 34px;
   margin: 0;
+}
+
+.action-card__note {
+  --border-radius: 999px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+
+  min-width: 34px;
+  min-height: 34px;
+  margin: 0 0 0 auto;
 }
 </style>

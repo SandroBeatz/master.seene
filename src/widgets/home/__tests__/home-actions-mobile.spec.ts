@@ -49,10 +49,19 @@ const stubs = {
     template:
       '<button :data-color="color"><slot name="start" /><slot /><slot name="icon-only" /></button>',
   },
+  IonButtons: passthrough,
   IonCard: { template: '<section><slot /></section>' },
+  IonContent: passthrough,
+  IonHeader: passthrough,
   IonIcon: { template: '<span class="ion-icon-stub" />' },
+  IonModal: {
+    props: ['isOpen'],
+    template: '<div v-if="isOpen" class="ion-modal-stub"><slot /></div>',
+  },
   IonSkeletonText: { template: '<span class="ion-skeleton-stub" />' },
   IonSpinner: passthrough,
+  IonTitle: passthrough,
+  IonToolbar: passthrough,
 }
 
 function appointment(
@@ -171,7 +180,7 @@ describe('HomeActionsMobile', () => {
     expect(wrapper.findAll('.action-skeleton')).toHaveLength(2)
   })
 
-  it('orders cards by action group and shows attention, online, notes, and checkout states', () => {
+  it('orders cards by action group and shows attention, online, notes, and checkout states', async () => {
     ;({ wrapper } = mountWidget({
       appointments: [
         appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed'),
@@ -192,13 +201,18 @@ describe('HomeActionsMobile', () => {
       'Client finish',
     ])
     expect(cards[0]?.text()).toContain('Waiting 30m for your reply')
-    expect(cards[0]?.text()).toContain('Please call before the appointment')
+    expect(cards[0]?.text()).not.toContain('Please call before the appointment')
+    expect(cards[0]?.find('.action-card__note').exists()).toBe(true)
     expect(cards[0]?.findAll('.ion-badge-stub')).toHaveLength(2)
     expect(cards[0]?.find('.action-card__primary').attributes('data-color')).toBe('secondary')
     expect(cards[1]?.text()).toContain('This request’s time slot has passed')
     expect(cards[2]?.text()).toContain('Complete')
     expect(cards[2]?.find('.action-card__primary').attributes('data-color')).toBe('primary')
     expect(wrapper.find('.action-card__open-icon').exists()).toBe(false)
+
+    await cards[0]?.find('.action-card__note').trigger('click')
+    expect(wrapper.find('.ion-modal-stub').text()).toContain('Appointment note')
+    expect(wrapper.find('.ion-modal-stub').text()).toContain('Please call before the appointment')
   })
 
   it('uses full width for one card and forwards typed card events', async () => {

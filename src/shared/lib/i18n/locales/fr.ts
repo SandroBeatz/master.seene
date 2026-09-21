@@ -149,6 +149,8 @@ export default {
       sectionToFinishCount: '{n} à finaliser',
       badgeOnline: 'En ligne',
       badgeOnlineHint: 'Réservé en ligne par le client',
+      noteTitle: 'Note du rendez-vous',
+      viewNote: 'Ouvrir la note',
       waitingFor: 'En attente depuis {time}',
       unitMinShort: '{n} min',
       unitHourShort: '{n} h',

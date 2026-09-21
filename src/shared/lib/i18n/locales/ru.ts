@@ -148,6 +148,8 @@ export default {
       sectionToFinishCount: '{n} нужно закрыть',
       badgeOnline: 'Онлайн',
       badgeOnlineHint: 'Клиент забронировал онлайн',
+      noteTitle: 'Заметка к записи',
+      viewNote: 'Открыть заметку',
       waitingFor: 'Ждёт ответа уже {time}',
       unitMinShort: '{n} мин',
       unitHourShort: '{n} ч',

@@ -149,6 +149,8 @@ export default {
       sectionToFinishCount: '{n} to close out',
       badgeOnline: 'Online',
       badgeOnlineHint: 'Booked online by the client',
+      noteTitle: 'Appointment note',
+      viewNote: 'Open note',
       waitingFor: 'Waiting {time} for your reply',
       unitMinShort: '{n}m',
       unitHourShort: '{n}h',
