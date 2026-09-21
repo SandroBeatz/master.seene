@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonContent, IonPage } from '@ionic/vue'
-import { HomeHeaderMobile, HomeOverviewMobile } from '@widgets/home/index.mobile'
+import { HomeActionsMobile, HomeHeaderMobile, HomeOverviewMobile } from '@widgets/home/index.mobile'
 </script>
 
 <template>
@@ -9,6 +9,7 @@ import { HomeHeaderMobile, HomeOverviewMobile } from '@widgets/home/index.mobile
     <ion-content :fullscreen="true">
       <main class="home-content">
         <home-overview-mobile />
+        <home-actions-mobile />
       </main>
     </ion-content>
   </ion-page>

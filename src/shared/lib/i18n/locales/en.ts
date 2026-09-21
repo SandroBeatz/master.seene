@@ -133,6 +133,9 @@ export default {
     },
     nextUp: {
       title: 'Needs your attention',
+      carouselLabel: 'Appointments that need attention',
+      loadError: 'Couldn’t load appointments',
+      retry: 'Try again',
       noAppointments: "You're all caught up — nothing needs action right now.",
       needAction: '{n} waiting on you',
       statusPending: 'Needs confirmation',
@@ -146,6 +149,8 @@ export default {
       sectionToFinishCount: '{n} to close out',
       badgeOnline: 'Online',
       badgeOnlineHint: 'Booked online by the client',
+      noteTitle: 'Appointment note',
+      viewNote: 'Open note',
       waitingFor: 'Waiting {time} for your reply',
       unitMinShort: '{n}m',
       unitHourShort: '{n}h',

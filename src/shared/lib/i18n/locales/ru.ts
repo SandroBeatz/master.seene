@@ -132,6 +132,9 @@ export default {
     },
     nextUp: {
       title: 'Требуют внимания',
+      carouselLabel: 'Записи, требующие внимания',
+      loadError: 'Не удалось загрузить записи',
+      retry: 'Повторить',
       noAppointments: 'Всё разобрано — сейчас ничего не требует действий.',
       needAction: '{n} ждут вас',
       statusPending: 'Нужно подтвердить',
@@ -145,6 +148,8 @@ export default {
       sectionToFinishCount: '{n} нужно закрыть',
       badgeOnline: 'Онлайн',
       badgeOnlineHint: 'Клиент забронировал онлайн',
+      noteTitle: 'Заметка к записи',
+      viewNote: 'Открыть заметку',
       waitingFor: 'Ждёт ответа уже {time}',
       unitMinShort: '{n} мин',
       unitHourShort: '{n} ч',

@@ -133,6 +133,9 @@ export default {
     },
     nextUp: {
       title: 'À traiter',
+      carouselLabel: 'Rendez-vous à traiter',
+      loadError: 'Impossible de charger les rendez-vous',
+      retry: 'Réessayer',
       noAppointments: 'Tout est à jour — rien à traiter pour le moment.',
       needAction: '{n} en attente',
       statusPending: 'À confirmer',
@@ -146,6 +149,8 @@ export default {
       sectionToFinishCount: '{n} à finaliser',
       badgeOnline: 'En ligne',
       badgeOnlineHint: 'Réservé en ligne par le client',
+      noteTitle: 'Note du rendez-vous',
+      viewNote: 'Ouvrir la note',
       waitingFor: 'En attente depuis {time}',
       unitMinShort: '{n} min',
       unitHourShort: '{n} h',
