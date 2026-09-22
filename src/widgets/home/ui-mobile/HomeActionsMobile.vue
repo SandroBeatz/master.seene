@@ -18,6 +18,7 @@ import {
 import { alertCircleOutline, closeOutline } from 'ionicons/icons'
 import {
   useActionableAppointmentsQuery,
+  useClientAppointmentsCountQuery,
   useRemoveAppointmentMutation,
   useUpdateAppointmentMutation,
   type Appointment,
@@ -27,7 +28,11 @@ import {
 import { useClientsQuery, type Client } from '@entities/client'
 import { useMasterPreferencesStore } from '@entities/master'
 import { usePaymentTypesQuery } from '@entities/payment-type'
-import { useCompleteSaleMutation, type CompleteSaleDto } from '@entities/sale'
+import {
+  useCompleteSaleMutation,
+  useSaleByAppointmentQuery,
+  type CompleteSaleDto,
+} from '@entities/sale'
 import { useServicesQuery, type Service } from '@entities/service'
 import { useSessionStore } from '@entities/session'
 import {
@@ -90,10 +95,19 @@ const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
 const pendingAfterDetails = ref<{
-  type: 'checkout' | 'actions'
+  type: 'checkout' | 'actions' | 'edit'
   appointment: Appointment
 } | null>(null)
 const processingIds = ref<Set<string>>(new Set())
+const detailsAppointmentId = computed(() =>
+  detailsAppointment.value?.status === 'completed' ? detailsAppointment.value.id : undefined,
+)
+const detailsClientId = computed(() => detailsAppointment.value?.client_id ?? '')
+const detailsSaleQuery = useSaleByAppointmentQuery(detailsAppointmentId)
+const detailsClientCountQuery = useClientAppointmentsCountQuery(detailsClientId)
+const detailsClientIsNew = computed(
+  () => detailsClientCountQuery.data.value != null && detailsClientCountQuery.data.value <= 1,
+)
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
   activeAppointment.value ? getServices(activeAppointment.value).map(({ color }) => color) : [],
@@ -288,6 +302,17 @@ async function handleNoShow(appointment: Appointment) {
   await updateStatus(appointment, 'no_show', t('home.nextUp.noShowSuccess'))
 }
 
+async function handleCancel(appointment: Appointment) {
+  if (isProcessing(appointment.id)) return
+  const confirmed = await confirmDestructiveAction({
+    header: t('appointments.preview.cancelConfirmTitle'),
+    message: t('appointments.preview.cancelConfirmMessage'),
+    confirmLabel: t('appointments.preview.cancelAppointment'),
+  })
+  if (!confirmed) return
+  await updateStatus(appointment, 'cancelled', t('appointments.preview.statusUpdateSuccess'))
+}
+
 async function openDetails(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   detailsAppointment.value = appointment
@@ -329,19 +354,30 @@ function handleCardPrimary(appointment: Appointment) {
   handlePrimary(appointment)
 }
 
-async function openEdit(appointment: Appointment) {
-  if (isProcessing(appointment.id)) return
-  detailsOpen.value = false
+async function presentEdit(appointment: Appointment) {
   editingAppointment.value = appointment
   await nextTick()
   editOpen.value = true
+}
+
+async function openEdit(appointment: Appointment) {
+  if (isProcessing(appointment.id)) return
+  if (detailsOpen.value) {
+    pendingAfterDetails.value = { type: 'edit', appointment }
+    detailsOpen.value = false
+    return
+  }
+  await presentEdit(appointment)
 }
 
 async function removeAppointment(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   const confirmed = await confirmDestructiveAction({
     header: t('appointments.delete.title'),
-    message: t('appointments.delete.message'),
+    message:
+      detailsAppointment.value?.id === appointment.id && detailsSaleQuery.data.value
+        ? t('appointments.delete.messageWithSale')
+        : t('appointments.delete.message'),
     confirmLabel: t('appointments.delete.confirm'),
   })
   if (!confirmed) return
@@ -417,7 +453,8 @@ async function finishDetailsDismiss() {
   pendingAfterDetails.value = null
   if (!pending) return
   if (pending.type === 'checkout') await presentCheckout(pending.appointment)
-  else await openActions(pending.appointment)
+  else if (pending.type === 'actions') await openActions(pending.appointment)
+  else await presentEdit(pending.appointment)
 }
 
 async function handleDrawerAction(action: MobileAppointmentMoreAction) {
@@ -425,8 +462,8 @@ async function handleDrawerAction(action: MobileAppointmentMoreAction) {
   if (!appointment) return
   actionsOpen.value = false
 
-  if (action === 'edit') await openEdit(appointment)
-  else if (action === 'decline') await handleDecline(appointment)
+  if (action === 'decline') await handleDecline(appointment)
+  else if (action === 'cancel') await handleCancel(appointment)
   else await handleNoShow(appointment)
 }
 
@@ -544,17 +581,19 @@ defineExpose({
     :is-open="detailsOpen"
     :appointment="detailsAppointment"
     :client="getClient(detailsAppointment)"
-    :client-name="getClientName(detailsAppointment)"
-    :service-names="getServiceNames(detailsAppointment)"
-    :date-label="formats.dateDay(detailsAppointment.start_at)"
-    :time-label="formatTime(detailsAppointment.start_at)"
-    :duration-label="t('home.nextUp.minutesLabel', { n: detailsAppointment.duration })"
-    :price-label="formats.price(detailsAppointment.price)"
+    :services="getServices(detailsAppointment)"
+    :time-zone="masterPreferencesStore.timeZone"
+    :time-format="masterPreferencesStore.timeFormat"
+    :sale="detailsSaleQuery.data.value"
+    :sale-loading="detailsSaleQuery.isPending.value"
+    :is-new="detailsClientIsNew"
     :primary-loading="isProcessing(detailsAppointment.id)"
     @update:is-open="detailsOpen = $event"
     @did-dismiss="finishDetailsDismiss"
     @primary="handlePrimary(detailsAppointment)"
     @more="openActions(detailsAppointment)"
+    @edit="openEdit(detailsAppointment)"
+    @delete="removeAppointment(detailsAppointment)"
   />
 
   <appointment-edit-mobile

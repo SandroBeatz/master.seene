@@ -46,6 +46,10 @@ vi.mock('@entities/appointment', () => ({
     isLoading: ref(false),
     mutateAsync: queryMock.remove,
   }),
+  useClientAppointmentsCountQuery: () => ({
+    data: ref(2),
+    isPending: ref(false),
+  }),
   getEffectiveAppointmentStatus: (appointment: Appointment, now: Date) => {
     const end = new Date(appointment.start_at).getTime() + appointment.duration * 60_000
     if (appointment.status === 'confirmed' && end <= now.getTime()) return 'past'
@@ -69,6 +73,10 @@ vi.mock('@entities/sale', () => ({
   useCompleteSaleMutation: () => ({
     isLoading: ref(false),
     mutateAsync: queryMock.complete,
+  }),
+  useSaleByAppointmentQuery: () => ({
+    data: ref(null),
+    isPending: ref(false),
   }),
 }))
 
@@ -110,16 +118,16 @@ const stubs = {
   AppointmentDetailsMobile: {
     name: 'AppointmentDetailsMobile',
     props: ['isOpen'],
-    emits: ['more', 'primary', 'update:isOpen', 'did-dismiss'],
+    emits: ['more', 'primary', 'edit', 'delete', 'update:isOpen', 'did-dismiss'],
     template:
-      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub" @click="$emit(\'more\'); $emit(\'did-dismiss\')">Actions</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button></div>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub" @click="$emit(\'more\'); $emit(\'did-dismiss\')">Actions</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-edit-stub" @click="$emit(\'edit\'); $emit(\'did-dismiss\')">Edit</button><button class="details-delete-stub" @click="$emit(\'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
     props: ['isOpen'],
     emits: ['select', 'update:isOpen'],
     template:
-      '<div v-if="isOpen" class="actions-drawer-stub"><button class="drawer-edit" @click="$emit(\'select\', \'edit\')">Edit</button><button class="drawer-decline" @click="$emit(\'select\', \'decline\')">Decline</button><button class="drawer-no-show" @click="$emit(\'select\', \'no_show\')">No-show</button></div>',
+      '<div v-if="isOpen" class="actions-drawer-stub"><button class="drawer-decline" @click="$emit(\'select\', \'decline\')">Decline</button><button class="drawer-cancel" @click="$emit(\'select\', \'cancel\')">Cancel</button><button class="drawer-no-show" @click="$emit(\'select\', \'no_show\')">No-show</button></div>',
   },
   AppointmentCheckoutMobile: {
     props: ['isOpen'],
@@ -402,14 +410,12 @@ describe('HomeActionsMobile', () => {
     expect(queryMock.update).toHaveBeenCalledWith({ id: 'request', status: 'cancelled' })
   })
 
-  it('opens the reusable Ionic edit flow from the options drawer', async () => {
+  it('opens the reusable Ionic edit flow from the preview action dock', async () => {
     const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
     ;({ wrapper } = mountWidget({ appointments: [item] }))
 
     await wrapper.find('.action-card__content').trigger('click')
-    await wrapper.find('.details-mobile-stub').trigger('click')
-    await flushPromises()
-    await wrapper.find('.drawer-edit').trigger('click')
+    await wrapper.find('.details-edit-stub').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('.edit-mobile-stub').exists()).toBe(true)
