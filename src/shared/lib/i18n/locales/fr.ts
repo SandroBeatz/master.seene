@@ -110,6 +110,9 @@ export default {
       subtitle: 'pour le {date} · {n} rendez-vous',
       summary: '{date} · {n} rendez-vous',
       options: 'Options',
+      loadError: 'Impossible de charger le planning',
+      retry: 'Réessayer',
+      details: 'Détails du rendez-vous',
     },
     overview: {
       title: "Vue d'ensemble",

@@ -26,9 +26,10 @@ import {
   timeOutline,
   walletOutline,
 } from 'ionicons/icons'
-import type { Appointment } from '@entities/appointment'
+import { getEffectiveAppointmentStatus, type Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { getMobileAppointmentMoreActions } from '../model/action-set'
 
 const props = defineProps<{
   isOpen: boolean
@@ -45,6 +46,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:isOpen': [value: boolean]
+  'did-dismiss': []
   primary: []
   more: []
 }>()
@@ -61,19 +63,36 @@ const initials = computed(() => {
   return value || '—'
 })
 const isPending = computed(() => props.appointment.status === 'pending')
+const hasPrimary = computed(
+  () => props.appointment.status === 'pending' || props.appointment.status === 'confirmed',
+)
+const hasMoreActions = computed(
+  () => getMobileAppointmentMoreActions(props.appointment.status).length > 0,
+)
 const primaryLabel = computed(() =>
   isPending.value ? t('home.nextUp.confirm') : t('home.nextUp.complete'),
 )
 const primaryIcon = computed(() =>
   isPending.value ? checkmarkCircleOutline : checkmarkDoneOutline,
 )
-const statusLabel = computed(() =>
-  isPending.value ? t('home.nextUp.statusPending') : t('home.nextUp.statusToFinish'),
-)
+const effectiveStatus = computed(() => getEffectiveAppointmentStatus(props.appointment))
+const statusLabel = computed(() => t(`appointments.status.${effectiveStatus.value}`))
+const statusColor = computed(() => {
+  if (effectiveStatus.value === 'pending') return 'warning'
+  if (effectiveStatus.value === 'ongoing' || effectiveStatus.value === 'completed') return 'success'
+  if (effectiveStatus.value === 'confirmed') return 'tertiary'
+  if (effectiveStatus.value === 'no_show') return 'danger'
+  return 'medium'
+})
 
 function close() {
   if (props.primaryLoading) return
   emit('update:isOpen', false)
+}
+
+function onDidDismiss() {
+  emit('update:isOpen', false)
+  emit('did-dismiss')
 }
 </script>
 
@@ -85,7 +104,7 @@ function close() {
     :initial-breakpoint="0.82"
     :handle="!primaryLoading"
     :can-dismiss="!primaryLoading"
-    @did-dismiss="emit('update:isOpen', false)"
+    @did-dismiss="onDidDismiss"
   >
     <ion-header class="ion-no-border">
       <ion-toolbar>
@@ -103,6 +122,7 @@ function close() {
         <ion-title>{{ t('appointments.preview.title') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button
+            v-if="hasMoreActions"
             fill="clear"
             color="dark"
             :disabled="primaryLoading"
@@ -123,7 +143,7 @@ function close() {
         </ion-avatar>
         <div>
           <h2>{{ clientName }}</h2>
-          <ion-badge :color="isPending ? 'warning' : 'tertiary'">{{ statusLabel }}</ion-badge>
+          <ion-badge :color="statusColor">{{ statusLabel }}</ion-badge>
         </div>
       </section>
 
@@ -165,7 +185,7 @@ function close() {
       </inset-list>
     </ion-content>
 
-    <ion-footer class="ion-no-border">
+    <ion-footer v-if="hasPrimary" class="ion-no-border">
       <ion-toolbar>
         <ion-button
           class="appointment-details-mobile__primary"

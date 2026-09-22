@@ -18,6 +18,7 @@ import {
 import { alertCircleOutline, closeOutline } from 'ionicons/icons'
 import {
   useActionableAppointmentsQuery,
+  useRemoveAppointmentMutation,
   useUpdateAppointmentMutation,
   type Appointment,
   type AppointmentStatus,
@@ -64,6 +65,7 @@ const { data: clients } = useClientsQuery(userId)
 const { data: services } = useServicesQuery(userId)
 const { data: paymentTypes } = usePaymentTypesQuery(userId)
 const updateMutation = useUpdateAppointmentMutation(userId)
+const removeMutation = useRemoveAppointmentMutation(userId)
 const completeSaleMutation = useCompleteSaleMutation(userId)
 
 const groups = computed(() => groupHomeActionableAppointments(appointments.value ?? [], now.value))
@@ -80,11 +82,17 @@ const serviceById = computed(
 const activeIndex = ref(0)
 const noteAppointment = ref<Appointment | null>(null)
 const detailsAppointment = ref<Appointment | null>(null)
+const detailsOpen = ref(false)
 const actionsAppointment = ref<Appointment | null>(null)
 const actionsOpen = ref(false)
 const editingAppointment = ref<Appointment | null>(null)
+const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
+const pendingAfterDetails = ref<{
+  type: 'checkout' | 'actions'
+  appointment: Appointment
+} | null>(null)
 const processingIds = ref<Set<string>>(new Set())
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
@@ -223,7 +231,7 @@ async function updateStatus(
   setProcessing(appointment.id, true)
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status })
-    detailsAppointment.value = null
+    detailsOpen.value = false
     await showToast(successMessage, 'success')
   } catch {
     await showToast(t('appointments.preview.statusUpdateError'), 'danger')
@@ -280,17 +288,27 @@ async function handleNoShow(appointment: Appointment) {
   await updateStatus(appointment, 'no_show', t('home.nextUp.noShowSuccess'))
 }
 
-function openDetails(appointment: Appointment) {
+async function openDetails(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   detailsAppointment.value = appointment
+  await nextTick()
+  detailsOpen.value = true
+}
+
+async function presentCheckout(appointment: Appointment) {
+  checkoutAppointment.value = appointment
+  await nextTick()
+  checkoutOpen.value = true
 }
 
 async function openCheckout(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  detailsAppointment.value = null
-  checkoutAppointment.value = appointment
-  await nextTick()
-  checkoutOpen.value = true
+  if (detailsOpen.value) {
+    pendingAfterDetails.value = { type: 'checkout', appointment }
+    detailsOpen.value = false
+    return
+  }
+  await presentCheckout(appointment)
 }
 
 function handlePrimary(appointment: Appointment) {
@@ -311,10 +329,34 @@ function handleCardPrimary(appointment: Appointment) {
   handlePrimary(appointment)
 }
 
-function openEdit(appointment: Appointment) {
+async function openEdit(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  detailsAppointment.value = null
+  detailsOpen.value = false
   editingAppointment.value = appointment
+  await nextTick()
+  editOpen.value = true
+}
+
+async function removeAppointment(appointment: Appointment) {
+  if (isProcessing(appointment.id)) return
+  const confirmed = await confirmDestructiveAction({
+    header: t('appointments.delete.title'),
+    message: t('appointments.delete.message'),
+    confirmLabel: t('appointments.delete.confirm'),
+  })
+  if (!confirmed) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await removeMutation.mutateAsync(appointment.id)
+    if (detailsAppointment.value?.id === appointment.id) detailsOpen.value = false
+    if (editingAppointment.value?.id === appointment.id) editOpen.value = false
+    await showToast(t('appointments.form.successDelete'), 'success')
+  } catch {
+    await showToast(t('appointments.form.errorDelete'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
 }
 
 async function saveEdit(payload: UpdateAppointmentDto) {
@@ -355,19 +397,35 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
 
 async function openActions(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  detailsAppointment.value = null
+  if (detailsOpen.value) {
+    pendingAfterDetails.value = { type: 'actions', appointment }
+    detailsOpen.value = false
+    return
+  }
   actionsAppointment.value = appointment
   await nextTick()
   actionsOpen.value = true
+}
+
+async function finishDetailsDismiss() {
+  detailsOpen.value = false
+  // Keep `detailsAppointment` set so the inline ion-modal stays mounted.
+  // Ionic reparents inline modals to <ion-app>; removing the element via v-if
+  // after dismiss triggers "Cannot read properties of null (reading 'insertBefore')".
+
+  const pending = pendingAfterDetails.value
+  pendingAfterDetails.value = null
+  if (!pending) return
+  if (pending.type === 'checkout') await presentCheckout(pending.appointment)
+  else await openActions(pending.appointment)
 }
 
 async function handleDrawerAction(action: MobileAppointmentMoreAction) {
   const appointment = actionsAppointment.value
   if (!appointment) return
   actionsOpen.value = false
-  actionsAppointment.value = null
 
-  if (action === 'edit') openEdit(appointment)
+  if (action === 'edit') await openEdit(appointment)
   else if (action === 'decline') await handleDecline(appointment)
   else await handleNoShow(appointment)
 }
@@ -377,9 +435,16 @@ function closeCheckout() {
 }
 
 function finishCheckoutDismiss() {
+  // Keep `checkoutAppointment` set so the inline ion-modal stays mounted; see
+  // finishDetailsDismiss for why unmounting a reparented modal crashes Vue.
   checkoutOpen.value = false
-  checkoutAppointment.value = null
 }
+
+defineExpose({
+  openAppointment: openDetails,
+  editAppointment: openEdit,
+  deleteAppointment: removeAppointment,
+})
 </script>
 
 <template>
@@ -476,7 +541,7 @@ function finishCheckoutDismiss() {
 
   <appointment-details-mobile
     v-if="detailsAppointment"
-    :is-open="Boolean(detailsAppointment)"
+    :is-open="detailsOpen"
     :appointment="detailsAppointment"
     :client="getClient(detailsAppointment)"
     :client-name="getClientName(detailsAppointment)"
@@ -486,20 +551,21 @@ function finishCheckoutDismiss() {
     :duration-label="t('home.nextUp.minutesLabel', { n: detailsAppointment.duration })"
     :price-label="formats.price(detailsAppointment.price)"
     :primary-loading="isProcessing(detailsAppointment.id)"
-    @update:is-open="detailsAppointment = null"
+    @update:is-open="detailsOpen = $event"
+    @did-dismiss="finishDetailsDismiss"
     @primary="handlePrimary(detailsAppointment)"
     @more="openActions(detailsAppointment)"
   />
 
   <appointment-edit-mobile
     v-if="editingAppointment"
-    :is-open="Boolean(editingAppointment)"
+    :is-open="editOpen"
     :appointment="editingAppointment"
     :clients="clients ?? []"
     :services="services ?? []"
     :time-zone="masterPreferencesStore.timeZone"
     :on-save="saveEdit"
-    @update:is-open="editingAppointment = null"
+    @update:is-open="editOpen = $event"
   />
 
   <appointment-actions-drawer-mobile

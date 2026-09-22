@@ -110,6 +110,9 @@ export default {
       subtitle: 'for {date} · {n} appointments',
       summary: '{date} · {n} appointments',
       options: 'Options',
+      loadError: 'Couldn’t load the schedule',
+      retry: 'Try again',
+      details: 'Appointment details',
     },
     overview: {
       title: 'Overview',

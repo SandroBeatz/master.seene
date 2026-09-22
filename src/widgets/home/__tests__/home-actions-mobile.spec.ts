@@ -15,6 +15,7 @@ const queryMock = vi.hoisted(() => ({
   services: null as Record<string, unknown> | null,
   paymentTypes: null as Record<string, unknown> | null,
   update: vi.fn<(payload: unknown) => Promise<unknown>>(),
+  remove: vi.fn<(id: string) => Promise<unknown>>(),
   complete: vi.fn<(payload: unknown) => Promise<unknown>>(),
   alertRole: 'cancel' as 'cancel' | 'destructive',
   alertCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -40,6 +41,10 @@ vi.mock('@entities/appointment', () => ({
   useUpdateAppointmentMutation: () => ({
     isLoading: ref(false),
     mutateAsync: queryMock.update,
+  }),
+  useRemoveAppointmentMutation: () => ({
+    isLoading: ref(false),
+    mutateAsync: queryMock.remove,
   }),
   getEffectiveAppointmentStatus: (appointment: Appointment, now: Date) => {
     const end = new Date(appointment.start_at).getTime() + appointment.duration * 60_000
@@ -103,10 +108,11 @@ const stubs = {
   IonTitle: passthrough,
   IonToolbar: passthrough,
   AppointmentDetailsMobile: {
+    name: 'AppointmentDetailsMobile',
     props: ['isOpen'],
-    emits: ['more', 'primary', 'update:isOpen'],
+    emits: ['more', 'primary', 'update:isOpen', 'did-dismiss'],
     template:
-      '<button v-if="isOpen" class="details-mobile-stub" @click="$emit(\'more\')">Actions</button>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub" @click="$emit(\'more\'); $emit(\'did-dismiss\')">Actions</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -117,7 +123,7 @@ const stubs = {
   },
   AppointmentCheckoutMobile: {
     props: ['isOpen'],
-    emits: ['confirm', 'update:isOpen'],
+    emits: ['confirm', 'update:isOpen', 'did-dismiss'],
     data: () => ({
       payload: {
         appointment_id: 'finish',
@@ -127,7 +133,7 @@ const stubs = {
       },
     }),
     template:
-      '<button v-if="isOpen" class="checkout-mobile-stub" @click="$emit(\'confirm\', payload)">Checkout</button>',
+      '<div v-if="isOpen"><button class="checkout-mobile-stub" @click="$emit(\'confirm\', payload)">Checkout</button><button class="checkout-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button></div>',
   },
 }
 
@@ -230,6 +236,8 @@ describe('HomeActionsMobile', () => {
     queryMock.paymentTypes = { data: ref([]) }
     queryMock.update.mockReset()
     queryMock.update.mockImplementation(async (payload) => payload)
+    queryMock.remove.mockReset()
+    queryMock.remove.mockResolvedValue(undefined)
     queryMock.complete.mockReset()
     queryMock.complete.mockResolvedValue('sale-1')
     queryMock.alertRole = 'cancel'
@@ -316,6 +324,43 @@ describe('HomeActionsMobile', () => {
     expect(wrapper.emitted('primary')?.[0]).toEqual([item])
   })
 
+  it('can dismiss and reopen appointment details repeatedly', async () => {
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    const exposed = wrapper.vm as unknown as {
+      openAppointment: (appointment: Appointment) => Promise<void>
+    }
+    await exposed.openAppointment(item)
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+
+    await wrapper.find('.details-close-stub').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(false)
+
+    await exposed.openAppointment(item)
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+  })
+
+  it('waits for details to dismiss before opening checkout and can reopen it', async () => {
+    const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__content').trigger('click')
+    const details = wrapper.findComponent({ name: 'AppointmentDetailsMobile' })
+    await wrapper.find('.details-primary-stub').trigger('click')
+    details.vm.$emit('did-dismiss')
+    await flushPromises()
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(false)
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(true)
+
+    await wrapper.find('.checkout-close-stub').trigger('click')
+    await flushPromises()
+    await wrapper.find('.action-card__primary').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(true)
+  })
+
   it('confirms a pending appointment once', async () => {
     const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
     ;({ wrapper } = mountWidget({ appointments: [item] }))
@@ -368,6 +413,20 @@ describe('HomeActionsMobile', () => {
     await flushPromises()
 
     expect(wrapper.find('.edit-mobile-stub').exists()).toBe(true)
+  })
+
+  it('exposes deletion for schedule events with destructive confirmation', async () => {
+    queryMock.alertRole = 'destructive'
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    const exposed = wrapper.vm as unknown as {
+      deleteAppointment: (appointment: Appointment) => Promise<void>
+    }
+    await exposed.deleteAppointment(item)
+
+    expect(queryMock.alertCreate).toHaveBeenCalledOnce()
+    expect(queryMock.remove).toHaveBeenCalledWith('request')
   })
 
   it('marks a confirmed appointment as no-show after confirmation', async () => {
