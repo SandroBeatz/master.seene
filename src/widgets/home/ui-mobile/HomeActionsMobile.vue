@@ -86,6 +86,7 @@ const detailsOpen = ref(false)
 const actionsAppointment = ref<Appointment | null>(null)
 const actionsOpen = ref(false)
 const editingAppointment = ref<Appointment | null>(null)
+const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
 const pendingAfterDetails = ref<{
@@ -328,10 +329,12 @@ function handleCardPrimary(appointment: Appointment) {
   handlePrimary(appointment)
 }
 
-function openEdit(appointment: Appointment) {
+async function openEdit(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   detailsOpen.value = false
   editingAppointment.value = appointment
+  await nextTick()
+  editOpen.value = true
 }
 
 async function removeAppointment(appointment: Appointment) {
@@ -347,7 +350,7 @@ async function removeAppointment(appointment: Appointment) {
   try {
     await removeMutation.mutateAsync(appointment.id)
     if (detailsAppointment.value?.id === appointment.id) detailsOpen.value = false
-    if (editingAppointment.value?.id === appointment.id) editingAppointment.value = null
+    if (editingAppointment.value?.id === appointment.id) editOpen.value = false
     await showToast(t('appointments.form.successDelete'), 'success')
   } catch {
     await showToast(t('appointments.form.errorDelete'), 'danger')
@@ -406,7 +409,9 @@ async function openActions(appointment: Appointment) {
 
 async function finishDetailsDismiss() {
   detailsOpen.value = false
-  detailsAppointment.value = null
+  // Keep `detailsAppointment` set so the inline ion-modal stays mounted.
+  // Ionic reparents inline modals to <ion-app>; removing the element via v-if
+  // after dismiss triggers "Cannot read properties of null (reading 'insertBefore')".
 
   const pending = pendingAfterDetails.value
   pendingAfterDetails.value = null
@@ -419,9 +424,8 @@ async function handleDrawerAction(action: MobileAppointmentMoreAction) {
   const appointment = actionsAppointment.value
   if (!appointment) return
   actionsOpen.value = false
-  actionsAppointment.value = null
 
-  if (action === 'edit') openEdit(appointment)
+  if (action === 'edit') await openEdit(appointment)
   else if (action === 'decline') await handleDecline(appointment)
   else await handleNoShow(appointment)
 }
@@ -431,8 +435,9 @@ function closeCheckout() {
 }
 
 function finishCheckoutDismiss() {
+  // Keep `checkoutAppointment` set so the inline ion-modal stays mounted; see
+  // finishDetailsDismiss for why unmounting a reparented modal crashes Vue.
   checkoutOpen.value = false
-  checkoutAppointment.value = null
 }
 
 defineExpose({
@@ -554,13 +559,13 @@ defineExpose({
 
   <appointment-edit-mobile
     v-if="editingAppointment"
-    :is-open="Boolean(editingAppointment)"
+    :is-open="editOpen"
     :appointment="editingAppointment"
     :clients="clients ?? []"
     :services="services ?? []"
     :time-zone="masterPreferencesStore.timeZone"
     :on-save="saveEdit"
-    @update:is-open="editingAppointment = null"
+    @update:is-open="editOpen = $event"
   />
 
   <appointment-actions-drawer-mobile
