@@ -4,9 +4,10 @@ export { default as AppointmentDetailsMobile } from './ui-mobile/AppointmentDeta
 export { default as AppointmentEditMobile } from './ui-mobile/AppointmentEditMobile.vue'
 export { default as AppointmentActionsDrawerMobile } from './ui-mobile/AppointmentActionsDrawerMobile.vue'
 export {
-  getMobileAppointmentFooterActions,
+  getMobileAppointmentFooterAction,
+  getMobileAppointmentMenuActions,
   getMobileAppointmentMoreActions,
-  type MobileAppointmentFooterActions,
+  type MobileAppointmentFooterAction,
+  type MobileAppointmentMenuAction,
   type MobileAppointmentMoreAction,
-  type MobileAppointmentPrimaryAction,
 } from './model/action-set'

@@ -118,9 +118,9 @@ const stubs = {
   AppointmentDetailsMobile: {
     name: 'AppointmentDetailsMobile',
     props: ['isOpen'],
-    emits: ['more', 'primary', 'edit', 'delete', 'update:isOpen', 'did-dismiss'],
+    emits: ['action', 'primary', 'update:isOpen', 'did-dismiss'],
     template:
-      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub" @click="$emit(\'more\'); $emit(\'did-dismiss\')">Actions</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-edit-stub" @click="$emit(\'edit\'); $emit(\'did-dismiss\')">Edit</button><button class="details-delete-stub" @click="$emit(\'delete\')">Delete</button></div>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-edit-stub" @click="$emit(\'action\', \'edit\'); $emit(\'did-dismiss\')">Edit</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -401,16 +401,14 @@ describe('HomeActionsMobile', () => {
     ;({ wrapper } = mountWidget({ appointments: [item] }))
 
     await wrapper.find('.action-card__content').trigger('click')
-    await wrapper.find('.details-mobile-stub').trigger('click')
-    await flushPromises()
-    await wrapper.find('.drawer-decline').trigger('click')
+    await wrapper.find('.details-decline-stub').trigger('click')
     await flushPromises()
 
     expect(queryMock.alertCreate).toHaveBeenCalledOnce()
     expect(queryMock.update).toHaveBeenCalledWith({ id: 'request', status: 'cancelled' })
   })
 
-  it('opens the reusable Ionic edit flow from the preview action dock', async () => {
+  it('opens the reusable Ionic edit flow from the preview menu', async () => {
     const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
     ;({ wrapper } = mountWidget({ appointments: [item] }))
 
@@ -441,9 +439,7 @@ describe('HomeActionsMobile', () => {
     ;({ wrapper } = mountWidget({ appointments: [item] }))
 
     await wrapper.find('.action-card__content').trigger('click')
-    await wrapper.find('.details-mobile-stub').trigger('click')
-    await flushPromises()
-    await wrapper.find('.drawer-no-show').trigger('click')
+    await wrapper.find('.details-no-show-stub').trigger('click')
     await flushPromises()
 
     expect(queryMock.update).toHaveBeenCalledWith({ id: 'finish', status: 'no_show' })

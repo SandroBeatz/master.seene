@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { getMobileAppointmentFooterActions, getMobileAppointmentMoreActions } from '../action-set'
+import {
+  getMobileAppointmentFooterAction,
+  getMobileAppointmentMenuActions,
+  getMobileAppointmentMoreActions,
+} from '../action-set'
 
 describe('getMobileAppointmentMoreActions', () => {
   it('offers decline for a pending request', () => {
@@ -16,36 +20,43 @@ describe('getMobileAppointmentMoreActions', () => {
   })
 })
 
-describe('getMobileAppointmentFooterActions', () => {
-  it('puts confirmation or checkout between delete and edit', () => {
-    expect(getMobileAppointmentFooterActions('pending')).toEqual({
-      primary: 'confirm',
-      showDeleteSideAction: true,
-      showEditSideAction: true,
-    })
-    expect(getMobileAppointmentFooterActions('confirmed')).toEqual({
-      primary: 'complete',
-      showDeleteSideAction: true,
-      showEditSideAction: true,
-    })
+describe('getMobileAppointmentMenuActions', () => {
+  it('wraps status transitions between edit and delete', () => {
+    expect(getMobileAppointmentMenuActions('pending')).toEqual(['edit', 'decline', 'delete'])
+    expect(getMobileAppointmentMenuActions('confirmed')).toEqual([
+      'edit',
+      'cancel',
+      'no_show',
+      'delete',
+    ])
   })
 
-  it('centers edit for completed appointments', () => {
-    expect(getMobileAppointmentFooterActions('completed')).toEqual({
-      primary: 'edit',
-      showDeleteSideAction: true,
-      showEditSideAction: false,
-    })
+  it('keeps edit for completed appointments', () => {
+    expect(getMobileAppointmentMenuActions('completed')).toEqual(['edit', 'delete'])
   })
 
   it.each(['cancelled', 'no_show', 'expired'] as const)(
     'only exposes delete for %s appointments',
     (status) => {
-      expect(getMobileAppointmentFooterActions(status)).toEqual({
-        primary: 'delete',
-        showDeleteSideAction: false,
-        showEditSideAction: false,
-      })
+      expect(getMobileAppointmentMenuActions(status)).toEqual(['delete'])
+    },
+  )
+})
+
+describe('getMobileAppointmentFooterAction', () => {
+  it('asks to confirm a pending request', () => {
+    expect(getMobileAppointmentFooterAction('pending')).toBe('confirm')
+  })
+
+  it('asks to complete a started or passed appointment', () => {
+    expect(getMobileAppointmentFooterAction('ongoing')).toBe('complete')
+    expect(getMobileAppointmentFooterAction('past')).toBe('complete')
+  })
+
+  it.each(['confirmed', 'completed', 'cancelled', 'no_show', 'expired'] as const)(
+    'has no footer action for %s appointments',
+    (status) => {
+      expect(getMobileAppointmentFooterAction(status)).toBeNull()
     },
   )
 })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   alertController,
@@ -18,7 +18,6 @@ import {
 import { alertCircleOutline, closeOutline } from 'ionicons/icons'
 import {
   useActionableAppointmentsQuery,
-  useClientAppointmentsCountQuery,
   useRemoveAppointmentMutation,
   useUpdateAppointmentMutation,
   type Appointment,
@@ -39,6 +38,7 @@ import {
   AppointmentActionsDrawerMobile,
   AppointmentDetailsMobile,
   AppointmentEditMobile,
+  type MobileAppointmentMenuAction,
   type MobileAppointmentMoreAction,
 } from '@features/appointment-actions/index.mobile'
 import { AppointmentCheckoutMobile } from '@features/appointment-checkout/index.mobile'
@@ -95,19 +95,18 @@ const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
 const pendingAfterDetails = ref<{
-  type: 'checkout' | 'actions' | 'edit'
+  type: 'checkout' | 'edit'
   appointment: Appointment
 } | null>(null)
 const processingIds = ref<Set<string>>(new Set())
 const detailsAppointmentId = computed(() =>
   detailsAppointment.value?.status === 'completed' ? detailsAppointment.value.id : undefined,
 )
-const detailsClientId = computed(() => detailsAppointment.value?.client_id ?? '')
 const detailsSaleQuery = useSaleByAppointmentQuery(detailsAppointmentId)
-const detailsClientCountQuery = useClientAppointmentsCountQuery(detailsClientId)
-const detailsClientIsNew = computed(
-  () => detailsClientCountQuery.data.value != null && detailsClientCountQuery.data.value <= 1,
-)
+const presentingElement = ref<HTMLElement | null>(null)
+onMounted(() => {
+  presentingElement.value = document.querySelector('ion-router-outlet')
+})
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
   activeAppointment.value ? getServices(activeAppointment.value).map(({ color }) => color) : [],
@@ -433,11 +432,6 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
 
 async function openActions(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  if (detailsOpen.value) {
-    pendingAfterDetails.value = { type: 'actions', appointment }
-    detailsOpen.value = false
-    return
-  }
   actionsAppointment.value = appointment
   await nextTick()
   actionsOpen.value = true
@@ -453,7 +447,6 @@ async function finishDetailsDismiss() {
   pendingAfterDetails.value = null
   if (!pending) return
   if (pending.type === 'checkout') await presentCheckout(pending.appointment)
-  else if (pending.type === 'actions') await openActions(pending.appointment)
   else await presentEdit(pending.appointment)
 }
 
@@ -465,6 +458,14 @@ async function handleDrawerAction(action: MobileAppointmentMoreAction) {
   if (action === 'decline') await handleDecline(appointment)
   else if (action === 'cancel') await handleCancel(appointment)
   else await handleNoShow(appointment)
+}
+
+async function handleDetailsAction(appointment: Appointment, action: MobileAppointmentMenuAction) {
+  if (action === 'edit') await openEdit(appointment)
+  else if (action === 'decline') await handleDecline(appointment)
+  else if (action === 'cancel') await handleCancel(appointment)
+  else if (action === 'no_show') await handleNoShow(appointment)
+  else await removeAppointment(appointment)
 }
 
 function closeCheckout() {
@@ -586,14 +587,12 @@ defineExpose({
     :time-format="masterPreferencesStore.timeFormat"
     :sale="detailsSaleQuery.data.value"
     :sale-loading="detailsSaleQuery.isPending.value"
-    :is-new="detailsClientIsNew"
     :primary-loading="isProcessing(detailsAppointment.id)"
+    :presenting-element="presentingElement"
     @update:is-open="detailsOpen = $event"
     @did-dismiss="finishDetailsDismiss"
     @primary="handlePrimary(detailsAppointment)"
-    @more="openActions(detailsAppointment)"
-    @edit="openEdit(detailsAppointment)"
-    @delete="removeAppointment(detailsAppointment)"
+    @action="handleDetailsAction(detailsAppointment, $event)"
   />
 
   <appointment-edit-mobile

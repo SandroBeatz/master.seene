@@ -1,20 +1,16 @@
-import type { AppointmentStatus } from '@entities/appointment'
+import type { AppointmentStatus, EffectiveAppointmentStatus } from '@entities/appointment'
 
 export type MobileAppointmentMoreAction = 'decline' | 'cancel' | 'no_show'
 
-export type MobileAppointmentPrimaryAction = 'confirm' | 'complete' | 'edit' | 'delete'
+export type MobileAppointmentMenuAction = 'edit' | MobileAppointmentMoreAction | 'delete'
 
-export interface MobileAppointmentFooterActions {
-  primary: MobileAppointmentPrimaryAction
-  showDeleteSideAction: boolean
-  showEditSideAction: boolean
-}
+export type MobileAppointmentFooterAction = 'confirm' | 'complete'
 
 /**
  * Contextual actions used by the Ionic appointment action sheet.
  *
- * The stored status is intentionally used here. Effective states such as
- * `past` are presentation-only and must not change which mutation is allowed.
+ * Status transitions are exposed only while they are meaningful: a pending
+ * request can be declined, while a confirmed appointment can become a no-show.
  */
 export function getMobileAppointmentMoreActions(
   status: AppointmentStatus,
@@ -25,23 +21,26 @@ export function getMobileAppointmentMoreActions(
 }
 
 /**
- * Bottom action dock used by the full-screen Ionic preview.
- *
- * Pending and confirmed appointments keep the frequent action prominent in
- * the middle. Completed appointments promote edit to the middle, while other
- * terminal states expose only deletion.
+ * Items of the preview's top-right popover: edit first, status transitions in
+ * the middle, delete last. Terminal statuses other than `completed` can only
+ * be deleted.
  */
-export function getMobileAppointmentFooterActions(
+export function getMobileAppointmentMenuActions(
   status: AppointmentStatus,
-): MobileAppointmentFooterActions {
-  if (status === 'pending') {
-    return { primary: 'confirm', showDeleteSideAction: true, showEditSideAction: true }
-  }
-  if (status === 'confirmed') {
-    return { primary: 'complete', showDeleteSideAction: true, showEditSideAction: true }
-  }
-  if (status === 'completed') {
-    return { primary: 'edit', showDeleteSideAction: true, showEditSideAction: false }
-  }
-  return { primary: 'delete', showDeleteSideAction: false, showEditSideAction: false }
+): MobileAppointmentMenuAction[] {
+  if (status === 'cancelled' || status === 'no_show' || status === 'expired') return ['delete']
+  return ['edit', ...getMobileAppointmentMoreActions(status), 'delete']
+}
+
+/**
+ * The single prominent button at the bottom of the preview. Pending requests
+ * need confirmation; a confirmed appointment asks for completion only once it
+ * has started (`ongoing`) or its slot has passed (`past`).
+ */
+export function getMobileAppointmentFooterAction(
+  status: EffectiveAppointmentStatus,
+): MobileAppointmentFooterAction | null {
+  if (status === 'pending') return 'confirm'
+  if (status === 'ongoing' || status === 'past') return 'complete'
+  return null
 }
