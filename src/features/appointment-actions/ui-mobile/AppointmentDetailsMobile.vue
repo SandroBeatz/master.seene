@@ -569,8 +569,8 @@ function runPrimary() {
  */
 .appointment-details-mobile::part(content) {
   background:
-    linear-gradient(to bottom, transparent, var(--se-surface-page) 280px) top / 100% 280px no-repeat,
-    var(--session-accent, transparent) top / 100% 280px no-repeat,
+    linear-gradient(to bottom, transparent, var(--se-surface-page) 220px) top / 100% 220px no-repeat,
+    var(--session-accent, transparent) top / 100% 220px no-repeat,
     var(--se-surface-page, var(--ion-background-color));
 }
 
