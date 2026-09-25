@@ -1,60 +1,147 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   IonAvatar,
   IonBadge,
   IonButton,
   IonButtons,
+  IonCard,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonFooter,
   IonHeader,
   IonIcon,
   IonItem,
   IonLabel,
+  IonList,
   IonModal,
+  IonNote,
+  IonPopover,
+  IonSkeletonText,
   IonSpinner,
   IonTitle,
   IonToolbar,
   isPlatform,
+  toastController,
 } from '@ionic/vue'
 import {
+  alertCircleOutline,
   calendarOutline,
+  callOutline,
   checkmarkCircleOutline,
   checkmarkDoneOutline,
+  closeCircleOutline,
   closeOutline,
+  createOutline,
+  cutOutline,
+  ellipsisHorizontal,
+  globeOutline,
+  hourglassOutline,
+  logoWhatsapp,
+  notificationsOutline,
+  personRemoveOutline,
   timeOutline,
+  trashOutline,
   walletOutline,
 } from 'ionicons/icons'
-import { getEffectiveAppointmentStatus, type Appointment } from '@entities/appointment'
-import type { Client } from '@entities/client'
+import {
+  getEffectiveAppointmentStatus,
+  type Appointment,
+  type EffectiveAppointmentStatus,
+} from '@entities/appointment'
+import { ClientPickerModalMobile, type Client } from '@entities/client/index.mobile'
+import type { TimeFormat } from '@entities/master'
+import { PaymentTypePickerModalMobile, type PaymentType } from '@entities/payment-type/index.mobile'
+import {
+  SaleAmountEditorModalMobile,
+  type Sale,
+  type UpdateSaleDetailsDto,
+} from '@entities/sale/index.mobile'
+import { ServicePickerModalMobile, type Service } from '@entities/service/index.mobile'
+import { useFormats } from '@shared/lib/formats'
+import { useNowMinute } from '@shared/lib/now'
+import { getDateTimeInputValue } from '@shared/lib/time-zone'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
-import { getMobileAppointmentMoreActions } from '../model/action-set'
+import {
+  getMobileAppointmentFooterAction,
+  getMobileAppointmentMenuActions,
+  type MobileAppointmentMenuAction,
+} from '../model/action-set'
 
 const props = defineProps<{
   isOpen: boolean
   appointment: Appointment
   client?: Client | null
-  clientName: string
-  serviceNames: string
-  dateLabel: string
-  timeLabel: string
-  durationLabel: string
-  priceLabel: string
+  clients: Client[]
+  services: Service[]
+  paymentTypes: PaymentType[]
+  timeZone: string
+  timeFormat: TimeFormat
+  sale?: Sale | null
+  saleLoading?: boolean
   primaryLoading?: boolean
+  presentingElement?: HTMLElement | null
 }>()
 
 const emit = defineEmits<{
   'update:isOpen': [value: boolean]
   'did-dismiss': []
+  'select-client': [client: Client]
+  'select-services': [services: Service[]]
+  'select-payment-type': [paymentType: PaymentType]
+  'save-sale-amount': [details: UpdateSaleDetailsDto]
   primary: []
-  more: []
+  action: [action: MobileAppointmentMenuAction]
 }>()
 
 const { t } = useI18n()
+const formats = useFormats()
+const now = useNowMinute()
 const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
+
+const STATUS_META: Record<EffectiveAppointmentStatus, { icon: string; color: string }> = {
+  pending: { icon: timeOutline, color: 'warning' },
+  confirmed: { icon: checkmarkCircleOutline, color: 'primary' },
+  ongoing: { icon: hourglassOutline, color: 'success' },
+  past: { icon: alertCircleOutline, color: 'warning' },
+  completed: { icon: checkmarkDoneOutline, color: 'success' },
+  cancelled: { icon: closeCircleOutline, color: 'medium' },
+  no_show: { icon: personRemoveOutline, color: 'danger' },
+  expired: { icon: alertCircleOutline, color: 'medium' },
+}
+
+const effectiveStatus = computed(() => getEffectiveAppointmentStatus(props.appointment, now.value))
+const statusMeta = computed(() => STATUS_META[effectiveStatus.value])
+const statusLabel = computed(() => t(`appointments.preview.sessionStatus.${effectiveStatus.value}`))
+const serviceById = computed(
+  () => new Map(props.services.map((service) => [service.id, service] as const)),
+)
+const selectedServices = computed(() =>
+  props.appointment.service_ids
+    .map((id) => serviceById.value.get(id))
+    .filter((service): service is Service => Boolean(service)),
+)
+
+// Semi-transparent wash of the service colors behind the header; several
+// services blend into one gradient, none falls back to the plain page.
+const accentStyle = computed(() => {
+  const colors = selectedServices.value.map(
+    ({ color }) => `color-mix(in srgb, ${color} 38%, transparent)`,
+  )
+  if (!colors.length) return undefined
+  const stops = colors.length === 1 ? [colors[0], colors[0]] : colors
+  return { '--session-accent': `linear-gradient(120deg, ${stops.join(', ')})` }
+})
+
+const clientName = computed(() => {
+  if (!props.client) return t('appointments.unknownClient')
+  return [props.client.first_name, props.client.last_name].filter(Boolean).join(' ')
+})
+
 const initials = computed(() => {
-  const value = props.clientName
+  const value = clientName.value
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -62,28 +149,138 @@ const initials = computed(() => {
     .join('')
   return value || '—'
 })
-const isPending = computed(() => props.appointment.status === 'pending')
-const hasPrimary = computed(
-  () => props.appointment.status === 'pending' || props.appointment.status === 'confirmed',
-)
-const hasMoreActions = computed(
-  () => getMobileAppointmentMoreActions(props.appointment.status).length > 0,
-)
-const primaryLabel = computed(() =>
-  isPending.value ? t('home.nextUp.confirm') : t('home.nextUp.complete'),
-)
-const primaryIcon = computed(() =>
-  isPending.value ? checkmarkCircleOutline : checkmarkDoneOutline,
-)
-const effectiveStatus = computed(() => getEffectiveAppointmentStatus(props.appointment))
-const statusLabel = computed(() => t(`appointments.status.${effectiveStatus.value}`))
-const statusColor = computed(() => {
-  if (effectiveStatus.value === 'pending') return 'warning'
-  if (effectiveStatus.value === 'ongoing' || effectiveStatus.value === 'completed') return 'success'
-  if (effectiveStatus.value === 'confirmed') return 'tertiary'
-  if (effectiveStatus.value === 'no_show') return 'danger'
-  return 'medium'
+
+const avatarStyle = computed(() => {
+  const palette = [
+    ['#ffe4e6', '#9f1239'],
+    ['#ffedd5', '#9a3412'],
+    ['#d1fae5', '#065f46'],
+    ['#ccfbf1', '#115e59'],
+    ['#dbeafe', '#1e40af'],
+    ['#e0e7ff', '#3730a3'],
+    ['#fae8ff', '#86198f'],
+  ] as const
+  const seed = props.client?.id ?? clientName.value
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) | 0
+  }
+  const [background, color] = palette[Math.abs(hash) % palette.length]!
+  return { '--avatar-background': background, '--avatar-color': color }
 })
+
+const isOnline = computed(() => props.appointment.source === 'online_booking')
+
+const phoneHref = computed(() => (props.client?.phone ? `tel:${props.client.phone}` : undefined))
+const whatsappHref = computed(() => {
+  const normalized = props.client?.phone?.replace(/\D/g, '')
+  return normalized ? `https://wa.me/${normalized}` : undefined
+})
+
+const startParts = computed(() => getDateTimeInputValue(props.appointment.start_at, props.timeZone))
+const endParts = computed(() => {
+  const end = new Date(
+    new Date(props.appointment.start_at).getTime() + props.appointment.duration * 60_000,
+  )
+  return getDateTimeInputValue(end, props.timeZone)
+})
+
+const dateLabel = computed(() => formats.dateDay(props.appointment.start_at))
+const timeLabel = computed(() => {
+  const start = formats.time(startParts.value.time, props.timeFormat)
+  const end = formats.time(endParts.value.time, props.timeFormat)
+  return `${start} – ${end}`
+})
+
+const missingServiceCount = computed(() =>
+  Math.max(0, props.appointment.service_ids.length - selectedServices.value.length),
+)
+const serviceSubtotal = computed(() =>
+  selectedServices.value.reduce((sum, service) => sum + service.price, 0),
+)
+const isCompleted = computed(() => props.appointment.status === 'completed')
+const finalAmount = computed(
+  () => props.sale?.amount ?? props.appointment.price ?? serviceSubtotal.value,
+)
+const selectedPaymentType = computed(() =>
+  props.paymentTypes.find((paymentType) => paymentType.id === props.sale?.payment_type_id),
+)
+const paymentTypeName = computed(() => {
+  const paymentType = selectedPaymentType.value
+  if (paymentType?.kind === 'cash') return t('settings.paymentTypes.system.cash.name')
+  if (paymentType?.kind === 'card') return t('settings.paymentTypes.system.card.name')
+  return paymentType?.name ?? props.sale?.payment_type?.name ?? '—'
+})
+const paymentTypeColor = computed(
+  () => selectedPaymentType.value?.color ?? props.sale?.payment_type?.color,
+)
+const servicesLabel = computed(() => {
+  const labels = selectedServices.value.map((service) => service.name)
+  if (missingServiceCount.value) {
+    labels.push(t('appointments.preview.missingService', { n: missingServiceCount.value }))
+  }
+  return labels.join(', ') || t('appointments.preview.noServices')
+})
+
+const footerAction = computed(() => getMobileAppointmentFooterAction(effectiveStatus.value))
+const footerLabel = computed(() =>
+  footerAction.value === 'confirm'
+    ? t('appointments.preview.confirmAppointment')
+    : t('appointments.preview.completeAppointment'),
+)
+
+const MENU_ACTION_META: Record<MobileAppointmentMenuAction, { icon: string; labelKey: string }> = {
+  decline: { icon: closeCircleOutline, labelKey: 'appointments.preview.declineRequest' },
+  cancel: { icon: closeCircleOutline, labelKey: 'appointments.preview.cancelAppointment' },
+  no_show: { icon: personRemoveOutline, labelKey: 'appointments.preview.markNoShow' },
+  delete: { icon: trashOutline, labelKey: 'common.delete' },
+}
+
+const menuActions = computed(() =>
+  getMobileAppointmentMenuActions(props.appointment.status).map((action) => ({
+    action,
+    ...MENU_ACTION_META[action],
+  })),
+)
+
+const menuOpen = ref(false)
+const menuEvent = ref<Event>()
+const pendingMenuAction = ref<MobileAppointmentMenuAction | null>(null)
+const detailsModal = ref<{ $el: HTMLElement } | null>(null)
+const detailsModalEl = computed(() => detailsModal.value?.$el ?? null)
+const dateTimeModalOpen = ref(false)
+const clientPickerOpen = ref(false)
+const servicePickerOpen = ref(false)
+const paymentTypePickerOpen = ref(false)
+const saleAmountEditorOpen = ref(false)
+
+function openMenu(event: Event) {
+  menuEvent.value = event
+  menuOpen.value = true
+}
+
+function selectMenuAction(action: MobileAppointmentMenuAction) {
+  pendingMenuAction.value = action
+  menuOpen.value = false
+}
+
+// Emit only after the popover is gone so follow-up alerts never stack on top
+// of a closing popover.
+function onMenuDidDismiss() {
+  menuOpen.value = false
+  const action = pendingMenuAction.value
+  pendingMenuAction.value = null
+  if (action) emit('action', action)
+}
+
+async function notifyClient() {
+  const toast = await toastController.create({
+    message: t('appointments.preview.notifyComingSoon'),
+    duration: 2200,
+    position: 'top',
+  })
+  await toast.present()
+}
 
 function close() {
   if (props.primaryLoading) return
@@ -91,18 +288,28 @@ function close() {
 }
 
 function onDidDismiss() {
+  dateTimeModalOpen.value = false
+  clientPickerOpen.value = false
+  servicePickerOpen.value = false
+  paymentTypePickerOpen.value = false
+  saleAmountEditorOpen.value = false
   emit('update:isOpen', false)
   emit('did-dismiss')
+}
+
+function runPrimary() {
+  if (props.primaryLoading) return
+  emit('primary')
 }
 </script>
 
 <template>
   <ion-modal
+    ref="detailsModal"
     :is-open="isOpen"
     class="appointment-details-mobile"
-    :breakpoints="[0, 0.82, 1]"
-    :initial-breakpoint="0.82"
-    :handle="!primaryLoading"
+    :style="accentStyle"
+    :presenting-element="presentingElement ?? undefined"
     :can-dismiss="!primaryLoading"
     @did-dismiss="onDidDismiss"
   >
@@ -119,149 +326,681 @@ function onDidDismiss() {
             <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
-        <ion-title>{{ t('appointments.preview.title') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button
-            v-if="hasMoreActions"
+            v-if="isCompleted"
+            size="small"
+            fill="clear"
+            color="danger"
+            :disabled="primaryLoading"
+            :aria-label="t('common.delete')"
+            @click="emit('action', 'delete')"
+          >
+            <ion-icon slot="icon-only" :icon="trashOutline" aria-hidden="true" />
+          </ion-button>
+          <ion-button
+            v-else
+            size="small"
             fill="clear"
             color="dark"
             :disabled="primaryLoading"
             :aria-label="t('appointments.preview.actions')"
-            @click="emit('more')"
+            aria-haspopup="menu"
+            :aria-expanded="menuOpen"
+            @click="openMenu"
           >
-            {{ t('appointments.preview.actions') }}
+            <ion-icon slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="appointment-details-mobile__content">
-      <section class="appointment-details-mobile__person">
-        <ion-avatar aria-hidden="true">
-          <span v-if="client?.emoji">{{ client.emoji }}</span>
-          <span v-else>{{ initials }}</span>
-        </ion-avatar>
-        <div>
-          <h2>{{ clientName }}</h2>
-          <ion-badge :color="statusColor">{{ statusLabel }}</ion-badge>
-        </div>
-      </section>
+      <main class="appointment-details-mobile__body">
+        <header class="appointment-status">
+          <ion-badge class="appointment-status__badge" :color="statusMeta.color">
+            <ion-icon :icon="statusMeta.icon" aria-hidden="true" />
+            <span>{{ statusLabel }}</span>
+          </ion-badge>
+        </header>
 
-      <inset-list>
-        <ion-item lines="full">
-          <ion-icon slot="start" :icon="calendarOutline" color="medium" aria-hidden="true" />
-          <ion-label>
-            <p>{{ t('appointments.preview.date') }}</p>
-            <h2>{{ dateLabel }}</h2>
-          </ion-label>
-        </ion-item>
-        <ion-item lines="full">
-          <ion-icon slot="start" :icon="timeOutline" color="medium" aria-hidden="true" />
-          <ion-label>
-            <p>{{ t('appointments.preview.time') }}</p>
-            <h2>{{ timeLabel }} · {{ durationLabel }}</h2>
-          </ion-label>
-        </ion-item>
-        <ion-item lines="full">
-          <span slot="start" class="appointment-details-mobile__service-dot" aria-hidden="true" />
-          <ion-label class="ion-text-wrap">
-            <p>{{ t('appointments.preview.services') }}</p>
-            <h2>{{ serviceNames }}</h2>
-          </ion-label>
-        </ion-item>
-        <ion-item lines="none">
-          <ion-icon slot="start" :icon="walletOutline" color="medium" aria-hidden="true" />
-          <ion-label>
-            <p>{{ t('appointments.preview.price') }}</p>
-            <h2>{{ priceLabel }}</h2>
-          </ion-label>
-        </ion-item>
-      </inset-list>
+        <ion-card class="preview-card">
+          <div class="client-card">
+            <ion-item
+              class="client-card__person"
+              button
+              :detail="true"
+              lines="none"
+              :disabled="primaryLoading"
+              @click="clientPickerOpen = true"
+            >
+              <ion-avatar slot="start" :style="avatarStyle" aria-hidden="true">
+                <span v-if="client?.emoji">{{ client.emoji }}</span>
+                <span v-else>{{ initials }}</span>
+              </ion-avatar>
+              <ion-label class="client-card__text">
+                <h2>
+                  <span>{{ clientName }}</span>
+                  <ion-badge
+                    v-if="isOnline"
+                    color="tertiary"
+                    class="client-card__online"
+                    :aria-label="t('home.nextUp.badgeOnline')"
+                    :title="t('home.nextUp.badgeOnlineHint')"
+                  >
+                    <ion-icon :icon="globeOutline" aria-hidden="true" />
+                  </ion-badge>
+                </h2>
+                <p>{{ client?.phone || t('appointments.preview.noPhone') }}</p>
+              </ion-label>
+            </ion-item>
 
-      <inset-list v-if="appointment.notes" :header="t('appointments.preview.notes')">
-        <ion-item lines="none">
-          <p class="appointment-details-mobile__notes">{{ appointment.notes }}</p>
-        </ion-item>
-      </inset-list>
+            <div class="contact-actions">
+              <ion-button
+                class="contact-action contact-action--call"
+                fill="clear"
+                :href="phoneHref"
+                :disabled="!phoneHref"
+              >
+                <span class="contact-action__inner">
+                  <ion-icon :icon="callOutline" aria-hidden="true" />
+                  <span>{{ t('appointments.preview.callClient') }}</span>
+                </span>
+              </ion-button>
+              <ion-button
+                class="contact-action contact-action--whatsapp"
+                fill="clear"
+                :href="whatsappHref"
+                :disabled="!whatsappHref"
+                target="_blank"
+                rel="noopener"
+              >
+                <span class="contact-action__inner">
+                  <ion-icon :icon="logoWhatsapp" aria-hidden="true" />
+                  <span>{{ t('appointments.preview.whatsappClient') }}</span>
+                </span>
+              </ion-button>
+              <ion-button
+                class="contact-action contact-action--notify"
+                fill="clear"
+                @click="notifyClient"
+              >
+                <span class="contact-action__inner">
+                  <ion-icon :icon="notificationsOutline" aria-hidden="true" />
+                  <span>{{ t('appointments.preview.notifyClient') }}</span>
+                </span>
+              </ion-button>
+            </div>
+          </div>
+        </ion-card>
+
+        <inset-list
+          class="appointment-summary-group appointment-date-group"
+          :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
+        >
+          <ion-item button :detail="true" lines="none" @click="dateTimeModalOpen = true">
+            <ion-icon
+              slot="start"
+              class="appointment-date-group__icon"
+              :icon="calendarOutline"
+              aria-hidden="true"
+            />
+            <ion-label>
+              <h2>{{ dateLabel }}</h2>
+              <p>{{ timeLabel }}</p>
+            </ion-label>
+          </ion-item>
+        </inset-list>
+
+        <inset-list
+          class="appointment-summary-group appointment-service-group"
+          :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
+        >
+          <ion-item
+            button
+            :detail="true"
+            lines="none"
+            :disabled="primaryLoading"
+            @click="servicePickerOpen = true"
+          >
+            <ion-icon
+              slot="start"
+              class="appointment-summary-group__icon"
+              :icon="cutOutline"
+              aria-hidden="true"
+            />
+            <ion-label class="ion-text-wrap">
+              <h2>{{ servicesLabel }}</h2>
+              <p>{{ formats.duration(appointment.duration) }} · {{ formats.price(finalAmount) }}</p>
+            </ion-label>
+          </ion-item>
+        </inset-list>
+
+        <inset-list
+          v-if="isCompleted"
+          class="payment-card"
+          :style="{
+            '--se-list-inset-x': '0px',
+            '--se-group-gap': '0px',
+            '--payment-color': paymentTypeColor,
+          }"
+        >
+          <ion-item v-if="saleLoading" class="payment__loading" lines="none" aria-busy="true">
+            <ion-label>
+              <ion-skeleton-text :animated="true" />
+            </ion-label>
+          </ion-item>
+
+          <template v-else-if="sale">
+            <ion-item
+              button
+              :detail="true"
+              :disabled="primaryLoading"
+              @click="paymentTypePickerOpen = true"
+            >
+              <span slot="start" class="payment__icon" aria-hidden="true">
+                <ion-icon :icon="walletOutline" />
+              </span>
+              <ion-label class="ion-text-wrap">
+                <h2>{{ paymentTypeName }}</h2>
+                <p>{{ t('checkout.paidVia') }}</p>
+              </ion-label>
+            </ion-item>
+
+            <ion-item
+              button
+              :detail="false"
+              lines="none"
+              :disabled="primaryLoading"
+              :aria-label="t('checkout.editPaidAmount')"
+              @click="saleAmountEditorOpen = true"
+            >
+              <ion-label>{{ t('checkout.receivedAmount') }}</ion-label>
+              <ion-note slot="end">{{ formats.price(sale.amount) }}</ion-note>
+              <ion-icon slot="end" :icon="createOutline" color="medium" aria-hidden="true" />
+            </ion-item>
+          </template>
+
+          <ion-item v-else lines="none">
+            <ion-label class="card-empty ion-text-wrap">
+              {{ t('appointments.preview.paymentUnavailable') }}
+            </ion-label>
+          </ion-item>
+        </inset-list>
+
+        <section v-if="appointment.notes">
+          <h3 class="section-title">{{ t('appointments.preview.notes') }}</h3>
+          <ion-card class="preview-card">
+            <p class="notes-card">{{ appointment.notes }}</p>
+          </ion-card>
+        </section>
+      </main>
+
+      <ion-popover
+        v-if="!isCompleted"
+        :is-open="menuOpen"
+        :event="menuEvent"
+        alignment="end"
+        class="appointment-menu"
+        @did-dismiss="onMenuDidDismiss"
+      >
+        <ion-list lines="full" role="menu">
+          <ion-item
+            v-for="item in menuActions"
+            :key="item.action"
+            button
+            :detail="false"
+            role="menuitem"
+            :lines="item.action === 'delete' ? 'none' : 'full'"
+            @click="selectMenuAction(item.action)"
+          >
+            <ion-label :color="item.action === 'delete' ? 'danger' : undefined">
+              {{ t(item.labelKey) }}
+            </ion-label>
+            <ion-icon
+              slot="end"
+              :icon="item.icon"
+              :color="item.action === 'delete' ? 'danger' : 'medium'"
+              aria-hidden="true"
+            />
+          </ion-item>
+        </ion-list>
+      </ion-popover>
+
+      <ion-modal
+        :is-open="dateTimeModalOpen"
+        :presenting-element="detailsModalEl ?? undefined"
+        @did-dismiss="dateTimeModalOpen = false"
+      >
+        <ion-header class="ion-no-border">
+          <ion-toolbar>
+            <ion-buttons slot="start">
+              <ion-button
+                fill="clear"
+                color="dark"
+                :aria-label="t('common.close')"
+                @click="dateTimeModalOpen = false"
+              >
+                <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
+              </ion-button>
+            </ion-buttons>
+            <ion-title>{{ t('appointments.preview.dateTimeTitle') }}</ion-title>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content class="date-time-placeholder ion-padding">
+          <div class="date-time-placeholder__content">
+            <ion-icon :icon="calendarOutline" color="primary" aria-hidden="true" />
+            <h2>{{ t('common.comingSoon') }}</h2>
+            <p>{{ t('appointments.preview.dateTimeComingSoon') }}</p>
+          </div>
+        </ion-content>
+      </ion-modal>
+
+      <client-picker-modal-mobile
+        v-model:is-open="clientPickerOpen"
+        :clients="clients"
+        :model-value="appointment.client_id"
+        :presenting-element="detailsModalEl"
+        @select="emit('select-client', $event)"
+      />
+
+      <service-picker-modal-mobile
+        v-model:is-open="servicePickerOpen"
+        :services="services"
+        :model-value="appointment.service_ids"
+        :presenting-element="detailsModalEl"
+        @select="emit('select-services', $event)"
+      />
+
+      <payment-type-picker-modal-mobile
+        v-if="sale"
+        v-model:is-open="paymentTypePickerOpen"
+        :payment-types="paymentTypes"
+        :model-value="sale.payment_type_id"
+        :presenting-element="detailsModalEl"
+        @select="emit('select-payment-type', $event)"
+      />
+
+      <sale-amount-editor-modal-mobile
+        v-if="sale"
+        v-model:is-open="saleAmountEditorOpen"
+        :sale="sale"
+        :presenting-element="detailsModalEl"
+        @save="emit('save-sale-amount', $event)"
+      />
     </ion-content>
 
-    <ion-footer v-if="hasPrimary" class="ion-no-border">
+    <ion-footer v-if="footerAction" class="appointment-action-footer ion-no-border">
       <ion-toolbar>
-        <ion-button
-          class="appointment-details-mobile__primary"
-          expand="block"
-          :color="isPending ? 'secondary' : 'primary'"
-          :disabled="primaryLoading"
-          :aria-busy="primaryLoading"
-          @click="emit('primary')"
-        >
-          <ion-spinner v-if="primaryLoading" slot="start" :name="spinnerName" />
-          <ion-icon v-else slot="start" :icon="primaryIcon" aria-hidden="true" />
-          {{ primaryLabel }}
-        </ion-button>
+        <div class="appointment-action-footer__content">
+          <ion-fab class="appointment-action-footer__fab">
+            <ion-fab-button
+              :color="footerAction === 'confirm' ? 'primary' : 'success'"
+              :disabled="primaryLoading"
+              :aria-busy="primaryLoading"
+              :aria-label="footerLabel"
+              :title="footerLabel"
+              @click="runPrimary"
+            >
+              <ion-spinner v-if="primaryLoading" :name="spinnerName" />
+              <ion-icon
+                v-else
+                :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
+                aria-hidden="true"
+              />
+            </ion-fab-button>
+          </ion-fab>
+        </div>
       </ion-toolbar>
     </ion-footer>
   </ion-modal>
 </template>
 
 <style scoped>
-.appointment-details-mobile {
-  --border-radius: 20px 20px 0 0;
+/*
+ * The accent lives on the modal surface itself so it stays anchored under the
+ * header while the cards scroll over it: service wash, faded into the page.
+ */
+.appointment-details-mobile::part(content) {
+  background:
+    linear-gradient(to bottom, transparent, var(--se-surface-page) 220px) top / 100% 220px no-repeat,
+    var(--session-accent, transparent) top / 100% 220px no-repeat,
+    var(--se-surface-page, var(--ion-background-color));
 }
 
-.appointment-details-mobile ion-toolbar,
+.appointment-details-mobile ion-toolbar {
+  --background: transparent;
+  --border-width: 0;
+}
+
 .appointment-details-mobile__content {
-  --background: var(--se-surface-page, var(--ion-background-color));
+  --background: transparent;
 }
 
-.appointment-details-mobile__person {
+.appointment-details-mobile__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 24px;
+}
+
+.appointment-status {
+  display: flex;
+  align-items: flex-start;
+  padding: 2px 4px 4px;
+}
+
+.appointment-status__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.appointment-status__badge ion-icon {
+  font-size: 1rem;
+}
+
+.appointment-summary-group ion-label h2,
+.appointment-summary-group ion-label p {
+  margin: 0;
+}
+
+.appointment-summary-group ion-item {
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+.appointment-date-group__icon,
+.appointment-summary-group__icon {
+  color: var(--ion-text-color);
+}
+
+.appointment-summary-group ion-label h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.appointment-summary-group ion-label p {
+  margin-top: 2px;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-card {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--se-surface-card, var(--ion-card-background));
+  box-shadow: 0 1px 4px rgb(0 0 0 / 7%);
+  color: var(--ion-text-color);
+}
+
+.preview-card h2,
+.preview-card p {
+  margin: 0;
+}
+
+.client-card {
+  padding-bottom: 16px;
+}
+
+.preview-card .client-card__person {
+  --background: transparent;
+  --min-height: 80px;
+  --padding-start: 16px;
+  --inner-padding-end: 12px;
+  --border-width: 0;
+  --inner-border-width: 0;
+}
+
+.client-card__person ion-avatar {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  margin-inline: 0 13px;
+  background: var(--avatar-background);
+  color: var(--avatar-color);
+  place-items: center;
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.client-card__text {
+  min-width: 0;
+  flex: 1;
+}
+
+.client-card__text h2 {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 20px 4px;
-}
-
-.appointment-details-mobile__person ion-avatar {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  background: var(--se-surface-muted, var(--ion-background-color-step-100));
-  place-items: center;
+  gap: 6px;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
-.appointment-details-mobile__person h2 {
-  margin: 0 0 5px;
-  font-size: 1.08rem;
+.client-card__text h2 > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.appointment-details-mobile__service-dot {
-  width: 12px;
-  height: 12px;
-  margin-inline-end: 20px;
+.client-card__online {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  padding: 0;
   border-radius: 999px;
-  background: var(--ion-color-secondary);
+  place-items: center;
+  font-size: 12px;
 }
 
-.appointment-details-mobile__notes {
+.client-card__text p {
+  margin-top: 3px;
+  color: var(--ion-color-medium);
+  font-size: 0.86rem;
+}
+
+.contact-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 16px;
+}
+
+.contact-action {
+  --border-radius: 12px;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  --background: var(--se-surface-page);
+  --color: var(--action-color);
+
+  height: auto;
   margin: 0;
-  padding-block: 5px;
-  line-height: 1.45;
+  text-transform: none;
+}
+
+.contact-action--call {
+  --action-color: var(--ion-color-primary);
+}
+
+.contact-action--whatsapp {
+  --action-color: var(--ion-color-success);
+}
+
+.contact-action--notify {
+  --action-color: var(--ion-color-warning-shade);
+}
+
+.contact-action__inner {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.contact-action__inner ion-icon {
+  font-size: 22px;
+}
+
+.contact-action__inner span {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ion-text-color);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-card ion-list,
+.preview-card ion-item {
+  --background: transparent;
+}
+
+.preview-card ion-item {
+  --min-height: 58px;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  --border-color: var(--se-separator);
+}
+
+.preview-card ion-label h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.preview-card ion-label p {
+  margin-top: 2px;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+}
+
+.card-empty {
+  color: var(--ion-color-medium);
+  font-size: 0.9rem;
+}
+
+.payment__loading ion-skeleton-text {
+  height: 32px;
+  margin: 0;
+  border-radius: 8px;
+}
+
+.payment-card {
+  --se-item-min-height: 52px;
+}
+
+.payment__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  margin-inline: 0 var(--se-list-icon-gap, 12px);
+  border-radius: 10px;
+  background: var(--payment-color, var(--ion-color-medium));
+  color: var(--se-surface-card);
+  place-items: center;
+  font-size: 18px;
+}
+
+.payment-card ion-note {
+  margin-inline-end: 2px;
+  color: var(--ion-text-color);
+  font-size: 0.9rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-time-placeholder {
+  --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.date-time-placeholder__content {
+  display: grid;
+  min-height: 100%;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.date-time-placeholder__content > ion-icon {
+  font-size: 3rem;
+}
+
+.date-time-placeholder__content h2,
+.date-time-placeholder__content p {
+  margin: 0;
+}
+
+.date-time-placeholder__content p {
+  max-width: 280px;
+  color: var(--ion-color-medium);
+}
+
+.payment-card ion-icon[slot='end'] {
+  margin-inline-start: 5px;
+  font-size: 18px;
+}
+
+.section-title {
+  margin: 4px 0 7px 6px;
+  color: var(--ion-color-medium);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.notes-card {
+  padding: 14px 16px;
+  font-size: 0.92rem;
+  line-height: 1.5;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
-.appointment-details-mobile__primary {
-  --border-radius: 12px;
-
-  min-height: 48px;
-  margin: 8px 14px calc(8px + var(--safe-area-bottom, 0px));
-  text-transform: none;
+.appointment-action-footer ion-toolbar {
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
 }
 
-.appointment-details-mobile__primary ion-icon[slot='start'],
-.appointment-details-mobile__primary ion-spinner[slot='start'] {
-  margin-inline-end: 7px;
+.appointment-action-footer__content {
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px calc(8px + var(--safe-area-bottom, 0px));
+}
+
+.appointment-action-footer__fab {
+  position: static;
+  margin: 0;
+}
+
+.appointment-menu {
+  --width: 230px;
+}
+
+.appointment-menu::part(arrow) {
+  right: 18px;
+  left: auto !important;
+}
+
+.ion-palette-dark .preview-card {
+  box-shadow: none;
 }
 </style>

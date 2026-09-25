@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   alertController,
@@ -26,14 +26,22 @@ import {
 } from '@entities/appointment'
 import { useClientsQuery, type Client } from '@entities/client'
 import { useMasterPreferencesStore } from '@entities/master'
-import { usePaymentTypesQuery } from '@entities/payment-type'
-import { useCompleteSaleMutation, type CompleteSaleDto } from '@entities/sale'
-import { useServicesQuery, type Service } from '@entities/service'
+import { usePaymentTypesQuery, type PaymentType } from '@entities/payment-type/index.mobile'
+import {
+  useCompleteSaleMutation,
+  useSaleByAppointmentQuery,
+  useUpdateSaleDetailsMutation,
+  useUpdateSaleMutation,
+  type CompleteSaleDto,
+  type UpdateSaleDetailsDto,
+} from '@entities/sale'
+import { useServicesQuery, type Service } from '@entities/service/index.mobile'
 import { useSessionStore } from '@entities/session'
 import {
   AppointmentActionsDrawerMobile,
   AppointmentDetailsMobile,
   AppointmentEditMobile,
+  type MobileAppointmentMenuAction,
   type MobileAppointmentMoreAction,
 } from '@features/appointment-actions/index.mobile'
 import { AppointmentCheckoutMobile } from '@features/appointment-checkout/index.mobile'
@@ -67,6 +75,8 @@ const { data: paymentTypes } = usePaymentTypesQuery(userId)
 const updateMutation = useUpdateAppointmentMutation(userId)
 const removeMutation = useRemoveAppointmentMutation(userId)
 const completeSaleMutation = useCompleteSaleMutation(userId)
+const updateSaleMutation = useUpdateSaleMutation(userId)
+const updateSaleDetailsMutation = useUpdateSaleDetailsMutation(userId)
 
 const groups = computed(() => groupHomeActionableAppointments(appointments.value ?? [], now.value))
 const items = computed(() => groups.value.ordered)
@@ -90,10 +100,18 @@ const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
 const pendingAfterDetails = ref<{
-  type: 'checkout' | 'actions'
+  type: 'checkout' | 'edit'
   appointment: Appointment
 } | null>(null)
 const processingIds = ref<Set<string>>(new Set())
+const detailsAppointmentId = computed(() =>
+  detailsAppointment.value?.status === 'completed' ? detailsAppointment.value.id : undefined,
+)
+const detailsSaleQuery = useSaleByAppointmentQuery(detailsAppointmentId)
+const presentingElement = ref<HTMLElement | null>(null)
+onMounted(() => {
+  presentingElement.value = document.querySelector('ion-router-outlet')
+})
 const activeAppointment = computed(() => items.value[activeIndex.value] ?? items.value[0] ?? null)
 const activeColors = computed(() =>
   activeAppointment.value ? getServices(activeAppointment.value).map(({ color }) => color) : [],
@@ -288,6 +306,17 @@ async function handleNoShow(appointment: Appointment) {
   await updateStatus(appointment, 'no_show', t('home.nextUp.noShowSuccess'))
 }
 
+async function handleCancel(appointment: Appointment) {
+  if (isProcessing(appointment.id)) return
+  const confirmed = await confirmDestructiveAction({
+    header: t('appointments.preview.cancelConfirmTitle'),
+    message: t('appointments.preview.cancelConfirmMessage'),
+    confirmLabel: t('appointments.preview.cancelAppointment'),
+  })
+  if (!confirmed) return
+  await updateStatus(appointment, 'cancelled', t('appointments.preview.statusUpdateSuccess'))
+}
+
 async function openDetails(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   detailsAppointment.value = appointment
@@ -329,19 +358,30 @@ function handleCardPrimary(appointment: Appointment) {
   handlePrimary(appointment)
 }
 
-async function openEdit(appointment: Appointment) {
-  if (isProcessing(appointment.id)) return
-  detailsOpen.value = false
+async function presentEdit(appointment: Appointment) {
   editingAppointment.value = appointment
   await nextTick()
   editOpen.value = true
+}
+
+async function openEdit(appointment: Appointment) {
+  if (isProcessing(appointment.id)) return
+  if (detailsOpen.value) {
+    pendingAfterDetails.value = { type: 'edit', appointment }
+    detailsOpen.value = false
+    return
+  }
+  await presentEdit(appointment)
 }
 
 async function removeAppointment(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
   const confirmed = await confirmDestructiveAction({
     header: t('appointments.delete.title'),
-    message: t('appointments.delete.message'),
+    message:
+      detailsAppointment.value?.id === appointment.id && detailsSaleQuery.data.value
+        ? t('appointments.delete.messageWithSale')
+        : t('appointments.delete.message'),
     confirmLabel: t('appointments.delete.confirm'),
   })
   if (!confirmed) return
@@ -397,11 +437,6 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
 
 async function openActions(appointment: Appointment) {
   if (isProcessing(appointment.id)) return
-  if (detailsOpen.value) {
-    pendingAfterDetails.value = { type: 'actions', appointment }
-    detailsOpen.value = false
-    return
-  }
   actionsAppointment.value = appointment
   await nextTick()
   actionsOpen.value = true
@@ -417,7 +452,7 @@ async function finishDetailsDismiss() {
   pendingAfterDetails.value = null
   if (!pending) return
   if (pending.type === 'checkout') await presentCheckout(pending.appointment)
-  else await openActions(pending.appointment)
+  else await presentEdit(pending.appointment)
 }
 
 async function handleDrawerAction(action: MobileAppointmentMoreAction) {
@@ -425,9 +460,109 @@ async function handleDrawerAction(action: MobileAppointmentMoreAction) {
   if (!appointment) return
   actionsOpen.value = false
 
-  if (action === 'edit') await openEdit(appointment)
-  else if (action === 'decline') await handleDecline(appointment)
+  if (action === 'decline') await handleDecline(appointment)
+  else if (action === 'cancel') await handleCancel(appointment)
   else await handleNoShow(appointment)
+}
+
+async function handleDetailsAction(appointment: Appointment, action: MobileAppointmentMenuAction) {
+  if (action === 'decline') await handleDecline(appointment)
+  else if (action === 'cancel') await handleCancel(appointment)
+  else if (action === 'no_show') await handleNoShow(appointment)
+  else await removeAppointment(appointment)
+}
+
+async function handleClientSelect(appointment: Appointment, client: Client) {
+  if (appointment.client_id === client.id || isProcessing(appointment.id)) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateMutation.mutateAsync({ id: appointment.id, client_id: client.id })
+    if (detailsAppointment.value?.id === appointment.id) {
+      detailsAppointment.value = { ...detailsAppointment.value, client_id: client.id }
+    }
+    await showToast(t('appointments.preview.clientUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('appointments.preview.clientUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
+async function handleServicesSelect(appointment: Appointment, selectedServices: Service[]) {
+  if (isProcessing(appointment.id) || !selectedServices.length) return
+
+  const serviceIds = selectedServices.map((service) => service.id)
+  if (
+    serviceIds.length === appointment.service_ids.length &&
+    serviceIds.every((id, index) => id === appointment.service_ids[index])
+  ) {
+    return
+  }
+
+  const duration = selectedServices.reduce((total, service) => total + service.duration, 0)
+  const price = selectedServices.reduce((total, service) => total + service.price, 0)
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateMutation.mutateAsync({
+      id: appointment.id,
+      service_ids: serviceIds,
+      duration,
+      price,
+    })
+    if (detailsAppointment.value?.id === appointment.id) {
+      detailsAppointment.value = {
+        ...detailsAppointment.value,
+        service_ids: serviceIds,
+        duration,
+        price,
+      }
+    }
+    await showToast(t('appointments.preview.servicesUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('appointments.preview.servicesUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
+async function handlePaymentTypeSelect(appointment: Appointment, paymentType: PaymentType) {
+  const sale = detailsSaleQuery.data.value
+  if (!sale || sale.payment_type_id === paymentType.id || isProcessing(appointment.id)) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateSaleMutation.mutateAsync({
+      id: sale.id,
+      appointmentId: appointment.id,
+      patch: { payment_type_id: paymentType.id },
+    })
+    await showToast(t('checkout.paymentMethodUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('checkout.paymentMethodUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
+async function handleSaleAmountSave(appointment: Appointment, details: UpdateSaleDetailsDto) {
+  const sale = detailsSaleQuery.data.value
+  if (!sale || isProcessing(appointment.id)) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateSaleDetailsMutation.mutateAsync({
+      id: sale.id,
+      appointmentId: appointment.id,
+      details,
+    })
+    await showToast(t('checkout.amountUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('checkout.amountUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
 }
 
 function closeCheckout() {
@@ -544,17 +679,23 @@ defineExpose({
     :is-open="detailsOpen"
     :appointment="detailsAppointment"
     :client="getClient(detailsAppointment)"
-    :client-name="getClientName(detailsAppointment)"
-    :service-names="getServiceNames(detailsAppointment)"
-    :date-label="formats.dateDay(detailsAppointment.start_at)"
-    :time-label="formatTime(detailsAppointment.start_at)"
-    :duration-label="t('home.nextUp.minutesLabel', { n: detailsAppointment.duration })"
-    :price-label="formats.price(detailsAppointment.price)"
+    :clients="clients ?? []"
+    :services="services ?? []"
+    :payment-types="paymentTypes ?? []"
+    :time-zone="masterPreferencesStore.timeZone"
+    :time-format="masterPreferencesStore.timeFormat"
+    :sale="detailsSaleQuery.data.value"
+    :sale-loading="detailsSaleQuery.isPending.value"
     :primary-loading="isProcessing(detailsAppointment.id)"
+    :presenting-element="presentingElement"
     @update:is-open="detailsOpen = $event"
     @did-dismiss="finishDetailsDismiss"
+    @select-client="handleClientSelect(detailsAppointment, $event)"
+    @select-services="handleServicesSelect(detailsAppointment, $event)"
+    @select-payment-type="handlePaymentTypeSelect(detailsAppointment, $event)"
+    @save-sale-amount="handleSaleAmountSave(detailsAppointment, $event)"
     @primary="handlePrimary(detailsAppointment)"
-    @more="openActions(detailsAppointment)"
+    @action="handleDetailsAction(detailsAppointment, $event)"
   />
 
   <appointment-edit-mobile

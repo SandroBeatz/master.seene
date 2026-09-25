@@ -223,7 +223,9 @@ function createFormats(options: FormatsPluginOptions = {}): Formats {
             ? 'formats.dateDay.tomorrow'
             : null
 
-    const formattedDate = new Intl.DateTimeFormat(locale(), dateOptions).format(parsed)
+    const formattedDate = new Intl.DateTimeFormat(locale(), dateOptions)
+      .format(parsed)
+      .replace(',', '')
     return relativeKey ? `${i18n.global.t(relativeKey)} ${formattedDate}` : formattedDate
   }
 

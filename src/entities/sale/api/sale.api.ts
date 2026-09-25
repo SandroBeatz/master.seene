@@ -1,5 +1,5 @@
 import { supabase } from '@shared/lib/supabase'
-import type { CompleteSaleDto, Sale, SaleItem } from '../model/types'
+import type { CompleteSaleDto, Sale, SaleItem, UpdateSaleDetailsDto } from '../model/types'
 
 export async function completeSale(dto: CompleteSaleDto): Promise<string> {
   const { data, error } = await supabase.rpc('complete_appointment', {
@@ -17,6 +17,15 @@ export async function updateSale(
   patch: { payment_type_id?: string; amount?: number },
 ): Promise<void> {
   const { error } = await supabase.from('sale').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+export async function updateSaleDetails(id: string, details: UpdateSaleDetailsDto): Promise<void> {
+  const { error } = await supabase.rpc('update_sale_details', {
+    p_sale_id: id,
+    p_amount: details.amount,
+    p_items: details.items,
+  })
   if (error) throw error
 }
 
