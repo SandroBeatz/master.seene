@@ -1259,7 +1259,7 @@ export default {
       declineConfirmMessage:
         'Decline this booking request? The client will be notified it was not accepted.',
       keepRequest: 'Keep request',
-      markNoShow: 'Mark as no-show',
+      markNoShow: "Didn't show",
       noShowConfirmTitle: 'Mark as no-show',
       noShowConfirmMessage:
         'Mark this appointment as a no-show? It will be recorded as a missed visit.',
@@ -1344,7 +1344,13 @@ export default {
     confirm: 'Complete appointment',
     paymentInfo: 'Payment',
     paidAmount: 'Amount paid',
+    receivedAmount: 'Amount received',
     paidVia: 'Payment method',
+    editPaidAmount: 'Edit amount received',
+    paymentMethodUpdateSuccess: 'Payment method updated',
+    paymentMethodUpdateError: 'Failed to update payment method',
+    amountUpdateSuccess: 'Amount received updated',
+    amountUpdateError: 'Failed to update amount received',
     successTitle: 'Appointment completed',
     alreadyCompleted: 'This appointment is already completed',
     errorTitle: 'Failed to complete appointment',

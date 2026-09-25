@@ -26,11 +26,14 @@ import {
 } from '@entities/appointment'
 import { useClientsQuery, type Client } from '@entities/client'
 import { useMasterPreferencesStore } from '@entities/master'
-import { usePaymentTypesQuery } from '@entities/payment-type'
+import { usePaymentTypesQuery, type PaymentType } from '@entities/payment-type/index.mobile'
 import {
   useCompleteSaleMutation,
   useSaleByAppointmentQuery,
+  useUpdateSaleDetailsMutation,
+  useUpdateSaleMutation,
   type CompleteSaleDto,
+  type UpdateSaleDetailsDto,
 } from '@entities/sale'
 import { useServicesQuery, type Service } from '@entities/service/index.mobile'
 import { useSessionStore } from '@entities/session'
@@ -72,6 +75,8 @@ const { data: paymentTypes } = usePaymentTypesQuery(userId)
 const updateMutation = useUpdateAppointmentMutation(userId)
 const removeMutation = useRemoveAppointmentMutation(userId)
 const completeSaleMutation = useCompleteSaleMutation(userId)
+const updateSaleMutation = useUpdateSaleMutation(userId)
+const updateSaleDetailsMutation = useUpdateSaleDetailsMutation(userId)
 
 const groups = computed(() => groupHomeActionableAppointments(appointments.value ?? [], now.value))
 const items = computed(() => groups.value.ordered)
@@ -461,8 +466,7 @@ async function handleDrawerAction(action: MobileAppointmentMoreAction) {
 }
 
 async function handleDetailsAction(appointment: Appointment, action: MobileAppointmentMenuAction) {
-  if (action === 'edit') await openEdit(appointment)
-  else if (action === 'decline') await handleDecline(appointment)
+  if (action === 'decline') await handleDecline(appointment)
   else if (action === 'cancel') await handleCancel(appointment)
   else if (action === 'no_show') await handleNoShow(appointment)
   else await removeAppointment(appointment)
@@ -518,6 +522,44 @@ async function handleServicesSelect(appointment: Appointment, selectedServices: 
     await showToast(t('appointments.preview.servicesUpdateSuccess'), 'success')
   } catch {
     await showToast(t('appointments.preview.servicesUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
+async function handlePaymentTypeSelect(appointment: Appointment, paymentType: PaymentType) {
+  const sale = detailsSaleQuery.data.value
+  if (!sale || sale.payment_type_id === paymentType.id || isProcessing(appointment.id)) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateSaleMutation.mutateAsync({
+      id: sale.id,
+      appointmentId: appointment.id,
+      patch: { payment_type_id: paymentType.id },
+    })
+    await showToast(t('checkout.paymentMethodUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('checkout.paymentMethodUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
+async function handleSaleAmountSave(appointment: Appointment, details: UpdateSaleDetailsDto) {
+  const sale = detailsSaleQuery.data.value
+  if (!sale || isProcessing(appointment.id)) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateSaleDetailsMutation.mutateAsync({
+      id: sale.id,
+      appointmentId: appointment.id,
+      details,
+    })
+    await showToast(t('checkout.amountUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('checkout.amountUpdateError'), 'danger')
   } finally {
     setProcessing(appointment.id, false)
   }
@@ -639,6 +681,7 @@ defineExpose({
     :client="getClient(detailsAppointment)"
     :clients="clients ?? []"
     :services="services ?? []"
+    :payment-types="paymentTypes ?? []"
     :time-zone="masterPreferencesStore.timeZone"
     :time-format="masterPreferencesStore.timeFormat"
     :sale="detailsSaleQuery.data.value"
@@ -649,6 +692,8 @@ defineExpose({
     @did-dismiss="finishDetailsDismiss"
     @select-client="handleClientSelect(detailsAppointment, $event)"
     @select-services="handleServicesSelect(detailsAppointment, $event)"
+    @select-payment-type="handlePaymentTypeSelect(detailsAppointment, $event)"
+    @save-sale-amount="handleSaleAmountSave(detailsAppointment, $event)"
     @primary="handlePrimary(detailsAppointment)"
     @action="handleDetailsAction(detailsAppointment, $event)"
   />

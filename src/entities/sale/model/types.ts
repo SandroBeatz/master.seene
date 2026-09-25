@@ -36,3 +36,13 @@ export interface CompleteSaleDto {
   payment_type_id: string
   items: CompleteSaleItemDto[]
 }
+
+export interface UpdateSaleItemAmountDto {
+  id: string
+  price: number
+}
+
+export interface UpdateSaleDetailsDto {
+  amount: number
+  items: UpdateSaleItemAmountDto[]
+}

@@ -21,21 +21,12 @@ describe('getMobileAppointmentMoreActions', () => {
 })
 
 describe('getMobileAppointmentMenuActions', () => {
-  it('wraps status transitions between edit and delete', () => {
-    expect(getMobileAppointmentMenuActions('pending')).toEqual(['edit', 'decline', 'delete'])
-    expect(getMobileAppointmentMenuActions('confirmed')).toEqual([
-      'edit',
-      'cancel',
-      'no_show',
-      'delete',
-    ])
+  it('places status transitions before delete', () => {
+    expect(getMobileAppointmentMenuActions('pending')).toEqual(['decline', 'delete'])
+    expect(getMobileAppointmentMenuActions('confirmed')).toEqual(['cancel', 'no_show', 'delete'])
   })
 
-  it('keeps edit for completed appointments', () => {
-    expect(getMobileAppointmentMenuActions('completed')).toEqual(['edit', 'delete'])
-  })
-
-  it.each(['cancelled', 'no_show', 'expired'] as const)(
+  it.each(['completed', 'cancelled', 'no_show', 'expired'] as const)(
     'only exposes delete for %s appointments',
     (status) => {
       expect(getMobileAppointmentMenuActions(status)).toEqual(['delete'])

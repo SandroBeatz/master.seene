@@ -14,9 +14,12 @@ const queryMock = vi.hoisted(() => ({
   clients: null as Record<string, unknown> | null,
   services: null as Record<string, unknown> | null,
   paymentTypes: null as Record<string, unknown> | null,
+  sale: null as Record<string, unknown> | null,
   update: vi.fn<(payload: unknown) => Promise<unknown>>(),
   remove: vi.fn<(id: string) => Promise<unknown>>(),
   complete: vi.fn<(payload: unknown) => Promise<unknown>>(),
+  updateSale: vi.fn<(payload: unknown) => Promise<unknown>>(),
+  updateSaleDetails: vi.fn<(payload: unknown) => Promise<unknown>>(),
   alertRole: 'cancel' as 'cancel' | 'destructive',
   alertCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   toastCreate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -69,7 +72,7 @@ vi.mock('@entities/service/index.mobile', async (importOriginal) => {
   }
 })
 
-vi.mock('@entities/payment-type', () => ({
+vi.mock('@entities/payment-type/index.mobile', () => ({
   usePaymentTypesQuery: () => queryMock.paymentTypes,
 }))
 
@@ -79,9 +82,10 @@ vi.mock('@entities/sale', () => ({
     mutateAsync: queryMock.complete,
   }),
   useSaleByAppointmentQuery: () => ({
-    data: ref(null),
-    isPending: ref(false),
+    ...(queryMock.sale ?? { data: ref(null), isPending: ref(false) }),
   }),
+  useUpdateSaleMutation: () => ({ mutateAsync: queryMock.updateSale }),
+  useUpdateSaleDetailsMutation: () => ({ mutateAsync: queryMock.updateSaleDetails }),
 }))
 
 vi.mock('@entities/master', () => ({
@@ -121,17 +125,19 @@ const stubs = {
   IonToolbar: passthrough,
   AppointmentDetailsMobile: {
     name: 'AppointmentDetailsMobile',
-    props: ['isOpen', 'appointment', 'client', 'clients', 'services'],
+    props: ['isOpen', 'appointment', 'client', 'clients', 'services', 'paymentTypes'],
     emits: [
       'action',
       'primary',
       'select-client',
       'select-services',
+      'select-payment-type',
+      'save-sale-amount',
       'update:isOpen',
       'did-dismiss',
     ],
     template:
-      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-edit-stub" @click="$emit(\'action\', \'edit\'); $emit(\'did-dismiss\')">Edit</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button v-if="paymentTypes[0]" class="details-payment-stub" @click="$emit(\'select-payment-type\', paymentTypes[0])">Select payment</button><button class="details-amount-stub" @click="$emit(\'save-sale-amount\', { amount: 90, items: [{ id: \'item-1\', price: 90 }] })">Save amount</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -261,12 +267,17 @@ describe('HomeActionsMobile', () => {
     queryMock.clients = null
     queryMock.services = null
     queryMock.paymentTypes = { data: ref([]) }
+    queryMock.sale = null
     queryMock.update.mockReset()
     queryMock.update.mockImplementation(async (payload) => payload)
     queryMock.remove.mockReset()
     queryMock.remove.mockResolvedValue(undefined)
     queryMock.complete.mockReset()
     queryMock.complete.mockResolvedValue('sale-1')
+    queryMock.updateSale.mockReset()
+    queryMock.updateSale.mockResolvedValue(undefined)
+    queryMock.updateSaleDetails.mockReset()
+    queryMock.updateSaleDetails.mockResolvedValue(undefined)
     queryMock.alertRole = 'cancel'
     queryMock.alertCreate.mockReset()
     queryMock.alertCreate.mockImplementation(async () => ({
@@ -414,6 +425,60 @@ describe('HomeActionsMobile', () => {
     expect(wrapper.get('.details-service-ids').text()).toBe('service-haircut,service-coloring')
   })
 
+  it('updates payment method and received amount from completed appointment details', async () => {
+    const item = appointment('completed', '2026-06-08T10:00:00.000Z', 'completed')
+    const paymentType = {
+      id: 'payment-card',
+      user_id: 'user-1',
+      name: 'Card',
+      color: '#7c3aed',
+      kind: 'card' as const,
+      is_default: true,
+      is_active: true,
+      sort_order: 0,
+      created_at: '2026-06-01T00:00:00.000Z',
+      updated_at: '2026-06-01T00:00:00.000Z',
+    }
+    queryMock.paymentTypes = { data: ref([paymentType]) }
+    queryMock.sale = {
+      data: ref({
+        id: 'sale-1',
+        user_id: 'user-1',
+        appointment_id: item.id,
+        client_id: item.client_id,
+        payment_type_id: 'payment-cash',
+        amount: 100,
+        paid_at: '2026-06-08T11:00:00.000Z',
+        created_at: '2026-06-08T11:00:00.000Z',
+        items: [],
+      }),
+      isPending: ref(false),
+    }
+    ;({ wrapper } = mountWidget())
+
+    const exposed = wrapper.vm as unknown as {
+      openAppointment: (appointment: Appointment) => Promise<void>
+    }
+    await exposed.openAppointment(item)
+    await wrapper.get('.details-payment-stub').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.updateSale).toHaveBeenCalledWith({
+      id: 'sale-1',
+      appointmentId: 'completed',
+      patch: { payment_type_id: 'payment-card' },
+    })
+
+    await wrapper.get('.details-amount-stub').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.updateSaleDetails).toHaveBeenCalledWith({
+      id: 'sale-1',
+      appointmentId: 'completed',
+      details: { amount: 90, items: [{ id: 'item-1', price: 90 }] },
+    })
+  })
+
   it('waits for details to dismiss before opening checkout and can reopen it', async () => {
     const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
     ;({ wrapper } = mountWidget({ appointments: [item] }))
@@ -470,17 +535,6 @@ describe('HomeActionsMobile', () => {
 
     expect(queryMock.alertCreate).toHaveBeenCalledOnce()
     expect(queryMock.update).toHaveBeenCalledWith({ id: 'request', status: 'cancelled' })
-  })
-
-  it('opens the reusable Ionic edit flow from the preview menu', async () => {
-    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
-    ;({ wrapper } = mountWidget({ appointments: [item] }))
-
-    await wrapper.find('.action-card__content').trigger('click')
-    await wrapper.find('.details-edit-stub').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.find('.edit-mobile-stub').exists()).toBe(true)
   })
 
   it('exposes deletion for schedule events with destructive confirmation', async () => {

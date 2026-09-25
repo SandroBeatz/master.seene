@@ -1255,7 +1255,7 @@ export default {
       declineConfirmMessage:
         'Отклонить эту заявку на запись? Клиент получит уведомление, что она не принята.',
       keepRequest: 'Оставить заявку',
-      markNoShow: 'Отметить неявку',
+      markNoShow: 'Не пришёл',
       noShowConfirmTitle: 'Отметить неявку',
       noShowConfirmMessage:
         'Отметить эту запись как неявку? Она будет учтена как пропущенный визит.',
@@ -1340,7 +1340,13 @@ export default {
     confirm: 'Завершить запись',
     paymentInfo: 'Оплата',
     paidAmount: 'Оплачено',
+    receivedAmount: 'Получено',
     paidVia: 'Способ оплаты',
+    editPaidAmount: 'Изменить полученную сумму',
+    paymentMethodUpdateSuccess: 'Способ оплаты изменён',
+    paymentMethodUpdateError: 'Не удалось изменить способ оплаты',
+    amountUpdateSuccess: 'Полученная сумма изменена',
+    amountUpdateError: 'Не удалось изменить полученную сумму',
     successTitle: 'Запись завершена',
     alreadyCompleted: 'Эта запись уже завершена',
     errorTitle: 'Не удалось завершить запись',

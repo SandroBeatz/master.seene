@@ -1269,7 +1269,7 @@ export default {
       declineConfirmMessage:
         "Refuser cette demande de rendez-vous ? Le client sera informé qu'elle n'a pas été acceptée.",
       keepRequest: 'Garder la demande',
-      markNoShow: 'Marquer comme absent',
+      markNoShow: "N'est pas venu",
       noShowConfirmTitle: 'Marquer comme absent',
       noShowConfirmMessage:
         'Marquer ce rendez-vous comme une absence ? Il sera enregistré comme une visite manquée.',
@@ -1355,7 +1355,13 @@ export default {
     confirm: 'Terminer le rendez-vous',
     paymentInfo: 'Paiement',
     paidAmount: 'Montant payé',
+    receivedAmount: 'Montant reçu',
     paidVia: 'Mode de paiement',
+    editPaidAmount: 'Modifier le montant reçu',
+    paymentMethodUpdateSuccess: 'Mode de paiement mis à jour',
+    paymentMethodUpdateError: 'Impossible de modifier le mode de paiement',
+    amountUpdateSuccess: 'Montant reçu mis à jour',
+    amountUpdateError: 'Impossible de modifier le montant reçu',
     successTitle: 'Rendez-vous terminé',
     alreadyCompleted: 'Ce rendez-vous est déjà terminé',
     errorTitle: 'Impossible de terminer le rendez-vous',

@@ -2,7 +2,7 @@ import type { AppointmentStatus, EffectiveAppointmentStatus } from '@entities/ap
 
 export type MobileAppointmentMoreAction = 'decline' | 'cancel' | 'no_show'
 
-export type MobileAppointmentMenuAction = 'edit' | MobileAppointmentMoreAction | 'delete'
+export type MobileAppointmentMenuAction = MobileAppointmentMoreAction | 'delete'
 
 export type MobileAppointmentFooterAction = 'confirm' | 'complete'
 
@@ -21,15 +21,13 @@ export function getMobileAppointmentMoreActions(
 }
 
 /**
- * Items of the preview's top-right popover: edit first, status transitions in
- * the middle, delete last. Terminal statuses other than `completed` can only
- * be deleted.
+ * Items of the preview's top-right actions: status transitions first and
+ * deletion last. Terminal appointments can only be deleted.
  */
 export function getMobileAppointmentMenuActions(
   status: AppointmentStatus,
 ): MobileAppointmentMenuAction[] {
-  if (status === 'cancelled' || status === 'no_show' || status === 'expired') return ['delete']
-  return ['edit', ...getMobileAppointmentMoreActions(status), 'delete']
+  return [...getMobileAppointmentMoreActions(status), 'delete']
 }
 
 /**

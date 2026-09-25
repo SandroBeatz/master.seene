@@ -8,6 +8,8 @@ import {
   IonButtons,
   IonCard,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonFooter,
   IonHeader,
   IonIcon,
@@ -15,6 +17,7 @@ import {
   IonLabel,
   IonList,
   IonModal,
+  IonNote,
   IonPopover,
   IonSkeletonText,
   IonSpinner,
@@ -50,7 +53,12 @@ import {
 } from '@entities/appointment'
 import { ClientPickerModalMobile, type Client } from '@entities/client/index.mobile'
 import type { TimeFormat } from '@entities/master'
-import type { Sale } from '@entities/sale'
+import { PaymentTypePickerModalMobile, type PaymentType } from '@entities/payment-type/index.mobile'
+import {
+  SaleAmountEditorModalMobile,
+  type Sale,
+  type UpdateSaleDetailsDto,
+} from '@entities/sale/index.mobile'
 import { ServicePickerModalMobile, type Service } from '@entities/service/index.mobile'
 import { useFormats } from '@shared/lib/formats'
 import { useNowMinute } from '@shared/lib/now'
@@ -68,6 +76,7 @@ const props = defineProps<{
   client?: Client | null
   clients: Client[]
   services: Service[]
+  paymentTypes: PaymentType[]
   timeZone: string
   timeFormat: TimeFormat
   sale?: Sale | null
@@ -81,6 +90,8 @@ const emit = defineEmits<{
   'did-dismiss': []
   'select-client': [client: Client]
   'select-services': [services: Service[]]
+  'select-payment-type': [paymentType: PaymentType]
+  'save-sale-amount': [details: UpdateSaleDetailsDto]
   primary: []
   action: [action: MobileAppointmentMenuAction]
 }>()
@@ -191,6 +202,18 @@ const isCompleted = computed(() => props.appointment.status === 'completed')
 const finalAmount = computed(
   () => props.sale?.amount ?? props.appointment.price ?? serviceSubtotal.value,
 )
+const selectedPaymentType = computed(() =>
+  props.paymentTypes.find((paymentType) => paymentType.id === props.sale?.payment_type_id),
+)
+const paymentTypeName = computed(() => {
+  const paymentType = selectedPaymentType.value
+  if (paymentType?.kind === 'cash') return t('settings.paymentTypes.system.cash.name')
+  if (paymentType?.kind === 'card') return t('settings.paymentTypes.system.card.name')
+  return paymentType?.name ?? props.sale?.payment_type?.name ?? '—'
+})
+const paymentTypeColor = computed(
+  () => selectedPaymentType.value?.color ?? props.sale?.payment_type?.color,
+)
 const servicesLabel = computed(() => {
   const labels = selectedServices.value.map((service) => service.name)
   if (missingServiceCount.value) {
@@ -207,7 +230,6 @@ const footerLabel = computed(() =>
 )
 
 const MENU_ACTION_META: Record<MobileAppointmentMenuAction, { icon: string; labelKey: string }> = {
-  edit: { icon: createOutline, labelKey: 'common.edit' },
   decline: { icon: closeCircleOutline, labelKey: 'appointments.preview.declineRequest' },
   cancel: { icon: closeCircleOutline, labelKey: 'appointments.preview.cancelAppointment' },
   no_show: { icon: personRemoveOutline, labelKey: 'appointments.preview.markNoShow' },
@@ -229,6 +251,8 @@ const detailsModalEl = computed(() => detailsModal.value?.$el ?? null)
 const dateTimeModalOpen = ref(false)
 const clientPickerOpen = ref(false)
 const servicePickerOpen = ref(false)
+const paymentTypePickerOpen = ref(false)
+const saleAmountEditorOpen = ref(false)
 
 function openMenu(event: Event) {
   menuEvent.value = event
@@ -240,8 +264,8 @@ function selectMenuAction(action: MobileAppointmentMenuAction) {
   menuOpen.value = false
 }
 
-// Emit only after the popover is gone so follow-up overlays (alerts, the edit
-// modal) never stack on top of a closing popover.
+// Emit only after the popover is gone so follow-up alerts never stack on top
+// of a closing popover.
 function onMenuDidDismiss() {
   menuOpen.value = false
   const action = pendingMenuAction.value
@@ -267,6 +291,8 @@ function onDidDismiss() {
   dateTimeModalOpen.value = false
   clientPickerOpen.value = false
   servicePickerOpen.value = false
+  paymentTypePickerOpen.value = false
+  saleAmountEditorOpen.value = false
   emit('update:isOpen', false)
   emit('did-dismiss')
 }
@@ -302,6 +328,18 @@ function runPrimary() {
         </ion-buttons>
         <ion-buttons slot="end">
           <ion-button
+            v-if="isCompleted"
+            size="small"
+            fill="clear"
+            color="danger"
+            :disabled="primaryLoading"
+            :aria-label="t('common.delete')"
+            @click="emit('action', 'delete')"
+          >
+            <ion-icon slot="icon-only" :icon="trashOutline" aria-hidden="true" />
+          </ion-button>
+          <ion-button
+            v-else
             size="small"
             fill="clear"
             color="dark"
@@ -438,33 +476,57 @@ function runPrimary() {
           </ion-item>
         </inset-list>
 
-        <ion-card v-if="isCompleted" class="preview-card payment-card">
-          <div class="payment">
-            <div v-if="saleLoading" class="payment__loading" aria-busy="true">
+        <inset-list
+          v-if="isCompleted"
+          class="payment-card"
+          :style="{
+            '--se-list-inset-x': '0px',
+            '--se-group-gap': '0px',
+            '--payment-color': paymentTypeColor,
+          }"
+        >
+          <ion-item v-if="saleLoading" class="payment__loading" lines="none" aria-busy="true">
+            <ion-label>
               <ion-skeleton-text :animated="true" />
-            </div>
-            <div
-              v-else-if="sale"
-              class="payment__method"
-              :style="{ '--payment-color': sale.payment_type?.color }"
+            </ion-label>
+          </ion-item>
+
+          <template v-else-if="sale">
+            <ion-item
+              button
+              :detail="true"
+              :disabled="primaryLoading"
+              @click="paymentTypePickerOpen = true"
             >
-              <span class="payment__icon" aria-hidden="true">
+              <span slot="start" class="payment__icon" aria-hidden="true">
                 <ion-icon :icon="walletOutline" />
               </span>
-              <span class="payment__text">
-                <small>{{ t('checkout.paidVia') }}</small>
-                <strong>{{ sale.payment_type?.name ?? '—' }}</strong>
-              </span>
-              <ion-icon
-                class="payment__check"
-                :icon="checkmarkCircleOutline"
-                color="success"
-                aria-hidden="true"
-              />
-            </div>
-            <p v-else class="card-empty">{{ t('appointments.preview.paymentUnavailable') }}</p>
-          </div>
-        </ion-card>
+              <ion-label class="ion-text-wrap">
+                <h2>{{ paymentTypeName }}</h2>
+                <p>{{ t('checkout.paidVia') }}</p>
+              </ion-label>
+            </ion-item>
+
+            <ion-item
+              button
+              :detail="false"
+              lines="none"
+              :disabled="primaryLoading"
+              :aria-label="t('checkout.editPaidAmount')"
+              @click="saleAmountEditorOpen = true"
+            >
+              <ion-label>{{ t('checkout.receivedAmount') }}</ion-label>
+              <ion-note slot="end">{{ formats.price(sale.amount) }}</ion-note>
+              <ion-icon slot="end" :icon="createOutline" color="medium" aria-hidden="true" />
+            </ion-item>
+          </template>
+
+          <ion-item v-else lines="none">
+            <ion-label class="card-empty ion-text-wrap">
+              {{ t('appointments.preview.paymentUnavailable') }}
+            </ion-label>
+          </ion-item>
+        </inset-list>
 
         <section v-if="appointment.notes">
           <h3 class="section-title">{{ t('appointments.preview.notes') }}</h3>
@@ -475,6 +537,7 @@ function runPrimary() {
       </main>
 
       <ion-popover
+        v-if="!isCompleted"
         :is-open="menuOpen"
         :event="menuEvent"
         alignment="end"
@@ -549,28 +612,46 @@ function runPrimary() {
         :presenting-element="detailsModalEl"
         @select="emit('select-services', $event)"
       />
+
+      <payment-type-picker-modal-mobile
+        v-if="sale"
+        v-model:is-open="paymentTypePickerOpen"
+        :payment-types="paymentTypes"
+        :model-value="sale.payment_type_id"
+        :presenting-element="detailsModalEl"
+        @select="emit('select-payment-type', $event)"
+      />
+
+      <sale-amount-editor-modal-mobile
+        v-if="sale"
+        v-model:is-open="saleAmountEditorOpen"
+        :sale="sale"
+        :presenting-element="detailsModalEl"
+        @save="emit('save-sale-amount', $event)"
+      />
     </ion-content>
 
     <ion-footer v-if="footerAction" class="appointment-action-footer ion-no-border">
       <ion-toolbar>
-        <ion-button
-          expand="block"
-          size="large"
-          :color="footerAction === 'confirm' ? 'primary' : 'success'"
-          :disabled="primaryLoading"
-          :aria-busy="primaryLoading"
-          @click="runPrimary"
-        >
-          <ion-spinner v-if="primaryLoading" :name="spinnerName" />
-          <template v-else>
-            <ion-icon
-              slot="start"
-              :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
-              aria-hidden="true"
-            />
-            {{ footerLabel }}
-          </template>
-        </ion-button>
+        <div class="appointment-action-footer__content">
+          <ion-fab class="appointment-action-footer__fab">
+            <ion-fab-button
+              :color="footerAction === 'confirm' ? 'primary' : 'success'"
+              :disabled="primaryLoading"
+              :aria-busy="primaryLoading"
+              :aria-label="footerLabel"
+              :title="footerLabel"
+              @click="runPrimary"
+            >
+              <ion-spinner v-if="primaryLoading" :name="spinnerName" />
+              <ion-icon
+                v-else
+                :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
+                aria-hidden="true"
+              />
+            </ion-fab-button>
+          </ion-fab>
+        </div>
       </ion-toolbar>
     </ion-footer>
   </ion-modal>
@@ -807,32 +888,18 @@ function runPrimary() {
 }
 
 .card-empty {
-  padding: 14px 16px;
   color: var(--ion-color-medium);
   font-size: 0.9rem;
 }
 
-.payment {
-  padding: 12px;
-}
-
 .payment__loading ion-skeleton-text {
-  height: 56px;
+  height: 32px;
   margin: 0;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
-.payment__method {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: color-mix(
-    in srgb,
-    var(--payment-color, var(--ion-color-medium)) 12%,
-    var(--se-surface-card)
-  );
+.payment-card {
+  --se-item-min-height: 52px;
 }
 
 .payment__icon {
@@ -840,6 +907,7 @@ function runPrimary() {
   width: 36px;
   height: 36px;
   flex: 0 0 36px;
+  margin-inline: 0 var(--se-list-icon-gap, 12px);
   border-radius: 10px;
   background: var(--payment-color, var(--ion-color-medium));
   color: var(--se-surface-card);
@@ -847,11 +915,12 @@ function runPrimary() {
   font-size: 18px;
 }
 
-.payment__text {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
+.payment-card ion-note {
+  margin-inline-end: 2px;
+  color: var(--ion-text-color);
+  font-size: 0.9rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .date-time-placeholder {
@@ -882,22 +951,9 @@ function runPrimary() {
   color: var(--ion-color-medium);
 }
 
-.payment__text small {
-  color: var(--ion-color-medium);
-  font-size: 0.72rem;
-}
-
-.payment__text strong {
-  overflow: hidden;
-  font-size: 0.95rem;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.payment__check {
-  flex: 0 0 auto;
-  font-size: 22px;
+.payment-card ion-icon[slot='end'] {
+  margin-inline-start: 5px;
+  font-size: 18px;
 }
 
 .section-title {
@@ -918,18 +974,21 @@ function runPrimary() {
 }
 
 .appointment-action-footer ion-toolbar {
-  --padding-start: 16px;
-  --padding-end: 16px;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
 }
 
-.appointment-action-footer ion-button {
-  --border-radius: 14px;
+.appointment-action-footer__content {
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px calc(8px + var(--safe-area-bottom, 0px));
+}
 
+.appointment-action-footer__fab {
+  position: static;
   margin: 0;
-  font-weight: 650;
-  text-transform: none;
 }
 
 .appointment-menu {
