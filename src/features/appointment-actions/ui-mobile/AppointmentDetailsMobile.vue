@@ -323,24 +323,6 @@ function runPrimary() {
 
     <ion-content class="appointment-details-mobile__content">
       <main class="appointment-details-mobile__body">
-        <inset-list
-          class="appointment-date-group"
-          :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
-        >
-          <ion-item button :detail="true" lines="none" @click="dateTimeModalOpen = true">
-            <ion-icon
-              slot="start"
-              class="appointment-date-group__icon"
-              :icon="calendarOutline"
-              aria-hidden="true"
-            />
-            <ion-label>
-              <h2>{{ dateLabel }}</h2>
-              <p>{{ timeLabel }}</p>
-            </ion-label>
-          </ion-item>
-        </inset-list>
-
         <ion-card class="preview-card">
           <div class="client-card">
             <div class="client-card__person">
@@ -403,6 +385,24 @@ function runPrimary() {
             </div>
           </div>
         </ion-card>
+
+        <inset-list
+          class="appointment-date-group"
+          :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
+        >
+          <ion-item button :detail="true" lines="none" @click="dateTimeModalOpen = true">
+            <ion-icon
+              slot="start"
+              class="appointment-date-group__icon"
+              :icon="calendarOutline"
+              aria-hidden="true"
+            />
+            <ion-label>
+              <h2>{{ dateLabel }}</h2>
+              <p>{{ timeLabel }}</p>
+            </ion-label>
+          </ion-item>
+        </inset-list>
 
         <ion-card class="preview-card">
           <ion-list v-if="services.length || missingServiceCount" lines="full">
