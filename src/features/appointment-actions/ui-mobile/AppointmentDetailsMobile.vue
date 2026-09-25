@@ -299,6 +299,12 @@ function runPrimary() {
             <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
+        <ion-title class="appointment-status">
+          <ion-badge class="appointment-status__badge" :color="statusMeta.color">
+            <ion-icon :icon="statusMeta.icon" aria-hidden="true" />
+            <span>{{ statusLabel }}</span>
+          </ion-badge>
+        </ion-title>
         <ion-buttons slot="end">
           <ion-button
             fill="clear"
@@ -317,13 +323,6 @@ function runPrimary() {
 
     <ion-content class="appointment-details-mobile__content">
       <main class="appointment-details-mobile__body">
-        <header class="appointment-status">
-          <ion-badge class="appointment-status__badge" :color="statusMeta.color">
-            <ion-icon :icon="statusMeta.icon" aria-hidden="true" />
-            <span>{{ statusLabel }}</span>
-          </ion-badge>
-        </header>
-
         <inset-list
           class="appointment-date-group"
           :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
@@ -591,13 +590,13 @@ function runPrimary() {
 }
 
 .appointment-status {
-  display: flex;
-  align-items: flex-start;
-  padding: 2px 4px 4px;
+  padding-inline: 52px;
+  text-align: center;
 }
 
 .appointment-status__badge {
   display: inline-flex;
+  max-width: 100%;
   align-items: center;
   gap: 6px;
   padding: 7px 10px;
@@ -607,7 +606,14 @@ function runPrimary() {
 }
 
 .appointment-status__badge ion-icon {
+  flex: 0 0 auto;
   font-size: 1rem;
+}
+
+.appointment-status__badge span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .appointment-date-group ion-label h2,
