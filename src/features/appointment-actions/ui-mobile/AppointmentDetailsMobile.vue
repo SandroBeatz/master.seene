@@ -329,7 +329,12 @@ function runPrimary() {
           :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
         >
           <ion-item button :detail="true" lines="none" @click="dateTimeModalOpen = true">
-            <ion-icon slot="start" :icon="calendarOutline" color="primary" aria-hidden="true" />
+            <ion-icon
+              slot="start"
+              class="appointment-date-group__icon"
+              :icon="calendarOutline"
+              aria-hidden="true"
+            />
             <ion-label>
               <h2>{{ dateLabel }}</h2>
               <p>{{ timeLabel }}</p>
@@ -608,6 +613,10 @@ function runPrimary() {
 .appointment-date-group ion-label h2,
 .appointment-date-group ion-label p {
   margin: 0;
+}
+
+.appointment-date-group__icon {
+  color: var(--ion-text-color);
 }
 
 .appointment-date-group ion-label h2 {
