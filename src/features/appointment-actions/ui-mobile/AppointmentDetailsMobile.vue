@@ -32,6 +32,7 @@ import {
   closeCircleOutline,
   closeOutline,
   createOutline,
+  cutOutline,
   ellipsisHorizontal,
   globeOutline,
   hourglassOutline,
@@ -47,10 +48,10 @@ import {
   type Appointment,
   type EffectiveAppointmentStatus,
 } from '@entities/appointment'
-import type { Client } from '@entities/client'
+import { ClientPickerModalMobile, type Client } from '@entities/client/index.mobile'
 import type { TimeFormat } from '@entities/master'
 import type { Sale } from '@entities/sale'
-import type { Service } from '@entities/service'
+import { ServicePickerModalMobile, type Service } from '@entities/service/index.mobile'
 import { useFormats } from '@shared/lib/formats'
 import { useNowMinute } from '@shared/lib/now'
 import { getDateTimeInputValue } from '@shared/lib/time-zone'
@@ -65,6 +66,7 @@ const props = defineProps<{
   isOpen: boolean
   appointment: Appointment
   client?: Client | null
+  clients: Client[]
   services: Service[]
   timeZone: string
   timeFormat: TimeFormat
@@ -77,11 +79,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:isOpen': [value: boolean]
   'did-dismiss': []
+  'select-client': [client: Client]
+  'select-services': [services: Service[]]
   primary: []
   action: [action: MobileAppointmentMenuAction]
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const formats = useFormats()
 const now = useNowMinute()
 const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
@@ -100,11 +104,21 @@ const STATUS_META: Record<EffectiveAppointmentStatus, { icon: string; color: str
 const effectiveStatus = computed(() => getEffectiveAppointmentStatus(props.appointment, now.value))
 const statusMeta = computed(() => STATUS_META[effectiveStatus.value])
 const statusLabel = computed(() => t(`appointments.preview.sessionStatus.${effectiveStatus.value}`))
+const serviceById = computed(
+  () => new Map(props.services.map((service) => [service.id, service] as const)),
+)
+const selectedServices = computed(() =>
+  props.appointment.service_ids
+    .map((id) => serviceById.value.get(id))
+    .filter((service): service is Service => Boolean(service)),
+)
 
 // Semi-transparent wash of the service colors behind the header; several
 // services blend into one gradient, none falls back to the plain page.
 const accentStyle = computed(() => {
-  const colors = props.services.map(({ color }) => `color-mix(in srgb, ${color} 38%, transparent)`)
+  const colors = selectedServices.value.map(
+    ({ color }) => `color-mix(in srgb, ${color} 38%, transparent)`,
+  )
   if (!colors.length) return undefined
   const stops = colors.length === 1 ? [colors[0], colors[0]] : colors
   return { '--session-accent': `linear-gradient(120deg, ${stops.join(', ')})` }
@@ -160,22 +174,7 @@ const endParts = computed(() => {
   return getDateTimeInputValue(end, props.timeZone)
 })
 
-function formatCalendarDate(date: string, options: Intl.DateTimeFormatOptions): string {
-  if (!date) return '—'
-  const formatted = new Intl.DateTimeFormat(locale.value, { ...options, timeZone: 'UTC' }).format(
-    new Date(`${date}T00:00:00Z`),
-  )
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
-}
-
-const dateLabel = computed(() =>
-  formatCalendarDate(startParts.value.date, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }),
-)
+const dateLabel = computed(() => formats.dateDay(props.appointment.start_at))
 const timeLabel = computed(() => {
   const start = formats.time(startParts.value.time, props.timeFormat)
   const end = formats.time(endParts.value.time, props.timeFormat)
@@ -183,24 +182,22 @@ const timeLabel = computed(() => {
 })
 
 const missingServiceCount = computed(() =>
-  Math.max(0, props.appointment.service_ids.length - props.services.length),
+  Math.max(0, props.appointment.service_ids.length - selectedServices.value.length),
 )
 const serviceSubtotal = computed(() =>
-  props.services.reduce((sum, service) => sum + service.price, 0),
+  selectedServices.value.reduce((sum, service) => sum + service.price, 0),
 )
 const isCompleted = computed(() => props.appointment.status === 'completed')
 const finalAmount = computed(
   () => props.sale?.amount ?? props.appointment.price ?? serviceSubtotal.value,
 )
-// The catalogue sum is the reference price; it is unreliable when a service
-// has been deleted, so no strikethrough is shown in that case.
-const originalAmount = computed(() => {
-  if (missingServiceCount.value || !props.services.length) return null
-  return Math.abs(finalAmount.value - serviceSubtotal.value) >= 0.005 ? serviceSubtotal.value : null
+const servicesLabel = computed(() => {
+  const labels = selectedServices.value.map((service) => service.name)
+  if (missingServiceCount.value) {
+    labels.push(t('appointments.preview.missingService', { n: missingServiceCount.value }))
+  }
+  return labels.join(', ') || t('appointments.preview.noServices')
 })
-const priceChangeLabel = computed(() =>
-  props.sale ? t('appointments.preview.priceChanged') : t('appointments.preview.customPrice'),
-)
 
 const footerAction = computed(() => getMobileAppointmentFooterAction(effectiveStatus.value))
 const footerLabel = computed(() =>
@@ -230,6 +227,8 @@ const pendingMenuAction = ref<MobileAppointmentMenuAction | null>(null)
 const detailsModal = ref<{ $el: HTMLElement } | null>(null)
 const detailsModalEl = computed(() => detailsModal.value?.$el ?? null)
 const dateTimeModalOpen = ref(false)
+const clientPickerOpen = ref(false)
+const servicePickerOpen = ref(false)
 
 function openMenu(event: Event) {
   menuEvent.value = event
@@ -266,6 +265,8 @@ function close() {
 
 function onDidDismiss() {
   dateTimeModalOpen.value = false
+  clientPickerOpen.value = false
+  servicePickerOpen.value = false
   emit('update:isOpen', false)
   emit('did-dismiss')
 }
@@ -301,6 +302,7 @@ function runPrimary() {
         </ion-buttons>
         <ion-buttons slot="end">
           <ion-button
+            size="small"
             fill="clear"
             color="dark"
             :disabled="primaryLoading"
@@ -326,12 +328,19 @@ function runPrimary() {
 
         <ion-card class="preview-card">
           <div class="client-card">
-            <div class="client-card__person">
-              <ion-avatar :style="avatarStyle" aria-hidden="true">
+            <ion-item
+              class="client-card__person"
+              button
+              :detail="true"
+              lines="none"
+              :disabled="primaryLoading"
+              @click="clientPickerOpen = true"
+            >
+              <ion-avatar slot="start" :style="avatarStyle" aria-hidden="true">
                 <span v-if="client?.emoji">{{ client.emoji }}</span>
                 <span v-else>{{ initials }}</span>
               </ion-avatar>
-              <div class="client-card__text">
+              <ion-label class="client-card__text">
                 <h2>
                   <span>{{ clientName }}</span>
                   <ion-badge
@@ -345,8 +354,8 @@ function runPrimary() {
                   </ion-badge>
                 </h2>
                 <p>{{ client?.phone || t('appointments.preview.noPhone') }}</p>
-              </div>
-            </div>
+              </ion-label>
+            </ion-item>
 
             <div class="contact-actions">
               <ion-button
@@ -388,7 +397,7 @@ function runPrimary() {
         </ion-card>
 
         <inset-list
-          class="appointment-date-group"
+          class="appointment-summary-group appointment-date-group"
           :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
         >
           <ion-item button :detail="true" lines="none" @click="dateTimeModalOpen = true">
@@ -405,43 +414,32 @@ function runPrimary() {
           </ion-item>
         </inset-list>
 
-        <ion-card class="preview-card">
-          <ion-list v-if="services.length || missingServiceCount" lines="full">
-            <ion-item v-for="service in services" :key="service.id">
-              <span
-                slot="start"
-                class="service-color"
-                :style="{ backgroundColor: service.color }"
-                aria-hidden="true"
-              />
-              <ion-label class="ion-text-wrap">
-                <h2>{{ service.name }}</h2>
-                <p>{{ formats.duration(service.duration) }}</p>
-              </ion-label>
-              <span slot="end" class="service-price">{{ formats.price(service.price) }}</span>
-            </ion-item>
-            <ion-item v-if="missingServiceCount">
-              <span slot="start" class="service-color service-color--missing" aria-hidden="true" />
-              <ion-label class="ion-text-wrap">
-                <h2>{{ t('appointments.preview.missingService', { n: missingServiceCount }) }}</h2>
-                <p>{{ t('appointments.preview.missingServiceHint') }}</p>
-              </ion-label>
-            </ion-item>
-          </ion-list>
-          <p v-else class="card-empty">{{ t('appointments.preview.noServices') }}</p>
+        <inset-list
+          class="appointment-summary-group appointment-service-group"
+          :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
+        >
+          <ion-item
+            button
+            :detail="true"
+            lines="none"
+            :disabled="primaryLoading"
+            @click="servicePickerOpen = true"
+          >
+            <ion-icon
+              slot="start"
+              class="appointment-summary-group__icon"
+              :icon="cutOutline"
+              aria-hidden="true"
+            />
+            <ion-label class="ion-text-wrap">
+              <h2>{{ servicesLabel }}</h2>
+              <p>{{ formats.duration(appointment.duration) }} · {{ formats.price(finalAmount) }}</p>
+            </ion-label>
+          </ion-item>
+        </inset-list>
 
-          <div class="price-total">
-            <div class="price-total__label">
-              <span>{{ t('appointments.preview.total') }}</span>
-              <small v-if="originalAmount != null">{{ priceChangeLabel }}</small>
-            </div>
-            <div class="price-total__amount">
-              <s v-if="originalAmount != null">{{ formats.price(originalAmount) }}</s>
-              <strong>{{ formats.price(finalAmount) }}</strong>
-            </div>
-          </div>
-
-          <div v-if="isCompleted" class="payment">
+        <ion-card v-if="isCompleted" class="preview-card payment-card">
+          <div class="payment">
             <div v-if="saleLoading" class="payment__loading" aria-busy="true">
               <ion-skeleton-text :animated="true" />
             </div>
@@ -535,6 +533,22 @@ function runPrimary() {
           </div>
         </ion-content>
       </ion-modal>
+
+      <client-picker-modal-mobile
+        v-model:is-open="clientPickerOpen"
+        :clients="clients"
+        :model-value="appointment.client_id"
+        :presenting-element="detailsModalEl"
+        @select="emit('select-client', $event)"
+      />
+
+      <service-picker-modal-mobile
+        v-model:is-open="servicePickerOpen"
+        :services="services"
+        :model-value="appointment.service_ids"
+        :presenting-element="detailsModalEl"
+        @select="emit('select-services', $event)"
+      />
     </ion-content>
 
     <ion-footer v-if="footerAction" class="appointment-action-footer ion-no-border">
@@ -610,21 +624,27 @@ function runPrimary() {
   font-size: 1rem;
 }
 
-.appointment-date-group ion-label h2,
-.appointment-date-group ion-label p {
+.appointment-summary-group ion-label h2,
+.appointment-summary-group ion-label p {
   margin: 0;
 }
 
-.appointment-date-group__icon {
+.appointment-summary-group ion-item {
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+.appointment-date-group__icon,
+.appointment-summary-group__icon {
   color: var(--ion-text-color);
 }
 
-.appointment-date-group ion-label h2 {
+.appointment-summary-group ion-label h2 {
   font-size: 0.95rem;
   font-weight: 600;
 }
 
-.appointment-date-group ion-label p {
+.appointment-summary-group ion-label p {
   margin-top: 2px;
   color: var(--ion-color-medium);
   font-size: 0.8rem;
@@ -646,13 +666,16 @@ function runPrimary() {
 }
 
 .client-card {
-  padding: 16px;
+  padding-bottom: 16px;
 }
 
-.client-card__person {
-  display: flex;
-  align-items: center;
-  gap: 13px;
+.preview-card .client-card__person {
+  --background: transparent;
+  --min-height: 80px;
+  --padding-start: 16px;
+  --inner-padding-end: 12px;
+  --border-width: 0;
+  --inner-border-width: 0;
 }
 
 .client-card__person ion-avatar {
@@ -660,6 +683,7 @@ function runPrimary() {
   width: 52px;
   height: 52px;
   flex: 0 0 52px;
+  margin-inline: 0 13px;
   background: var(--avatar-background);
   color: var(--avatar-color);
   place-items: center;
@@ -708,7 +732,7 @@ function runPrimary() {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 14px;
+  margin: 0 16px;
 }
 
 .contact-action {
@@ -782,73 +806,14 @@ function runPrimary() {
   font-size: 0.78rem;
 }
 
-.service-color {
-  width: 10px;
-  height: 10px;
-  margin-inline-end: 14px;
-  border-radius: 999px;
-}
-
-.service-color--missing {
-  border: 1px dashed var(--ion-color-medium);
-  background: transparent;
-}
-
-.service-price {
-  font-size: 0.92rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 .card-empty {
   padding: 14px 16px;
   color: var(--ion-color-medium);
   font-size: 0.9rem;
 }
 
-.price-total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-}
-
-.price-total__label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.price-total__label span {
-  font-size: 1rem;
-  font-weight: 650;
-}
-
-.price-total__label small {
-  color: var(--ion-color-medium);
-  font-size: 0.74rem;
-}
-
-.price-total__amount {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-variant-numeric: tabular-nums;
-}
-
-.price-total__amount s {
-  color: var(--ion-color-medium);
-  font-size: 0.9rem;
-}
-
-.price-total__amount strong {
-  font-size: 1.3rem;
-  font-weight: 750;
-}
-
 .payment {
-  padding: 0 12px 12px;
+  padding: 12px;
 }
 
 .payment__loading ion-skeleton-text {
@@ -969,6 +934,11 @@ function runPrimary() {
 
 .appointment-menu {
   --width: 230px;
+}
+
+.appointment-menu::part(arrow) {
+  right: 18px;
+  left: auto !important;
 }
 
 .ion-palette-dark .preview-card {

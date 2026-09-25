@@ -61,9 +61,13 @@ vi.mock('@entities/client', () => ({
   useClientsQuery: () => queryMock.clients,
 }))
 
-vi.mock('@entities/service', () => ({
-  useServicesQuery: () => queryMock.services,
-}))
+vi.mock('@entities/service/index.mobile', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@entities/service/index.mobile')>()
+  return {
+    ...actual,
+    useServicesQuery: () => queryMock.services,
+  }
+})
 
 vi.mock('@entities/payment-type', () => ({
   usePaymentTypesQuery: () => queryMock.paymentTypes,
@@ -117,10 +121,17 @@ const stubs = {
   IonToolbar: passthrough,
   AppointmentDetailsMobile: {
     name: 'AppointmentDetailsMobile',
-    props: ['isOpen'],
-    emits: ['action', 'primary', 'update:isOpen', 'did-dismiss'],
+    props: ['isOpen', 'appointment', 'client', 'clients', 'services'],
+    emits: [
+      'action',
+      'primary',
+      'select-client',
+      'select-services',
+      'update:isOpen',
+      'did-dismiss',
+    ],
     template:
-      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-edit-stub" @click="$emit(\'action\', \'edit\'); $emit(\'did-dismiss\')">Edit</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-edit-stub" @click="$emit(\'action\', \'edit\'); $emit(\'did-dismiss\')">Edit</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -205,7 +216,13 @@ function service(id: string): Service {
 }
 
 function mountWidget(
-  options: { appointments?: Appointment[]; loading?: boolean; error?: Error } = {},
+  options: {
+    appointments?: Appointment[]
+    clients?: Client[]
+    services?: Service[]
+    loading?: boolean
+    error?: Error
+  } = {},
 ) {
   const refetch = vi.fn<() => void>()
   const appointmentList = options.appointments ?? []
@@ -217,10 +234,12 @@ function mountWidget(
     refetch,
   }
   queryMock.clients = {
-    data: ref(appointmentList.map((item) => client(item.id, `Client ${item.id}`))),
+    data: ref(
+      options.clients ?? appointmentList.map((item) => client(item.id, `Client ${item.id}`)),
+    ),
   }
   queryMock.services = {
-    data: ref(appointmentList.map((item) => service(item.id))),
+    data: ref(options.services ?? appointmentList.map((item) => service(item.id))),
   }
 
   const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
@@ -348,6 +367,51 @@ describe('HomeActionsMobile', () => {
 
     await exposed.openAppointment(item)
     expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+  })
+
+  it('updates the appointment client selected from the preview', async () => {
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    const currentClient = client('request', 'Current client')
+    const replacementClient = client('replacement', 'Replacement client')
+    ;({ wrapper } = mountWidget({
+      appointments: [item],
+      clients: [currentClient, replacementClient],
+    }))
+
+    await wrapper.find('.action-card__content').trigger('click')
+    expect(wrapper.get('.details-client-name').text()).toBe('Current client')
+
+    await wrapper.get('.details-client-stub').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.update).toHaveBeenCalledWith({
+      id: 'request',
+      client_id: 'client-replacement',
+    })
+    expect(wrapper.get('.details-client-name').text()).toBe('Replacement client')
+  })
+
+  it('updates services, duration, and price selected from the preview', async () => {
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    const currentService = service('request')
+    const haircut = { ...service('haircut'), duration: 45, price: 50 }
+    const coloring = { ...service('coloring'), duration: 90, price: 120 }
+    ;({ wrapper } = mountWidget({
+      appointments: [item],
+      services: [currentService, haircut, coloring],
+    }))
+
+    await wrapper.find('.action-card__content').trigger('click')
+    await wrapper.get('.details-services-stub').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.update).toHaveBeenCalledWith({
+      id: 'request',
+      service_ids: ['service-haircut', 'service-coloring'],
+      duration: 135,
+      price: 170,
+    })
+    expect(wrapper.get('.details-service-ids').text()).toBe('service-haircut,service-coloring')
   })
 
   it('waits for details to dismiss before opening checkout and can reopen it', async () => {

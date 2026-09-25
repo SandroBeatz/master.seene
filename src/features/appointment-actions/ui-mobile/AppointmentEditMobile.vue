@@ -13,8 +13,6 @@ import {
   IonLabel,
   IonModal,
   IonNote,
-  IonSelect,
-  IonSelectOption,
   IonSpinner,
   IonTextarea,
   IonTitle,
@@ -22,13 +20,12 @@ import {
   alertController,
   isPlatform,
 } from '@ionic/vue'
-import { checkmarkOutline, closeOutline, personCircleOutline } from 'ionicons/icons'
+import { checkmarkOutline, closeOutline, cutOutline, personCircleOutline } from 'ionicons/icons'
 import type { Appointment, UpdateAppointmentDto } from '@entities/appointment'
-import type { Client } from '@entities/client'
-import type { Service } from '@entities/service'
+import { ClientPickerModalMobile, type Client } from '@entities/client/index.mobile'
+import { ServicePickerModalMobile, type Service } from '@entities/service/index.mobile'
 import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
-import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
 
 interface EditState {
   clientId: string
@@ -57,9 +54,12 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 const isClientPickerOpen = ref(false)
+const isServicePickerOpen = ref(false)
 const isSubmitting = ref(false)
 const allowDismiss = ref(false)
 const submitted = ref(false)
+const selfModal = ref<{ $el: HTMLElement } | null>(null)
+const selfModalEl = computed(() => selfModal.value?.$el ?? null)
 
 const state = reactive<EditState>({
   clientId: '',
@@ -72,19 +72,18 @@ const state = reactive<EditState>({
 })
 const initialState = ref('')
 
-const clientItems = computed(() =>
-  props.clients.map((client) => ({
-    value: client.id,
-    label:
-      [client.first_name, client.last_name].filter(Boolean).join(' ') ||
-      t('appointments.unknownClient'),
-  })),
-)
-const selectedClientName = computed(
-  () =>
-    clientItems.value.find((client) => client.value === state.clientId)?.label ??
-    t('appointments.unknownClient'),
-)
+const selectedClientName = computed(() => {
+  const client = props.clients.find((item) => item.id === state.clientId)
+  return client
+    ? [client.first_name, client.last_name].filter(Boolean).join(' ')
+    : t('appointments.unknownClient')
+})
+const selectedServicesLabel = computed(() => {
+  const names = state.serviceIds
+    .map((id) => props.services.find((service) => service.id === id)?.name)
+    .filter(Boolean)
+  return names.join(', ') || t('appointments.form.servicesPlaceholder')
+})
 
 function snapshot(): string {
   return JSON.stringify({
@@ -107,6 +106,8 @@ function reset() {
   state.duration = props.appointment.duration
   state.price = props.appointment.price
   state.notes = props.appointment.notes ?? ''
+  isClientPickerOpen.value = false
+  isServicePickerOpen.value = false
   submitted.value = false
   allowDismiss.value = false
   initialState.value = snapshot()
@@ -167,9 +168,8 @@ function readNullableNumber(event: CustomEvent<{ value?: string | null }>): numb
   return Number.isFinite(value) ? Math.max(0, value) : null
 }
 
-function onServicesChange(event: CustomEvent<{ value?: string[] }>) {
-  state.serviceIds = event.detail.value ?? []
-  const selected = props.services.filter((service) => state.serviceIds.includes(service.id))
+function onServicesSelect(selected: Service[]) {
+  state.serviceIds = selected.map((service) => service.id)
   state.duration = selected.reduce((sum, service) => sum + service.duration, 0)
   state.price = selected.length ? selected.reduce((sum, service) => sum + service.price, 0) : null
 }
@@ -203,6 +203,7 @@ async function save() {
 
 <template>
   <ion-modal
+    ref="selfModal"
     :is-open="isOpen"
     :can-dismiss="canDismiss"
     @did-dismiss="emit('update:isOpen', false)"
@@ -234,20 +235,9 @@ async function save() {
         </inset-list>
 
         <inset-list :header="t('appointments.form.services')">
-          <ion-item lines="none">
-            <ion-select
-              class="appointment-edit-mobile__select"
-              :value="state.serviceIds"
-              multiple
-              interface="alert"
-              :placeholder="t('appointments.form.servicesPlaceholder')"
-              :aria-label="t('appointments.form.services')"
-              @ion-change="onServicesChange"
-            >
-              <ion-select-option v-for="service in services" :key="service.id" :value="service.id">
-                {{ service.name }}
-              </ion-select-option>
-            </ion-select>
+          <ion-item button :detail="true" lines="none" @click="isServicePickerOpen = true">
+            <ion-icon slot="start" :icon="cutOutline" color="medium" aria-hidden="true" />
+            <ion-label class="ion-text-wrap">{{ selectedServicesLabel }}</ion-label>
           </ion-item>
         </inset-list>
         <ion-note v-if="submitted && !state.serviceIds.length" color="danger" class="field-note">
@@ -337,12 +327,19 @@ async function save() {
       </ion-toolbar>
     </ion-footer>
 
-    <list-picker-modal
+    <client-picker-modal-mobile
       v-model:is-open="isClientPickerOpen"
       v-model:model-value="state.clientId"
-      :title="t('appointments.preview.selectClient')"
-      :items="clientItems"
-      searchable
+      :clients="clients"
+      :presenting-element="selfModalEl"
+    />
+
+    <service-picker-modal-mobile
+      v-model:is-open="isServicePickerOpen"
+      v-model:model-value="state.serviceIds"
+      :services="services"
+      :presenting-element="selfModalEl"
+      @select="onServicesSelect"
     />
   </ion-modal>
 </template>
@@ -351,11 +348,6 @@ async function save() {
 .appointment-edit-mobile__content,
 .appointment-edit-mobile__content ion-toolbar {
   --background: var(--se-surface-page, var(--ion-background-color));
-}
-
-.appointment-edit-mobile__select {
-  width: 100%;
-  max-width: none;
 }
 
 .appointment-edit-mobile__input {

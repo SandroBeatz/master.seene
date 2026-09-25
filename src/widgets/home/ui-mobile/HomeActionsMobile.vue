@@ -32,7 +32,7 @@ import {
   useSaleByAppointmentQuery,
   type CompleteSaleDto,
 } from '@entities/sale'
-import { useServicesQuery, type Service } from '@entities/service'
+import { useServicesQuery, type Service } from '@entities/service/index.mobile'
 import { useSessionStore } from '@entities/session'
 import {
   AppointmentActionsDrawerMobile,
@@ -468,6 +468,61 @@ async function handleDetailsAction(appointment: Appointment, action: MobileAppoi
   else await removeAppointment(appointment)
 }
 
+async function handleClientSelect(appointment: Appointment, client: Client) {
+  if (appointment.client_id === client.id || isProcessing(appointment.id)) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateMutation.mutateAsync({ id: appointment.id, client_id: client.id })
+    if (detailsAppointment.value?.id === appointment.id) {
+      detailsAppointment.value = { ...detailsAppointment.value, client_id: client.id }
+    }
+    await showToast(t('appointments.preview.clientUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('appointments.preview.clientUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
+async function handleServicesSelect(appointment: Appointment, selectedServices: Service[]) {
+  if (isProcessing(appointment.id) || !selectedServices.length) return
+
+  const serviceIds = selectedServices.map((service) => service.id)
+  if (
+    serviceIds.length === appointment.service_ids.length &&
+    serviceIds.every((id, index) => id === appointment.service_ids[index])
+  ) {
+    return
+  }
+
+  const duration = selectedServices.reduce((total, service) => total + service.duration, 0)
+  const price = selectedServices.reduce((total, service) => total + service.price, 0)
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateMutation.mutateAsync({
+      id: appointment.id,
+      service_ids: serviceIds,
+      duration,
+      price,
+    })
+    if (detailsAppointment.value?.id === appointment.id) {
+      detailsAppointment.value = {
+        ...detailsAppointment.value,
+        service_ids: serviceIds,
+        duration,
+        price,
+      }
+    }
+    await showToast(t('appointments.preview.servicesUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('appointments.preview.servicesUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
 function closeCheckout() {
   checkoutOpen.value = false
 }
@@ -582,7 +637,8 @@ defineExpose({
     :is-open="detailsOpen"
     :appointment="detailsAppointment"
     :client="getClient(detailsAppointment)"
-    :services="getServices(detailsAppointment)"
+    :clients="clients ?? []"
+    :services="services ?? []"
     :time-zone="masterPreferencesStore.timeZone"
     :time-format="masterPreferencesStore.timeFormat"
     :sale="detailsSaleQuery.data.value"
@@ -591,6 +647,8 @@ defineExpose({
     :presenting-element="presentingElement"
     @update:is-open="detailsOpen = $event"
     @did-dismiss="finishDetailsDismiss"
+    @select-client="handleClientSelect(detailsAppointment, $event)"
+    @select-services="handleServicesSelect(detailsAppointment, $event)"
     @primary="handlePrimary(detailsAppointment)"
     @action="handleDetailsAction(detailsAppointment, $event)"
   />
