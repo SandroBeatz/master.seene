@@ -8,8 +8,6 @@ import {
   IonButtons,
   IonCard,
   IonContent,
-  IonFab,
-  IonFabButton,
   IonFooter,
   IonHeader,
   IonIcon,
@@ -634,23 +632,25 @@ function runPrimary() {
     <ion-footer v-if="footerAction" class="appointment-action-footer ion-no-border">
       <ion-toolbar>
         <div class="appointment-action-footer__content">
-          <ion-fab class="appointment-action-footer__fab">
-            <ion-fab-button
-              :color="footerAction === 'confirm' ? 'primary' : 'success'"
-              :disabled="primaryLoading"
-              :aria-busy="primaryLoading"
-              :aria-label="footerLabel"
-              :title="footerLabel"
-              @click="runPrimary"
-            >
-              <ion-spinner v-if="primaryLoading" :name="spinnerName" />
+          <ion-button
+            class="appointment-action-footer__button"
+            size="default"
+            shape="round"
+            :color="footerAction === 'confirm' ? 'primary' : 'success'"
+            :disabled="primaryLoading"
+            :aria-busy="primaryLoading"
+            @click="runPrimary"
+          >
+            <ion-spinner v-if="primaryLoading" :name="spinnerName" />
+            <template v-else>
               <ion-icon
-                v-else
+                slot="start"
                 :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
                 aria-hidden="true"
               />
-            </ion-fab-button>
-          </ion-fab>
+              {{ footerLabel }}
+            </template>
+          </ion-button>
         </div>
       </ion-toolbar>
     </ion-footer>
@@ -983,12 +983,18 @@ function runPrimary() {
 .appointment-action-footer__content {
   display: flex;
   justify-content: center;
-  padding: 8px 16px calc(8px + var(--safe-area-bottom, 0px));
+  padding: 6px 16px calc(6px + var(--safe-area-bottom, 0px));
 }
 
-.appointment-action-footer__fab {
-  position: static;
+.appointment-action-footer__button {
+  --border-radius: 999px;
+  --padding-start: 18px;
+  --padding-end: 18px;
+
+  min-width: 136px;
   margin: 0;
+  font-weight: 650;
+  text-transform: none;
 }
 
 .appointment-menu {
