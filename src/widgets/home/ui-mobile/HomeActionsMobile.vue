@@ -99,6 +99,7 @@ const editingAppointment = ref<Appointment | null>(null)
 const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
+const pendingDetailsSuccessToast = ref<string | null>(null)
 const pendingAfterDetails = ref<{
   type: 'checkout' | 'edit'
   appointment: Appointment
@@ -249,8 +250,12 @@ async function updateStatus(
   setProcessing(appointment.id, true)
   try {
     await updateMutation.mutateAsync({ id: appointment.id, status })
-    detailsOpen.value = false
-    await showToast(successMessage, 'success')
+    if (detailsOpen.value && detailsAppointment.value?.id === appointment.id) {
+      pendingDetailsSuccessToast.value = successMessage
+      detailsOpen.value = false
+    } else {
+      await showToast(successMessage, 'success')
+    }
   } catch {
     await showToast(t('appointments.preview.statusUpdateError'), 'danger')
   } finally {
@@ -447,6 +452,10 @@ async function finishDetailsDismiss() {
   // Keep `detailsAppointment` set so the inline ion-modal stays mounted.
   // Ionic reparents inline modals to <ion-app>; removing the element via v-if
   // after dismiss triggers "Cannot read properties of null (reading 'insertBefore')".
+
+  const successMessage = pendingDetailsSuccessToast.value
+  pendingDetailsSuccessToast.value = null
+  if (successMessage) await showToast(successMessage, 'success')
 
   const pending = pendingAfterDetails.value
   pendingAfterDetails.value = null

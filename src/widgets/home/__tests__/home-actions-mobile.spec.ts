@@ -511,6 +511,43 @@ describe('HomeActionsMobile', () => {
     expect(queryMock.update).toHaveBeenCalledWith({ id: 'request', status: 'confirmed' })
   })
 
+  it('closes details after confirmation succeeds and shows the toast after dismissal', async () => {
+    let resolveUpdate: ((value: unknown) => void) | undefined
+    queryMock.update.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveUpdate = resolve
+        }),
+    )
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__content').trigger('click')
+    const details = wrapper.findComponent({ name: 'AppointmentDetailsMobile' })
+    await wrapper.find('.details-primary-stub').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+    expect(queryMock.toastCreate).not.toHaveBeenCalled()
+
+    resolveUpdate?.(undefined)
+    await flushPromises()
+
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(false)
+    expect(queryMock.toastCreate).not.toHaveBeenCalled()
+
+    details.vm.$emit('did-dismiss')
+    await flushPromises()
+
+    expect(queryMock.toastCreate).toHaveBeenCalledWith({
+      message: 'Appointment confirmed',
+      duration: 2200,
+      color: 'success',
+      position: 'top',
+    })
+    expect(queryMock.toastPresent).toHaveBeenCalledOnce()
+  })
+
   it('opens the Ionic options drawer when the card is held', async () => {
     vi.useFakeTimers()
     const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
