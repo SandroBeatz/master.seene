@@ -404,6 +404,7 @@ html.dark {
 }
 
 .fc .fc-event.app-appointment-event .fc-event-main {
+  height: 100%;
   padding: 0;
 }
 
