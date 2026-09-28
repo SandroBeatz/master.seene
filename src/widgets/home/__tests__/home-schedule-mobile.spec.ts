@@ -244,6 +244,18 @@ describe('HomeScheduleMobile', () => {
     expect(wrapper.find('.all-day-time-off').text()).toContain('Vacation')
   })
 
+  it('shows the service name in a compact 30-minute appointment', () => {
+    const wrapper = mountSchedule({
+      appointments: [
+        appointment('a1', '2026-09-21T09:00:00.000Z', ['service-1'], { duration: 30 }),
+      ],
+    })
+
+    const card = wrapper.find('.schedule-appointment--compact')
+    expect(card.exists()).toBe(true)
+    expect(card.find('.schedule-appointment__compact-meta').text()).toContain('Haircut')
+  })
+
   it('emits the selected appointment when a timeline card is tapped', async () => {
     const item = appointment('a1', '2026-09-21T09:00:00.000Z')
     const wrapper = mountSchedule({ appointments: [item] })
