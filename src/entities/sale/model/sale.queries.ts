@@ -22,6 +22,7 @@ export const useUpdateSaleMutation = (userId: Ref<string>) => {
       Promise.all([
         cache.invalidateQueries({ key: ['sale-by-appointment', vars?.appointmentId ?? ''] }),
         cache.invalidateQueries({ key: ['appointments', userId.value] }),
+        cache.invalidateQueries({ key: ['analytics-v2'] }),
       ]),
   })
 }
@@ -35,6 +36,7 @@ export const useCompleteSaleMutation = (userId: Ref<string>) => {
         cache.invalidateQueries({ key: ['appointments', userId.value] }),
         cache.invalidateQueries({ key: ['appointments-actionable', userId.value] }),
         cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] }),
+        cache.invalidateQueries({ key: ['analytics-v2'] }),
       ]
 
       if (dto) {
