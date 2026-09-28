@@ -647,6 +647,7 @@ function runPrimary() {
                 slot="start"
                 :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
                 aria-hidden="true"
+                class="ion-padding-end"
               />
               {{ footerLabel }}
             </template>
