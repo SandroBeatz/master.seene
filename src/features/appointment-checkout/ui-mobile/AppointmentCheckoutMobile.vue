@@ -128,6 +128,13 @@ function close() {
   emit('update:isOpen', false)
 }
 
+async function canDismiss(): Promise<boolean> {
+  // Ionic checks canDismiss even when the controlled isOpen prop switches to
+  // false. Always allow that parent-driven transition while still blocking
+  // gestures/backdrop dismissal during the mutation.
+  return !props.loading || !props.isOpen
+}
+
 function submit() {
   if (!canConfirm.value) return
   commitPaymentUsage()
@@ -157,7 +164,7 @@ watch(
     :is-open="isOpen"
     class="appointment-checkout-mobile"
     :presenting-element="presentingElement ?? undefined"
-    :can-dismiss="!loading"
+    :can-dismiss="canDismiss"
     @did-dismiss="onDidDismiss"
   >
     <ion-header class="ion-no-border">

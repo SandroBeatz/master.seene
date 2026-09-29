@@ -154,4 +154,63 @@ describe('AppointmentCheckoutMobile', () => {
       },
     ])
   })
+
+  it('allows controlled dismissal while blocking user dismissal during loading', async () => {
+    const first = service('service-1', 'Consultation', 100)
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+    const wrapper = mount(AppointmentCheckoutMobile, {
+      props: {
+        isOpen: true,
+        appointment,
+        client,
+        services: [first],
+        paymentTypes: [paymentType],
+        loading: true,
+      },
+      global: {
+        plugins: [i18n, formatsPlugin],
+        stubs: {
+          IonAvatar: passthrough,
+          IonButton: {
+            props: ['disabled'],
+            template:
+              '<button :disabled="disabled"><slot name="start" /><slot name="icon-only" /><slot /></button>',
+          },
+          IonButtons: passthrough,
+          IonContent: passthrough,
+          IonFooter: passthrough,
+          IonHeader: passthrough,
+          IonIcon: passthrough,
+          IonInput: passthrough,
+          IonItem: passthrough,
+          IonLabel: passthrough,
+          IonModal: {
+            name: 'IonModal',
+            props: ['isOpen', 'presentingElement', 'canDismiss'],
+            template: '<div v-if="isOpen"><slot /></div>',
+          },
+          IonNote: passthrough,
+          IonRadio: passthrough,
+          IonRadioGroup: passthrough,
+          IonSpinner: passthrough,
+          IonTitle: passthrough,
+          IonToolbar: passthrough,
+          InsetList: { template: '<section><slot name="header" /><slot /></section>' },
+          ServicePickerModalMobile: passthrough,
+        },
+      },
+    })
+
+    const modal = wrapper.getComponent({ name: 'IonModal' })
+    const guard = modal.props('canDismiss') as () => Promise<boolean>
+
+    expect(await guard()).toBe(false)
+
+    await wrapper.setProps({ isOpen: false })
+    expect(await guard()).toBe(true)
+
+    await wrapper.setProps({ isOpen: true, loading: false })
+    await wrapper.get('button[aria-label="Close"]').trigger('click')
+    expect(wrapper.emitted('update:isOpen')?.slice(-1)[0]).toEqual([false])
+  })
 })

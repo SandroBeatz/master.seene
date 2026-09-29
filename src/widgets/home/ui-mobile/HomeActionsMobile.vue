@@ -428,11 +428,15 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   setProcessing(appointment.id, true)
   try {
     await completeSaleMutation.mutateAsync(payload)
+    // Ionic evaluates canDismiss when isOpen changes. Clear loading first so
+    // the controlled close cannot be rejected by the modal.
+    setProcessing(appointment.id, false)
     checkoutOpen.value = false
     await showToast(t('checkout.successTitle'), 'success')
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
     if (message.includes('already_completed')) {
+      setProcessing(appointment.id, false)
       checkoutOpen.value = false
       await showToast(t('checkout.alreadyCompleted'), 'warning')
     } else {
