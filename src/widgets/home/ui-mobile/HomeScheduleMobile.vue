@@ -465,7 +465,7 @@ onBeforeUnmount(clearHoldTimer)
               left: `${LABEL_WIDTH + 10}px`,
               '--schedule-accent': block.accentColor || 'var(--se-separator)',
             }"
-            :aria-label="`${block.clientName}, ${block.timeRange}`"
+            :aria-label="`${block.clientName}, ${block.serviceNames}, ${block.timeRange}`"
             @click="openAppointment(block.appointment)"
             @pointerdown="startAppointmentHold($event, block.appointment)"
             @pointermove="trackAppointmentHold"
@@ -476,16 +476,22 @@ onBeforeUnmount(clearHoldTimer)
           >
             <span class="schedule-appointment__rail" aria-hidden="true" />
 
-            <div v-if="block.compact" class="schedule-appointment__compact-row">
-              <strong>{{ block.startLabel }}</strong>
-              <span>{{ block.clientName }}</span>
-              <ion-icon
-                :icon="block.status.icon"
-                :color="block.status.color"
-                :aria-label="block.statusLabel"
-                :title="block.statusLabel"
-              />
-            </div>
+            <template v-if="block.compact">
+              <div class="schedule-appointment__compact-row">
+                <strong>{{ block.startLabel }}</strong>
+                <span>{{ block.clientName }}</span>
+                <ion-icon
+                  :icon="block.status.icon"
+                  :color="block.status.color"
+                  :aria-label="block.statusLabel"
+                  :title="block.statusLabel"
+                />
+              </div>
+              <p class="schedule-appointment__compact-meta">
+                {{ block.serviceNames
+                }}<template v-if="block.priceLabel"> · {{ block.priceLabel }}</template>
+              </p>
+            </template>
 
             <template v-else>
               <div class="schedule-appointment__time-row">
@@ -835,6 +841,16 @@ onBeforeUnmount(clearHoldTimer)
   margin-inline-start: auto;
   flex: 0 0 auto;
   font-size: 14px;
+}
+
+.schedule-appointment__compact-meta {
+  overflow: hidden;
+  margin-top: 3px !important;
+  color: var(--ion-color-medium);
+  font-size: 0.64rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .schedule-appointment__time-row {
