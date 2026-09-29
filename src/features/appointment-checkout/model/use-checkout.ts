@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import type { Appointment } from '@entities/appointment'
 import type { PaymentType } from '@entities/payment-type'
 import type { Service } from '@entities/service'
@@ -23,6 +23,8 @@ export function useCheckout(
   options?: UseCheckoutOptions,
 ) {
   const decimals = options?.decimals ?? 2
+  const activeAppointment = shallowRef(appointment)
+  const checkoutServices = ref<Service[]>([...services])
 
   const serviceAmounts = ref<number[]>(
     services.length > 0 ? services.map((s) => s.price) : [appointment.price ?? 0],
@@ -60,16 +62,20 @@ export function useCheckout(
     serviceAmounts.value = next
   }
 
+  function preferredPaymentTypeId(types: PaymentType[]): string | null {
+    const activePaymentTypes = types.filter((pt) => pt.is_active)
+    const frequentId = getMostUsedPaymentTypeId(activePaymentTypes.map((pt) => pt.id))
+    const preselected =
+      activePaymentTypes.find((pt) => pt.id === frequentId) ??
+      activePaymentTypes.find((pt) => pt.is_default) ??
+      activePaymentTypes[0] ??
+      null
+    return preselected?.id ?? null
+  }
+
   // Only active methods can be used to pay. Prefer the method used most over the
   // last 5 days (front-only heuristic), then the master's default, then the first.
-  const activePaymentTypes = paymentTypes.filter((pt) => pt.is_active)
-  const frequentId = getMostUsedPaymentTypeId(activePaymentTypes.map((pt) => pt.id))
-  const preselected =
-    activePaymentTypes.find((pt) => pt.id === frequentId) ??
-    activePaymentTypes.find((pt) => pt.is_default) ??
-    activePaymentTypes[0] ??
-    null
-  const selectedPaymentTypeId = ref<string | null>(preselected?.id ?? null)
+  const selectedPaymentTypeId = ref<string | null>(preferredPaymentTypeId(paymentTypes))
 
   const canSubmit = computed(
     () =>
@@ -80,10 +86,10 @@ export function useCheckout(
 
   function buildPayload(): CompleteSaleDto {
     return {
-      appointment_id: appointment.id,
+      appointment_id: activeAppointment.value.id,
       amount: total.value,
       payment_type_id: selectedPaymentTypeId.value!,
-      items: services.map((s, i) => ({
+      items: checkoutServices.value.map((s, i) => ({
         service_id: s.id,
         name: s.name,
         price: serviceAmounts.value[i] ?? 0,
@@ -96,12 +102,38 @@ export function useCheckout(
     if (selectedPaymentTypeId.value) recordPaymentUsage(selectedPaymentTypeId.value)
   }
 
+  function setServices(nextServices: Service[]) {
+    const previousAmounts = new Map(
+      checkoutServices.value.map((service, index) => [service.id, serviceAmounts.value[index]]),
+    )
+    checkoutServices.value = [...nextServices]
+    serviceAmounts.value = nextServices.map(
+      (service) => previousAmounts.get(service.id) ?? service.price,
+    )
+  }
+
+  function reset(
+    nextAppointment: Appointment,
+    nextServices: Service[],
+    nextPaymentTypes: PaymentType[],
+  ) {
+    activeAppointment.value = nextAppointment
+    checkoutServices.value = [...nextServices]
+    serviceAmounts.value = nextServices.length
+      ? nextServices.map((service) => service.price)
+      : [nextAppointment.price ?? 0]
+    selectedPaymentTypeId.value = preferredPaymentTypeId(nextPaymentTypes)
+  }
+
   return {
+    checkoutServices,
     serviceAmounts,
     total,
     selectedPaymentTypeId,
     canSubmit,
     buildPayload,
     commitPaymentUsage,
+    setServices,
+    reset,
   }
 }

@@ -99,9 +99,10 @@ const editingAppointment = ref<Appointment | null>(null)
 const editOpen = ref(false)
 const checkoutAppointment = ref<Appointment | null>(null)
 const checkoutOpen = ref(false)
+const checkoutPresentingElement = ref<HTMLElement | null>(null)
 const pendingDetailsSuccessToast = ref<string | null>(null)
 const pendingAfterDetails = ref<{
-  type: 'checkout' | 'edit'
+  type: 'edit'
   appointment: Appointment
 } | null>(null)
 const processingIds = ref<Set<string>>(new Set())
@@ -329,28 +330,30 @@ async function openDetails(appointment: Appointment) {
   detailsOpen.value = true
 }
 
-async function presentCheckout(appointment: Appointment) {
+async function presentCheckout(
+  appointment: Appointment,
+  nestedPresentingElement?: HTMLElement | null,
+) {
   checkoutAppointment.value = appointment
+  checkoutPresentingElement.value = nestedPresentingElement ?? presentingElement.value
   await nextTick()
   checkoutOpen.value = true
 }
 
-async function openCheckout(appointment: Appointment) {
+async function openCheckout(
+  appointment: Appointment,
+  nestedPresentingElement?: HTMLElement | null,
+) {
   if (isProcessing(appointment.id)) return
-  if (detailsOpen.value) {
-    pendingAfterDetails.value = { type: 'checkout', appointment }
-    detailsOpen.value = false
-    return
-  }
-  await presentCheckout(appointment)
+  await presentCheckout(appointment, nestedPresentingElement)
 }
 
-function handlePrimary(appointment: Appointment) {
+function handlePrimary(appointment: Appointment, nestedPresentingElement?: HTMLElement | null) {
   if (appointment.status === 'pending') {
     void handleConfirm(appointment)
     return
   }
-  void openCheckout(appointment)
+  void openCheckout(appointment, nestedPresentingElement)
 }
 
 function handleCardOpen(appointment: Appointment) {
@@ -460,8 +463,7 @@ async function finishDetailsDismiss() {
   const pending = pendingAfterDetails.value
   pendingAfterDetails.value = null
   if (!pending) return
-  if (pending.type === 'checkout') await presentCheckout(pending.appointment)
-  else await presentEdit(pending.appointment)
+  await presentEdit(pending.appointment)
 }
 
 async function handleDrawerAction(action: MobileAppointmentMoreAction) {
@@ -703,7 +705,7 @@ defineExpose({
     @select-services="handleServicesSelect(detailsAppointment, $event)"
     @select-payment-type="handlePaymentTypeSelect(detailsAppointment, $event)"
     @save-sale-amount="handleSaleAmountSave(detailsAppointment, $event)"
-    @primary="handlePrimary(detailsAppointment)"
+    @primary="handlePrimary(detailsAppointment, $event)"
     @action="handleDetailsAction(detailsAppointment, $event)"
   />
 
@@ -735,7 +737,9 @@ defineExpose({
     :appointment="checkoutAppointment"
     :client="getClient(checkoutAppointment)"
     :services="getServices(checkoutAppointment)"
+    :available-services="services ?? []"
     :payment-types="paymentTypes ?? []"
+    :presenting-element="checkoutPresentingElement"
     :loading="isProcessing(checkoutAppointment.id)"
     @update:is-open="closeCheckout"
     @did-dismiss="finishCheckoutDismiss"

@@ -257,4 +257,49 @@ describe('useCheckout', () => {
       ],
     })
   })
+
+  it('replaces checkout services while preserving retained custom amounts', () => {
+    const first = makeService('svc-1', 1200)
+    const second = makeService('svc-2', 800)
+    const third = makeService('svc-3', 500)
+    const { checkoutServices, serviceAmounts, setServices, buildPayload } = useCheckout(
+      makeAppointment(),
+      [first, second],
+      [makePaymentType('pt-1', true)],
+    )
+
+    serviceAmounts.value[1] = 750
+    setServices([second, third])
+
+    expect(checkoutServices.value).toEqual([second, third])
+    expect(serviceAmounts.value).toEqual([750, 500])
+    expect(buildPayload().items).toEqual([
+      { service_id: 'svc-2', name: 'Service svc-2', price: 750 },
+      { service_id: 'svc-3', name: 'Service svc-3', price: 500 },
+    ])
+  })
+
+  it('resets appointment, services, amounts, and preferred payment for a new checkout', () => {
+    const { serviceAmounts, selectedPaymentTypeId, buildPayload, reset } = useCheckout(
+      makeAppointment(),
+      [makeService('svc-1', 1200)],
+      [makePaymentType('pt-1', true)],
+    )
+
+    serviceAmounts.value[0] = 999
+    reset(
+      makeAppointment({ id: 'appt-2', service_ids: ['svc-2'] }),
+      [makeService('svc-2', 700)],
+      [makePaymentType('pt-2', true)],
+    )
+
+    expect(serviceAmounts.value).toEqual([700])
+    expect(selectedPaymentTypeId.value).toBe('pt-2')
+    expect(buildPayload()).toEqual({
+      appointment_id: 'appt-2',
+      amount: 700,
+      payment_type_id: 'pt-2',
+      items: [{ service_id: 'svc-2', name: 'Service svc-2', price: 700 }],
+    })
+  })
 })

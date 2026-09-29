@@ -137,7 +137,7 @@ const stubs = {
       'did-dismiss',
     ],
     template:
-      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button v-if="paymentTypes[0]" class="details-payment-stub" @click="$emit(\'select-payment-type\', paymentTypes[0])">Select payment</button><button class="details-amount-stub" @click="$emit(\'save-sale-amount\', { amount: 90, items: [{ id: \'item-1\', price: 90 }] })">Save amount</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\')">Primary</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button v-if="paymentTypes[0]" class="details-payment-stub" @click="$emit(\'select-payment-type\', paymentTypes[0])">Select payment</button><button class="details-amount-stub" @click="$emit(\'save-sale-amount\', { amount: 90, items: [{ id: \'item-1\', price: 90 }] })">Save amount</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\', $el)">Primary</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -147,7 +147,8 @@ const stubs = {
       '<div v-if="isOpen" class="actions-drawer-stub"><button class="drawer-decline" @click="$emit(\'select\', \'decline\')">Decline</button><button class="drawer-cancel" @click="$emit(\'select\', \'cancel\')">Cancel</button><button class="drawer-no-show" @click="$emit(\'select\', \'no_show\')">No-show</button></div>',
   },
   AppointmentCheckoutMobile: {
-    props: ['isOpen'],
+    name: 'AppointmentCheckoutMobile',
+    props: ['isOpen', 'presentingElement'],
     emits: ['confirm', 'update:isOpen', 'did-dismiss'],
     data: () => ({
       payload: {
@@ -479,23 +480,25 @@ describe('HomeActionsMobile', () => {
     })
   })
 
-  it('waits for details to dismiss before opening checkout and can reopen it', async () => {
+  it('opens checkout as a card modal over appointment details', async () => {
     const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
     ;({ wrapper } = mountWidget({ appointments: [item] }))
 
     await wrapper.find('.action-card__content').trigger('click')
     const details = wrapper.findComponent({ name: 'AppointmentDetailsMobile' })
     await wrapper.find('.details-primary-stub').trigger('click')
-    details.vm.$emit('did-dismiss')
     await flushPromises()
-    expect(wrapper.find('.details-mobile-stub').exists()).toBe(false)
+
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
     expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(true)
+    expect(
+      wrapper.findComponent({ name: 'AppointmentCheckoutMobile' }).props('presentingElement'),
+    ).toBe(details.element)
 
     await wrapper.find('.checkout-close-stub').trigger('click')
     await flushPromises()
-    await wrapper.find('.action-card__primary').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(true)
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(false)
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
   })
 
   it('confirms a pending appointment once', async () => {
@@ -615,6 +618,13 @@ describe('HomeActionsMobile', () => {
       amount: 100,
       payment_type_id: 'cash',
       items: [{ service_id: 'service-finish', name: 'Service finish', price: 100 }],
+    })
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(false)
+    expect(queryMock.toastCreate).toHaveBeenCalledWith({
+      message: 'Appointment completed',
+      duration: 2200,
+      color: 'success',
+      position: 'top',
     })
   })
 

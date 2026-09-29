@@ -90,7 +90,7 @@ const emit = defineEmits<{
   'select-services': [services: Service[]]
   'select-payment-type': [paymentType: PaymentType]
   'save-sale-amount': [details: UpdateSaleDetailsDto]
-  primary: []
+  primary: [presentingElement: HTMLElement | null]
   action: [action: MobileAppointmentMenuAction]
 }>()
 
@@ -297,7 +297,7 @@ function onDidDismiss() {
 
 function runPrimary() {
   if (props.primaryLoading) return
-  emit('primary')
+  emit('primary', detailsModalEl.value)
 }
 </script>
 
