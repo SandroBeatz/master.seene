@@ -137,7 +137,7 @@ const stubs = {
       'did-dismiss',
     ],
     template:
-      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button v-if="paymentTypes[0]" class="details-payment-stub" @click="$emit(\'select-payment-type\', paymentTypes[0])">Select payment</button><button class="details-amount-stub" @click="$emit(\'save-sale-amount\', { amount: 90, items: [{ id: \'item-1\', price: 90 }] })">Save amount</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button class="details-primary-stub" @click="$emit(\'primary\', $el)">Primary</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
+      '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><span class="details-status">{{ appointment.status }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button v-if="paymentTypes[0]" class="details-payment-stub" @click="$emit(\'select-payment-type\', paymentTypes[0])">Select payment</button><button class="details-amount-stub" @click="$emit(\'save-sale-amount\', { amount: 90, items: [{ id: \'item-1\', price: 90 }] })">Save amount</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button v-if="appointment.status !== \'completed\'" class="details-primary-stub" @click="$emit(\'primary\', $el)">Primary</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
   AppointmentActionsDrawerMobile: {
@@ -499,6 +499,22 @@ describe('HomeActionsMobile', () => {
     await flushPromises()
     expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(false)
     expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+  })
+
+  it('updates the underlying details after checkout so it cannot complete twice', async () => {
+    const item = appointment('finish', '2026-06-08T10:00:00.000Z', 'confirmed')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    await wrapper.find('.action-card__content').trigger('click')
+    await wrapper.find('.details-primary-stub').trigger('click')
+    await flushPromises()
+    await wrapper.find('.checkout-mobile-stub').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.checkout-mobile-stub').exists()).toBe(false)
+    expect(wrapper.find('.details-mobile-stub').exists()).toBe(true)
+    expect(wrapper.get('.details-status').text()).toBe('completed')
+    expect(wrapper.find('.details-primary-stub').exists()).toBe(false)
   })
 
   it('confirms a pending appointment once', async () => {

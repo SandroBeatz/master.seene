@@ -422,12 +422,22 @@ async function saveEdit(payload: UpdateAppointmentDto) {
   }
 }
 
+function markAppointmentCompleted(appointmentId: string) {
+  if (checkoutAppointment.value?.id === appointmentId) {
+    checkoutAppointment.value = { ...checkoutAppointment.value, status: 'completed' }
+  }
+  if (detailsAppointment.value?.id === appointmentId) {
+    detailsAppointment.value = { ...detailsAppointment.value, status: 'completed' }
+  }
+}
+
 async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   const appointment = checkoutAppointment.value
   if (!appointment || isProcessing(appointment.id)) return
   setProcessing(appointment.id, true)
   try {
     await completeSaleMutation.mutateAsync(payload)
+    markAppointmentCompleted(appointment.id)
     // Ionic evaluates canDismiss when isOpen changes. Clear loading first so
     // the controlled close cannot be rejected by the modal.
     setProcessing(appointment.id, false)
@@ -436,6 +446,7 @@ async function handleCheckoutConfirm(payload: CompleteSaleDto) {
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
     if (message.includes('already_completed')) {
+      markAppointmentCompleted(appointment.id)
       setProcessing(appointment.id, false)
       checkoutOpen.value = false
       await showToast(t('checkout.alreadyCompleted'), 'warning')
