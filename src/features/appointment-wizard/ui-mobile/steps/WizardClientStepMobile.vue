@@ -61,6 +61,6 @@ function select(client: Client) {
 }
 
 .wizard-client-step__search ion-searchbar {
-  padding-block: 4px 8px;
+  padding-block: 12px 8px;
 }
 </style>

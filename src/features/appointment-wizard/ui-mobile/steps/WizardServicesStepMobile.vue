@@ -79,6 +79,6 @@ function toggle(service: Service) {
 }
 
 .wizard-services-step__toolbar ion-searchbar {
-  padding-block: 4px 8px;
+  padding-block: 12px 8px;
 }
 </style>

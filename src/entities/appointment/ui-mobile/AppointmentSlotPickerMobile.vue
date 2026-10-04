@@ -107,9 +107,9 @@ watch(
 
 const weekdayFormatter = computed(() => new Intl.DateTimeFormat(locale.value, { weekday: 'short' }))
 
-const weekDays = computed(() =>
-  Array.from({ length: 7 }, (_, index) => {
-    const date = addDateInputDays(weekStart.value, index)
+function buildWeek(start: string) {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDateInputDays(start, index)
     const isPast = date < today.value
     return {
       date,
@@ -119,6 +119,15 @@ const weekDays = computed(() =>
       isPast,
       state: isPast ? null : availability.dayState(date),
     }
+  })
+}
+
+// Previous, current and next week side by side, so a drag always reveals the
+// neighbouring week instead of empty space.
+const weekPages = computed(() =>
+  [-1, 0, 1].map((offset) => {
+    const start = addDateInputDays(weekStart.value, offset * 7)
+    return { start, isCurrent: offset === 0, days: buildWeek(start) }
   }),
 )
 
@@ -151,7 +160,7 @@ const swipeEl = ref<HTMLElement | null>(null)
 const trackOffset = ref(0)
 const trackAnimated = ref(false)
 const trackStyle = computed(() => ({
-  transform: `translate3d(${trackOffset.value}px, 0, 0)`,
+  transform: `translate3d(calc(-100% + ${trackOffset.value}px), 0, 0)`,
   transition: trackAnimated.value ? `transform ${SLIDE_MS}ms ease-out` : 'none',
 }))
 let isSliding = false
@@ -170,14 +179,12 @@ async function slideWeek(direction: 1 | -1) {
   trackAnimated.value = true
   trackOffset.value = -direction * width
   await wait(SLIDE_MS)
+  // The neighbour is now fully in view: swap it in as the current week and
+  // snap the track back to centre in the same frame — no visible jump.
   trackAnimated.value = false
   shiftWeek(direction)
-  trackOffset.value = direction * width
-  await nextFrame()
-  trackAnimated.value = true
   trackOffset.value = 0
-  await wait(SLIDE_MS)
-  trackAnimated.value = false
+  await nextFrame()
   isSliding = false
 }
 
@@ -364,6 +371,17 @@ const manualValue = computed(() => {
 })
 const manualDraft = ref<number | null>(null)
 
+// The wheel fades its edges into `--wheel-fade-background-rgb`, which defaults
+// to the white base color. Feed it the sheet's actual surface so the fade
+// blends in every palette/mode instead of drawing light bands.
+const timeBodyEl = ref<HTMLElement | null>(null)
+const wheelFadeRgb = ref<string>()
+watch(timeBodyEl, (el) => {
+  if (!el) return
+  const channels = getComputedStyle(el).backgroundColor.match(/\d+(\.\d+)?/g)
+  if (channels && channels.length >= 3) wheelFadeRgb.value = channels.slice(0, 3).join(', ')
+})
+
 function openManualTime() {
   manualDraft.value = timeInputToMinutes(manualValue.value.slice(11, 16))
   isTimeOpen.value = true
@@ -445,31 +463,40 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
       </div>
 
       <div class="slot-picker__week-viewport">
-        <div class="slot-picker__week" role="listbox" :style="trackStyle">
-          <button
-            v-for="day in weekDays"
-            :key="day.date"
-            type="button"
-            role="option"
-            class="slot-picker__day ion-activatable"
-            :class="{
-              'slot-picker__day--selected': day.date === date,
-              'slot-picker__day--today': day.isToday,
-              'slot-picker__day--past': day.isPast,
-            }"
-            :aria-selected="day.date === date"
-            :data-testid="`slot-picker-day-${day.date}`"
-            @click="selectDate(day.date)"
+        <div class="slot-picker__week-track" :style="trackStyle">
+          <div
+            v-for="page in weekPages"
+            :key="page.start"
+            class="slot-picker__week"
+            :role="page.isCurrent ? 'listbox' : undefined"
+            :aria-hidden="!page.isCurrent"
+            :inert="!page.isCurrent"
           >
-            <span class="slot-picker__weekday">{{ day.weekday }}</span>
-            <span class="slot-picker__day-number">{{ day.day }}</span>
-            <span
-              class="slot-picker__marker"
-              :class="day.state ? `slot-picker__marker--${day.state}` : null"
-              aria-hidden="true"
-            />
-            <ion-ripple-effect />
-          </button>
+            <button
+              v-for="day in page.days"
+              :key="day.date"
+              type="button"
+              role="option"
+              class="slot-picker__day ion-activatable"
+              :class="{
+                'slot-picker__day--selected': day.date === date,
+                'slot-picker__day--today': day.isToday,
+                'slot-picker__day--past': day.isPast,
+              }"
+              :aria-selected="day.date === date"
+              :data-testid="`slot-picker-day-${day.date}`"
+              @click="selectDate(day.date)"
+            >
+              <span class="slot-picker__weekday">{{ day.weekday }}</span>
+              <span class="slot-picker__day-number">{{ day.day }}</span>
+              <span
+                class="slot-picker__marker"
+                :class="day.state ? `slot-picker__marker--${day.state}` : null"
+                aria-hidden="true"
+              />
+              <ion-ripple-effect />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -692,7 +719,11 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
-      <div class="slot-picker__sheet-body">
+      <div
+        ref="timeBodyEl"
+        class="slot-picker__sheet-body"
+        :style="{ '--wheel-fade-background-rgb': wheelFadeRgb }"
+      >
         <ion-datetime
           presentation="time"
           size="cover"
@@ -773,12 +804,18 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
   overflow: hidden;
 }
 
+.slot-picker__week-track {
+  display: flex;
+  will-change: transform;
+}
+
 .slot-picker__week {
   display: grid;
+  flex: 0 0 100%;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
+  box-sizing: border-box;
   padding: 0 var(--se-picker-inset-x);
-  will-change: transform;
 }
 
 .slot-picker__day {
@@ -1141,18 +1178,20 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
   --border-radius: 20px 20px 0 0;
 }
 
-.slot-picker__sheet ion-toolbar,
-.slot-picker__sheet-body {
+.slot-picker__sheet ion-toolbar {
   --background: var(--se-surface-page, var(--ion-background-color));
-}
-
-.slot-picker__sheet ion-datetime {
-  --background: var(--se-surface-page, var(--ion-background-color));
-
-  margin: 0 auto;
 }
 
 .slot-picker__sheet-body {
   padding-bottom: calc(12px + var(--safe-area-bottom, 0px));
+  background: var(--se-surface-page, var(--ion-background-color));
+}
+
+.slot-picker__sheet ion-datetime {
+  --background: transparent;
+  --wheel-highlight-background: var(--se-surface-card, var(--ion-background-color));
+  --wheel-highlight-border-radius: 12px;
+
+  margin: 0 auto;
 }
 </style>
