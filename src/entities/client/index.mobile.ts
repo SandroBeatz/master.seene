@@ -2,3 +2,5 @@
 // desktop client components depend on Nuxt UI.
 export type { Client } from './model/types'
 export { default as ClientPickerModalMobile } from './ui-mobile/ClientPickerModalMobile.vue'
+export { default as ClientSelectListMobile } from './ui-mobile/ClientSelectListMobile.vue'
+export { useClientsQuery } from './model/client.queries'

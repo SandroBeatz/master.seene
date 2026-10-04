@@ -193,6 +193,7 @@ export default {
       title: 'Новая запись',
       next: 'Далее',
       create: 'Создать',
+      stepOf: 'Шаг {step} из {total}',
       steps: {
         client: 'Выберите клиента',
         services: 'Выберите услуги',
@@ -223,6 +224,9 @@ export default {
           available: 'Есть слоты',
           full: 'Всё занято',
           dayOff: 'Выходной',
+          free: 'Свободно',
+          busy: 'Занято',
+          short: 'Не помещается',
         },
         groups: {
           morning: 'Утро',
@@ -232,6 +236,19 @@ export default {
         manual: 'Указать время вручную',
         selectTime: 'Выберите время',
         conflict: 'Это время пересекается с существующей записью.',
+        today: 'Сегодня',
+        openCalendar: 'Открыть календарь',
+        previousWeek: 'Предыдущая неделя',
+        nextWeek: 'Следующая неделя',
+        calendarTitle: 'Выберите дату',
+        freeCount: 'Нет свободных слотов | {count} свободный слот | Свободных слотов: {count}',
+        selected: 'Выбрано',
+        conflictConfirm: {
+          title: 'Это время занято',
+          message:
+            'Запись пересечётся с другой записью, нерабочим временем или перерывом. Всё равно записать?',
+          confirm: 'Всё равно записать',
+        },
         timeOff: 'Перерыв',
         allDay: 'Весь день',
         past: {
