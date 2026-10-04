@@ -13,12 +13,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/vue'
-import {
-  closeCircleOutline,
-  closeOutline,
-  createOutline,
-  personRemoveOutline,
-} from 'ionicons/icons'
+import { closeCircleOutline, closeOutline, personRemoveOutline } from 'ionicons/icons'
 import type { Appointment } from '@entities/appointment'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import {
@@ -48,19 +43,13 @@ const drawerStyle = computed(() => ({
 }))
 
 function actionLabel(action: MobileAppointmentMoreAction): string {
-  if (action === 'edit') return t('common.edit')
   if (action === 'decline') return t('home.nextUp.decline')
+  if (action === 'cancel') return t('appointments.preview.cancelAppointment')
   return t('home.nextUp.noShow')
 }
 
 function actionIcon(action: MobileAppointmentMoreAction): string {
-  if (action === 'edit') return createOutline
-  if (action === 'decline') return closeCircleOutline
-  return personRemoveOutline
-}
-
-function isDestructive(action: MobileAppointmentMoreAction): boolean {
-  return action === 'decline' || action === 'no_show'
+  return action === 'no_show' ? personRemoveOutline : closeCircleOutline
 }
 
 function close() {
@@ -117,15 +106,8 @@ function onDidDismiss() {
           lines="full"
           @click="select(action)"
         >
-          <ion-icon
-            slot="start"
-            :icon="actionIcon(action)"
-            :color="isDestructive(action) ? 'danger' : 'medium'"
-            aria-hidden="true"
-          />
-          <ion-label :color="isDestructive(action) ? 'danger' : undefined">
-            {{ actionLabel(action) }}
-          </ion-label>
+          <ion-icon slot="start" :icon="actionIcon(action)" color="danger" aria-hidden="true" />
+          <ion-label color="danger">{{ actionLabel(action) }}</ion-label>
         </ion-item>
       </inset-list>
     </ion-content>

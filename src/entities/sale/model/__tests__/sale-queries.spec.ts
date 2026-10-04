@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import { useCompleteSaleMutation } from '../sale.queries'
+import { useCompleteSaleMutation, useUpdateSaleDetailsMutation } from '../sale.queries'
 
 const mocks = vi.hoisted(() => ({
   invalidate: vi.fn<(options: { key: unknown[] }) => Promise<void>>(),
@@ -20,6 +20,7 @@ vi.mock('../../api/sale.api', () => ({
   completeSale: vi.fn<() => never>(),
   getSaleByAppointmentId: vi.fn<() => never>(),
   updateSale: vi.fn<() => never>(),
+  updateSaleDetails: vi.fn<() => never>(),
 }))
 
 describe('complete sale mutation cache refresh', () => {
@@ -43,6 +44,21 @@ describe('complete sale mutation cache refresh', () => {
       ['appointment-day-counts', 'user-1'],
       ['analytics-v2'],
       ['sale-by-appointment', 'appointment-1'],
+    ])
+  })
+
+  it('refreshes sale, appointment, and analytics after editing sale details', async () => {
+    useUpdateSaleDetailsMutation(ref('user-1'))
+    const onSettled = mocks.mutationOptions?.onSettled as
+      | ((data: unknown, error: unknown, vars: { appointmentId: string }) => Promise<unknown>)
+      | undefined
+
+    await onSettled?.(undefined, undefined, { appointmentId: 'appointment-1' })
+
+    expect(mocks.invalidate.mock.calls.map(([options]) => options.key)).toEqual([
+      ['sale-by-appointment', 'appointment-1'],
+      ['appointments', 'user-1'],
+      ['analytics-v2'],
     ])
   })
 })
