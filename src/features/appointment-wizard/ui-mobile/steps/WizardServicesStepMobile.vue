@@ -74,10 +74,14 @@ function toggle(service: Service) {
 .wizard-services-step__toolbar {
   --background: var(--se-surface-page, var(--ion-background-color));
   --min-height: 44px;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 4px;
 }
 
 .wizard-services-step {
-  --padding-top: 24px;
+  --padding-top: 16px;
   --padding-bottom: 24px;
 }
 </style>

@@ -55,7 +55,7 @@ function select(client: Client) {
 
 <style scoped>
 .wizard-client-step {
-  --padding-top: 24px;
+  --padding-top: 16px;
   --padding-bottom: 24px;
 }
 </style>
