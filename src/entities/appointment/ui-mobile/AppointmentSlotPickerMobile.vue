@@ -134,7 +134,7 @@ function shiftWeek(direction: 1 | -1) {
 }
 
 function selectDate(date: string) {
-  if (date === props.date) return
+  if (date === props.date || Date.now() - lastSwipeAt < 300) return
   emit('update:date', date)
   emit('update:slotMinutes', null)
 }
@@ -144,20 +144,75 @@ function goToday() {
   selectDate(today.value)
 }
 
-// Horizontal swipe on the strip pages between weeks.
-const stripEl = ref<HTMLElement | null>(null)
+// Swiping anywhere on the month row or the strip drags the week with the
+// finger; past a threshold it slides out and the next/previous week slides in.
+const SLIDE_MS = 220
+const swipeEl = ref<HTMLElement | null>(null)
+const trackOffset = ref(0)
+const trackAnimated = ref(false)
+const trackStyle = computed(() => ({
+  transform: `translate3d(${trackOffset.value}px, 0, 0)`,
+  transition: trackAnimated.value ? `transform ${SLIDE_MS}ms ease-out` : 'none',
+}))
+let isSliding = false
+// A drag released over a day button must not also select that day.
+let lastSwipeAt = 0
 let gesture: Gesture | undefined
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const nextFrame = () =>
+  new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+async function slideWeek(direction: 1 | -1) {
+  if (isSliding) return
+  isSliding = true
+  const width = swipeEl.value?.offsetWidth || 320
+  trackAnimated.value = true
+  trackOffset.value = -direction * width
+  await wait(SLIDE_MS)
+  trackAnimated.value = false
+  shiftWeek(direction)
+  trackOffset.value = direction * width
+  await nextFrame()
+  trackAnimated.value = true
+  trackOffset.value = 0
+  await wait(SLIDE_MS)
+  trackAnimated.value = false
+  isSliding = false
+}
+
+async function settleTrack() {
+  trackAnimated.value = true
+  trackOffset.value = 0
+  await wait(SLIDE_MS)
+  trackAnimated.value = false
+}
+
 onMounted(() => {
-  if (!stripEl.value) return
+  if (!swipeEl.value) return
   gesture = createGesture({
-    el: stripEl.value,
+    el: swipeEl.value,
     gestureName: 'appointment-week-swipe',
+    // Above ion-nav's swipe-back so a horizontal drag here pages weeks.
+    gesturePriority: 102,
     direction: 'x',
-    threshold: 12,
+    threshold: 10,
+    canStart: () => !isSliding,
+    onStart: () => {
+      trackAnimated.value = false
+    },
+    onMove: (detail) => {
+      trackOffset.value = detail.deltaX
+    },
     onEnd: (detail) => {
-      if (Math.abs(detail.deltaX) < 48) return
-      shiftWeek(detail.deltaX < 0 ? 1 : -1)
+      lastSwipeAt = Date.now()
+      const width = swipeEl.value?.offsetWidth || 320
+      const isFling = Math.abs(detail.velocityX) > 0.35
+      if (Math.abs(detail.deltaX) > width * 0.18 || isFling) {
+        void slideWeek(detail.deltaX < 0 ? 1 : -1)
+      } else {
+        void settleTrack()
+      }
     },
   })
   gesture.enable()
@@ -167,6 +222,11 @@ onBeforeUnmount(() => gesture?.destroy())
 
 // --- Month calendar sheet ---
 const isCalendarOpen = ref(false)
+
+function openCalendar() {
+  if (Date.now() - lastSwipeAt < 300) return
+  isCalendarOpen.value = true
+}
 
 const HIGHLIGHT_BY_STATE: Record<DayState, { textColor: string; backgroundColor: string }> = {
   available: {
@@ -339,75 +399,79 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
 
 <template>
   <div class="slot-picker">
-    <!-- Month + week navigation -->
-    <div class="slot-picker__nav">
-      <button
-        type="button"
-        class="slot-picker__month ion-activatable"
-        :aria-label="t('quickCreate.appointment.dateTime.openCalendar')"
-        @click="isCalendarOpen = true"
-      >
-        <span>{{ monthLabel }}</span>
-        <ion-icon :icon="chevronDownOutline" aria-hidden="true" />
-        <ion-ripple-effect />
-      </button>
+    <!-- Month + week navigation (swipe area) -->
+    <div ref="swipeEl" class="slot-picker__swipe">
+      <div class="slot-picker__nav">
+        <button
+          type="button"
+          class="slot-picker__month ion-activatable"
+          :aria-label="t('quickCreate.appointment.dateTime.openCalendar')"
+          @click="openCalendar"
+        >
+          <span>{{ monthLabel }}</span>
+          <ion-icon :icon="chevronDownOutline" aria-hidden="true" />
+          <ion-ripple-effect />
+        </button>
 
-      <div class="slot-picker__nav-actions">
-        <ion-button
-          v-if="showTodayButton"
-          size="small"
-          fill="clear"
-          class="slot-picker__today"
-          @click="goToday"
-        >
-          {{ t('quickCreate.appointment.dateTime.today') }}
-        </ion-button>
-        <ion-button
-          fill="clear"
-          color="dark"
-          size="small"
-          :aria-label="t('quickCreate.appointment.dateTime.previousWeek')"
-          @click="shiftWeek(-1)"
-        >
-          <ion-icon slot="icon-only" :icon="chevronBackOutline" aria-hidden="true" />
-        </ion-button>
-        <ion-button
-          fill="clear"
-          color="dark"
-          size="small"
-          :aria-label="t('quickCreate.appointment.dateTime.nextWeek')"
-          @click="shiftWeek(1)"
-        >
-          <ion-icon slot="icon-only" :icon="chevronForwardOutline" aria-hidden="true" />
-        </ion-button>
+        <div class="slot-picker__nav-actions">
+          <ion-button
+            v-if="showTodayButton"
+            size="small"
+            fill="clear"
+            class="slot-picker__today"
+            @click="goToday"
+          >
+            {{ t('quickCreate.appointment.dateTime.today') }}
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="dark"
+            size="small"
+            :aria-label="t('quickCreate.appointment.dateTime.previousWeek')"
+            @click="slideWeek(-1)"
+          >
+            <ion-icon slot="icon-only" :icon="chevronBackOutline" aria-hidden="true" />
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="dark"
+            size="small"
+            :aria-label="t('quickCreate.appointment.dateTime.nextWeek')"
+            @click="slideWeek(1)"
+          >
+            <ion-icon slot="icon-only" :icon="chevronForwardOutline" aria-hidden="true" />
+          </ion-button>
+        </div>
       </div>
-    </div>
 
-    <div ref="stripEl" class="slot-picker__week" role="listbox">
-      <button
-        v-for="day in weekDays"
-        :key="day.date"
-        type="button"
-        role="option"
-        class="slot-picker__day ion-activatable"
-        :class="{
-          'slot-picker__day--selected': day.date === date,
-          'slot-picker__day--today': day.isToday,
-          'slot-picker__day--past': day.isPast,
-        }"
-        :aria-selected="day.date === date"
-        :data-testid="`slot-picker-day-${day.date}`"
-        @click="selectDate(day.date)"
-      >
-        <span class="slot-picker__weekday">{{ day.weekday }}</span>
-        <span class="slot-picker__day-number">{{ day.day }}</span>
-        <span
-          class="slot-picker__marker"
-          :class="day.state ? `slot-picker__marker--${day.state}` : null"
-          aria-hidden="true"
-        />
-        <ion-ripple-effect />
-      </button>
+      <div class="slot-picker__week-viewport">
+        <div class="slot-picker__week" role="listbox" :style="trackStyle">
+          <button
+            v-for="day in weekDays"
+            :key="day.date"
+            type="button"
+            role="option"
+            class="slot-picker__day ion-activatable"
+            :class="{
+              'slot-picker__day--selected': day.date === date,
+              'slot-picker__day--today': day.isToday,
+              'slot-picker__day--past': day.isPast,
+            }"
+            :aria-selected="day.date === date"
+            :data-testid="`slot-picker-day-${day.date}`"
+            @click="selectDate(day.date)"
+          >
+            <span class="slot-picker__weekday">{{ day.weekday }}</span>
+            <span class="slot-picker__day-number">{{ day.day }}</span>
+            <span
+              class="slot-picker__marker"
+              :class="day.state ? `slot-picker__marker--${day.state}` : null"
+              aria-hidden="true"
+            />
+            <ion-ripple-effect />
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="slot-picker__legend" aria-hidden="true">
@@ -698,12 +762,23 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
 }
 
 /* --- Week strip --- */
+.slot-picker__swipe {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  touch-action: pan-y;
+}
+
+.slot-picker__week-viewport {
+  overflow: hidden;
+}
+
 .slot-picker__week {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   padding: 0 var(--se-picker-inset-x);
-  touch-action: pan-y;
+  will-change: transform;
 }
 
 .slot-picker__day {

@@ -87,3 +87,17 @@ async function onCreated() {
     />
   </ion-modal>
 </template>
+
+<style scoped>
+/* Rounded sheet top in every mode: iOS already presents a card, Material
+   renders a full-screen modal — inset it under the status bar instead. */
+.appointment-wizard-mobile {
+  --border-radius: 16px 16px 0 0;
+}
+
+.appointment-wizard-mobile.md {
+  --height: calc(100% - var(--ion-safe-area-top, 0px) - 12px);
+
+  align-items: flex-end;
+}
+</style>

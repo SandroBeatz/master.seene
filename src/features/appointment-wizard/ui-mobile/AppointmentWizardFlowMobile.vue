@@ -101,7 +101,8 @@ const STEP_COMPONENTS: Record<WizardStep, NavComponent> = {
 
 const navRef = ref<{ $el: HTMLIonNavElement } | null>(null)
 /** Steps currently on the nav stack, bottom → top. */
-const stack = ref<WizardStep[]>([1])
+let stack: WizardStep[] = [1]
+let isNavigating = false
 
 function isStepValid(step: WizardStep): boolean {
   if (step === 1) return wizard.isStep1Valid.value
@@ -110,26 +111,43 @@ function isStepValid(step: WizardStep): boolean {
   return true
 }
 
-function next(from: WizardStep) {
+// Back button / swipe-back pop the nav natively, so re-read its real depth
+// before every navigation instead of trusting our own bookkeeping.
+async function syncStack(nav: HTMLIonNavElement) {
+  const length = await nav.getLength()
+  if (length > 0 && length < stack.length) stack = stack.slice(0, length)
+}
+
+async function navigate(action: (nav: HTMLIonNavElement) => Promise<void>) {
   const nav = navRef.value?.$el
-  if (!nav || !isStepValid(from) || stack.value.at(-1) !== from) return
-  const target: WizardStep = from === 2 && state.skipDateTime ? 4 : ((from + 1) as WizardStep)
-  if (target > 4) return
-  stack.value = [...stack.value, target]
-  void nav.push(STEP_COMPONENTS[target])
+  if (!nav || isNavigating) return
+  isNavigating = true
+  try {
+    await syncStack(nav)
+    await action(nav)
+  } finally {
+    isNavigating = false
+  }
+}
+
+function next(from: WizardStep) {
+  if (!isStepValid(from)) return
+  void navigate(async (nav) => {
+    if (stack.at(-1) !== from) return
+    const target: WizardStep = from === 2 && state.skipDateTime ? 4 : ((from + 1) as WizardStep)
+    if (target > 4) return
+    await nav.push(STEP_COMPONENTS[target])
+    stack = [...stack, target]
+  })
 }
 
 function goTo(step: WizardStep) {
-  const nav = navRef.value?.$el
-  const index = stack.value.indexOf(step)
-  if (!nav || index < 0 || index === stack.value.length - 1) return
-  void nav.popTo(index)
-}
-
-// Keep `stack` in sync with back-button / swipe-back pops.
-async function onNavChange() {
-  const length = await navRef.value?.$el.getLength()
-  if (length && length < stack.value.length) stack.value = stack.value.slice(0, length)
+  void navigate(async (nav) => {
+    const index = stack.indexOf(step)
+    if (index < 0 || index === stack.length - 1) return
+    await nav.popTo(index)
+    stack = stack.slice(0, index + 1)
+  })
 }
 
 // --- Create ---
@@ -199,5 +217,5 @@ provide(APPOINTMENT_WIZARD_MOBILE_KEY, context)
 </script>
 
 <template>
-  <ion-nav ref="navRef" :root="STEP_COMPONENTS[1]" @ion-nav-did-change="onNavChange" />
+  <ion-nav ref="navRef" :root="STEP_COMPONENTS[1]" />
 </template>

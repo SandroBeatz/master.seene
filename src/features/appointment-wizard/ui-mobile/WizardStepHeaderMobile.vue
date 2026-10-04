@@ -11,7 +11,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/vue'
-import { closeOutline } from 'ionicons/icons'
+import { arrowBackOutline, closeOutline } from 'ionicons/icons'
 import type { WizardStep } from '../model/appointment-wizard'
 import { useAppointmentWizardMobile } from '../model/wizard-mobile-context'
 
@@ -40,7 +40,13 @@ const position = computed(() => wizard.positionOf(props.step))
         >
           <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
         </ion-button>
-        <ion-back-button v-else :text="t('quickCreate.actions.back')" />
+        <ion-back-button
+          v-else
+          text=""
+          :icon="arrowBackOutline"
+          color="dark"
+          :aria-label="t('quickCreate.actions.back')"
+        />
       </ion-buttons>
       <ion-title>
         <span class="wizard-step-header__title">{{ title }}</span>
