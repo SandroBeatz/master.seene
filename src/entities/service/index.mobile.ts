@@ -8,3 +8,6 @@ export {
   useServicesQuery,
   useUpdateServiceMutation,
 } from './model/service.queries'
+export { default as ServiceSelectListMobile } from './ui-mobile/ServiceSelectListMobile.vue'
+export { default as ServiceCategorySegmentMobile } from './ui-mobile/ServiceCategorySegmentMobile.vue'
+export { useServiceSelectFilter } from './model/use-service-select-filter'

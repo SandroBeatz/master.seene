@@ -20,10 +20,21 @@ import {
   alertController,
   isPlatform,
 } from '@ionic/vue'
-import { checkmarkOutline, closeOutline, cutOutline, personCircleOutline } from 'ionicons/icons'
+import {
+  calendarOutline,
+  checkmarkOutline,
+  closeOutline,
+  cutOutline,
+  personCircleOutline,
+} from 'ionicons/icons'
 import type { Appointment, UpdateAppointmentDto } from '@entities/appointment'
+import { AppointmentSlotPickerMobile } from '@entities/appointment/index.mobile'
 import { ClientPickerModalMobile, type Client } from '@entities/client/index.mobile'
+import { useMasterPreferencesStore } from '@entities/master'
 import { ServicePickerModalMobile, type Service } from '@entities/service/index.mobile'
+import { useSessionStore } from '@entities/session'
+import { useFormats } from '@shared/lib/formats'
+import { minutesToTimeInput, timeInputToMinutes } from '@shared/lib/scheduling'
 import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 
@@ -52,9 +63,14 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const formats = useFormats()
+const sessionStore = useSessionStore()
+const masterPreferencesStore = useMasterPreferencesStore()
+const userId = computed(() => sessionStore.session?.user.id ?? '')
 const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 const isClientPickerOpen = ref(false)
 const isServicePickerOpen = ref(false)
+const isSlotPickerOpen = ref(false)
 const isSubmitting = ref(false)
 const allowDismiss = ref(false)
 const submitted = ref(false)
@@ -85,6 +101,31 @@ const selectedServicesLabel = computed(() => {
   return names.join(', ') || t('appointments.form.servicesPlaceholder')
 })
 
+const dateTimeLabel = computed(() => {
+  if (!state.date || !state.time) return ''
+  const [year = 1970, month = 1, day = 1] = state.date.split('-').map(Number)
+  return `${formats.weekdayDateShort(new Date(year, month - 1, day))} · ${formats.time(state.time)}`
+})
+
+// The slot picker edits a draft; "Done" commits it to the form.
+const slotDraft = reactive<{ date: string; slotMinutes: number | null }>({
+  date: '',
+  slotMinutes: null,
+})
+
+function openSlotPicker() {
+  slotDraft.date = state.date
+  slotDraft.slotMinutes = state.time ? timeInputToMinutes(state.time) : null
+  isSlotPickerOpen.value = true
+}
+
+function applySlot() {
+  if (!slotDraft.date || slotDraft.slotMinutes == null) return
+  state.date = slotDraft.date
+  state.time = minutesToTimeInput(slotDraft.slotMinutes)
+  isSlotPickerOpen.value = false
+}
+
 function snapshot(): string {
   return JSON.stringify({
     clientId: state.clientId,
@@ -108,6 +149,7 @@ function reset() {
   state.notes = props.appointment.notes ?? ''
   isClientPickerOpen.value = false
   isServicePickerOpen.value = false
+  isSlotPickerOpen.value = false
   submitted.value = false
   allowDismiss.value = false
   initialState.value = snapshot()
@@ -245,25 +287,9 @@ async function save() {
         </ion-note>
 
         <inset-list :header="t('appointments.preview.date')">
-          <ion-item lines="full">
-            <ion-label>{{ t('appointments.form.date') }}</ion-label>
-            <ion-input
-              v-model="state.date"
-              slot="end"
-              class="appointment-edit-mobile__input"
-              type="date"
-              :aria-label="t('appointments.form.date')"
-            />
-          </ion-item>
-          <ion-item lines="none">
-            <ion-label>{{ t('appointments.form.time') }}</ion-label>
-            <ion-input
-              v-model="state.time"
-              slot="end"
-              class="appointment-edit-mobile__input"
-              type="time"
-              :aria-label="t('appointments.form.time')"
-            />
+          <ion-item button :detail="true" lines="none" @click="openSlotPicker">
+            <ion-icon slot="start" :icon="calendarOutline" color="medium" aria-hidden="true" />
+            <ion-label class="appointment-edit-mobile__date">{{ dateTimeLabel }}</ion-label>
           </ion-item>
         </inset-list>
 
@@ -334,6 +360,47 @@ async function save() {
       :presenting-element="selfModalEl"
     />
 
+    <ion-modal
+      :is-open="isSlotPickerOpen"
+      :presenting-element="selfModalEl ?? undefined"
+      @did-dismiss="isSlotPickerOpen = false"
+    >
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button
+              fill="clear"
+              color="dark"
+              :aria-label="t('common.close')"
+              @click="isSlotPickerOpen = false"
+            >
+              <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
+            </ion-button>
+          </ion-buttons>
+          <ion-title>{{ t('quickCreate.appointment.steps.dateTime') }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button strong :disabled="slotDraft.slotMinutes == null" @click="applySlot">
+              {{ t('common.done') }}
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="appointment-edit-mobile__content appointment-edit-mobile__slots">
+        <appointment-slot-picker-mobile
+          v-model:date="slotDraft.date"
+          v-model:slot-minutes="slotDraft.slotMinutes"
+          :user-id="userId"
+          :time-zone="timeZone"
+          :schedule="masterPreferencesStore.preferences.profile?.schedule ?? null"
+          :step-minutes="masterPreferencesStore.calendarSlotStepMinutes"
+          :duration-minutes="state.duration"
+          :first-day-of-week="masterPreferencesStore.calendarFirstDay"
+          :hour-cycle="masterPreferencesStore.timeFormat === 12 ? 'h12' : 'h23'"
+          :exclude-appointment-id="appointment.id"
+        />
+      </ion-content>
+    </ion-modal>
+
     <service-picker-modal-mobile
       v-model:is-open="isServicePickerOpen"
       v-model:model-value="state.serviceIds"
@@ -353,6 +420,14 @@ async function save() {
 .appointment-edit-mobile__input {
   max-width: 150px;
   text-align: end;
+}
+
+.appointment-edit-mobile__date {
+  text-transform: capitalize;
+}
+
+.appointment-edit-mobile__slots {
+  --padding-top: 12px;
 }
 
 .field-note {

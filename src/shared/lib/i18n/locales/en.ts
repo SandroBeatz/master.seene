@@ -195,6 +195,7 @@ export default {
       title: 'New appointment',
       next: 'Next',
       create: 'Create',
+      stepOf: 'Step {step} of {total}',
       steps: {
         client: 'Choose a client',
         services: 'Choose services',
@@ -225,6 +226,9 @@ export default {
           available: 'Free slots',
           full: 'Fully booked',
           dayOff: 'Day off',
+          free: 'Free',
+          busy: 'Busy',
+          short: "Doesn't fit",
         },
         groups: {
           morning: 'Morning',
@@ -234,6 +238,19 @@ export default {
         manual: 'Set time manually',
         selectTime: 'Select time',
         conflict: 'This time overlaps an existing booking.',
+        today: 'Today',
+        openCalendar: 'Open calendar',
+        previousWeek: 'Previous week',
+        nextWeek: 'Next week',
+        calendarTitle: 'Choose a date',
+        freeCount: 'No free slots | {count} free slot | {count} free slots',
+        selected: 'Selected',
+        conflictConfirm: {
+          title: 'This time is taken',
+          message:
+            'The appointment will overlap an existing booking, time off or break. Book anyway?',
+          confirm: 'Book anyway',
+        },
         timeOff: 'Time off',
         allDay: 'All day',
         past: {
