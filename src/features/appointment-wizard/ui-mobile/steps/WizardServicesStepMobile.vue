@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IonButton, IonContent, IonIcon, IonSearchbar, IonToolbar } from '@ionic/vue'
+import { IonButton, IonContent, IonIcon, IonToolbar } from '@ionic/vue'
 import { arrowForwardOutline } from 'ionicons/icons'
 import {
   ServiceCategorySegmentMobile,
@@ -11,7 +11,8 @@ import {
 } from '@entities/service/index.mobile'
 import { useFormats } from '@shared/lib/formats'
 import { useAppointmentWizardMobile } from '../../model/wizard-mobile-context'
-import WizardStepFooterMobile from '../WizardStepFooterMobile.vue'
+import { ActionFooterMobile } from '@shared/ui/action-footer/index.mobile'
+import WizardSearchbarMobile from '../WizardSearchbarMobile.vue'
 import WizardStepHeaderMobile from '../WizardStepHeaderMobile.vue'
 
 const { t } = useI18n()
@@ -36,19 +37,16 @@ function toggle(service: Service) {
 
 <template>
   <wizard-step-header-mobile :step="2" :title="t('quickCreate.appointment.steps.services')">
-    <ion-toolbar class="wizard-services-step__toolbar">
-      <ion-searchbar
-        v-model="query"
-        :placeholder="t('quickCreate.appointment.services.searchPlaceholder')"
-        :debounce="150"
-      />
-    </ion-toolbar>
+    <wizard-searchbar-mobile
+      v-model="query"
+      :placeholder="t('quickCreate.appointment.services.searchPlaceholder')"
+    />
     <ion-toolbar v-if="categoryChips.length > 1" class="wizard-services-step__toolbar">
       <service-category-segment-mobile v-model="activeCategory" :chips="categoryChips" />
     </ion-toolbar>
   </wizard-step-header-mobile>
 
-  <ion-content class="ion-padding-vertical">
+  <ion-content class="wizard-services-step">
     <service-select-list-mobile
       :services="filteredServices"
       :selected-ids="state.serviceIds"
@@ -57,7 +55,7 @@ function toggle(service: Service) {
     />
   </ion-content>
 
-  <wizard-step-footer-mobile>
+  <action-footer-mobile>
     <span>{{ t('quickCreate.appointment.footer.services', state.serviceIds.length) }}</span>
     <strong v-if="state.serviceIds.length">
       {{ formats.duration(wizard.totalDuration.value) }} ·
@@ -69,7 +67,7 @@ function toggle(service: Service) {
         <ion-icon slot="end" :icon="arrowForwardOutline" aria-hidden="true" />
       </ion-button>
     </template>
-  </wizard-step-footer-mobile>
+  </action-footer-mobile>
 </template>
 
 <style scoped>
@@ -78,7 +76,8 @@ function toggle(service: Service) {
   --min-height: 44px;
 }
 
-.wizard-services-step__toolbar ion-searchbar {
-  padding-block: 12px 8px;
+.wizard-services-step {
+  --padding-top: 24px;
+  --padding-bottom: 24px;
 }
 </style>

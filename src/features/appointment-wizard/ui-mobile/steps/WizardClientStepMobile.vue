@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IonContent, IonIcon, IonItem, IonLabel, IonSearchbar, IonToolbar } from '@ionic/vue'
+import { IonContent, IonIcon, IonItem, IonLabel } from '@ionic/vue'
 import { personAddOutline } from 'ionicons/icons'
 import { ClientSelectListMobile, type Client } from '@entities/client/index.mobile'
 import { ClientFormMobile } from '@features/client-form/index.mobile'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { useAppointmentWizardMobile } from '../../model/wizard-mobile-context'
+import WizardSearchbarMobile from '../WizardSearchbarMobile.vue'
 import WizardStepHeaderMobile from '../WizardStepHeaderMobile.vue'
 
 const { t } = useI18n()
@@ -22,16 +23,13 @@ function select(client: Client) {
 
 <template>
   <wizard-step-header-mobile :step="1" :title="t('quickCreate.appointment.steps.client')">
-    <ion-toolbar class="wizard-client-step__search">
-      <ion-searchbar
-        v-model="query"
-        :placeholder="t('quickCreate.appointment.client.searchPlaceholder')"
-        :debounce="150"
-      />
-    </ion-toolbar>
+    <wizard-searchbar-mobile
+      v-model="query"
+      :placeholder="t('quickCreate.appointment.client.searchPlaceholder')"
+    />
   </wizard-step-header-mobile>
 
-  <ion-content class="wizard-client-step ion-padding-vertical">
+  <ion-content class="wizard-client-step">
     <inset-list>
       <ion-item button :detail="false" lines="none" @click="isClientFormOpen = true">
         <ion-icon slot="start" :icon="personAddOutline" color="primary" aria-hidden="true" />
@@ -56,11 +54,8 @@ function select(client: Client) {
 </template>
 
 <style scoped>
-.wizard-client-step__search {
-  --background: var(--se-surface-page, var(--ion-background-color));
-}
-
-.wizard-client-step__search ion-searchbar {
-  padding-block: 12px 8px;
+.wizard-client-step {
+  --padding-top: 24px;
+  --padding-bottom: 24px;
 }
 </style>

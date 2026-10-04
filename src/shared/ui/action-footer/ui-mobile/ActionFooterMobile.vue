@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { IonFooter, IonToolbar } from '@ionic/vue'
 
-// Sticky step footer: running summary on the left (default slot), the step's
-// primary action on the right (`action` slot).
+// Sticky sheet footer: running summary on the left (default slot), the
+// primary action on the right (`action` slot). Kept off the shared/ui barrel.
 </script>
 
 <template>
-  <ion-footer class="wizard-step-footer ion-no-border">
+  <ion-footer class="se-action-footer ion-no-border">
     <ion-toolbar>
-      <div class="wizard-step-footer__row">
-        <div class="wizard-step-footer__summary">
+      <div class="se-action-footer__row">
+        <div class="se-action-footer__summary">
           <slot />
         </div>
         <slot name="action" />
@@ -19,7 +19,7 @@ import { IonFooter, IonToolbar } from '@ionic/vue'
 </template>
 
 <style scoped>
-.wizard-step-footer ion-toolbar {
+.se-action-footer ion-toolbar {
   --background: var(--se-surface-card, var(--ion-background-color));
   --padding-start: 16px;
   --padding-end: 16px;
@@ -27,14 +27,14 @@ import { IonFooter, IonToolbar } from '@ionic/vue'
   --padding-bottom: calc(8px + var(--safe-area-bottom, 0px));
 }
 
-.wizard-step-footer__row {
+.se-action-footer__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
-.wizard-step-footer__summary {
+.se-action-footer__summary {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -43,14 +43,14 @@ import { IonFooter, IonToolbar } from '@ionic/vue'
   font-variant-numeric: tabular-nums;
 }
 
-.wizard-step-footer__summary :deep(span) {
+.se-action-footer__summary :deep(span) {
   overflow: hidden;
   color: var(--ion-color-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.wizard-step-footer__row :deep(ion-button) {
+.se-action-footer__row :deep(ion-button) {
   --border-radius: 12px;
 
   flex: 0 0 auto;

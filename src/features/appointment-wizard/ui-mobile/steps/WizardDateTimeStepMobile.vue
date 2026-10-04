@@ -7,7 +7,7 @@ import { AppointmentSlotPickerMobile } from '@entities/appointment/index.mobile'
 import { useFormats } from '@shared/lib/formats'
 import { minutesToTimeInput } from '@shared/lib/scheduling'
 import { useAppointmentWizardMobile } from '../../model/wizard-mobile-context'
-import WizardStepFooterMobile from '../WizardStepFooterMobile.vue'
+import { ActionFooterMobile } from '@shared/ui/action-footer/index.mobile'
 import WizardStepHeaderMobile from '../WizardStepHeaderMobile.vue'
 
 const { t } = useI18n()
@@ -40,7 +40,7 @@ const selectionLabel = computed(() => {
     />
   </ion-content>
 
-  <wizard-step-footer-mobile>
+  <action-footer-mobile>
     <span>{{ formats.duration(wizard.totalDuration.value) }}</span>
     <strong v-if="selectionLabel">{{ selectionLabel }}</strong>
     <strong v-else class="wizard-date-time-step__pending">
@@ -52,12 +52,12 @@ const selectionLabel = computed(() => {
         <ion-icon slot="end" :icon="arrowForwardOutline" aria-hidden="true" />
       </ion-button>
     </template>
-  </wizard-step-footer-mobile>
+  </action-footer-mobile>
 </template>
 
 <style scoped>
 .wizard-date-time-step {
-  --padding-top: 12px;
+  --padding-top: 24px;
 }
 
 .wizard-date-time-step__pending {

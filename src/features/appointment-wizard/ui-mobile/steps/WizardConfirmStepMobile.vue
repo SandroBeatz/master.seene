@@ -24,7 +24,7 @@ import { useFormats } from '@shared/lib/formats'
 import { minutesToTimeInput } from '@shared/lib/scheduling'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { useAppointmentWizardMobile } from '../../model/wizard-mobile-context'
-import WizardStepFooterMobile from '../WizardStepFooterMobile.vue'
+import { ActionFooterMobile } from '@shared/ui/action-footer/index.mobile'
 import WizardStepHeaderMobile from '../WizardStepHeaderMobile.vue'
 
 const { t } = useI18n()
@@ -55,7 +55,7 @@ function onPriceInput(event: CustomEvent<{ value?: string | null }>) {
 <template>
   <wizard-step-header-mobile :step="4" :title="t('quickCreate.appointment.steps.confirm')" />
 
-  <ion-content class="ion-padding-vertical">
+  <ion-content class="wizard-confirm">
     <inset-list>
       <ion-item button :detail="true" @click="wizard.goTo(1)">
         <ion-icon slot="start" :icon="personCircleOutline" color="medium" aria-hidden="true" />
@@ -129,7 +129,7 @@ function onPriceInput(event: CustomEvent<{ value?: string | null }>) {
     </inset-list>
   </ion-content>
 
-  <wizard-step-footer-mobile>
+  <action-footer-mobile>
     <span>{{ t('quickCreate.appointment.confirm.price') }}</span>
     <strong>{{ formats.price(wizard.effectivePrice.value) }}</strong>
     <template #action>
@@ -143,10 +143,15 @@ function onPriceInput(event: CustomEvent<{ value?: string | null }>) {
         {{ t('quickCreate.appointment.create') }}
       </ion-button>
     </template>
-  </wizard-step-footer-mobile>
+  </action-footer-mobile>
 </template>
 
 <style scoped>
+.wizard-confirm {
+  --padding-top: 24px;
+  --padding-bottom: 24px;
+}
+
 ion-item ion-label p {
   margin: 0 0 2px;
   color: var(--ion-color-medium);

@@ -553,6 +553,24 @@ async function handleServicesSelect(appointment: Appointment, selectedServices: 
   }
 }
 
+async function handleDateTimeSelect(appointment: Appointment, startAt: string) {
+  if (isProcessing(appointment.id)) return
+  if (new Date(startAt).getTime() === new Date(appointment.start_at).getTime()) return
+
+  setProcessing(appointment.id, true)
+  try {
+    await updateMutation.mutateAsync({ id: appointment.id, start_at: startAt })
+    if (detailsAppointment.value?.id === appointment.id) {
+      detailsAppointment.value = { ...detailsAppointment.value, start_at: startAt }
+    }
+    await showToast(t('appointments.preview.dateTimeUpdateSuccess'), 'success')
+  } catch {
+    await showToast(t('appointments.preview.dateTimeUpdateError'), 'danger')
+  } finally {
+    setProcessing(appointment.id, false)
+  }
+}
+
 async function handlePaymentTypeSelect(appointment: Appointment, paymentType: PaymentType) {
   const sale = detailsSaleQuery.data.value
   if (!sale || sale.payment_type_id === paymentType.id || isProcessing(appointment.id)) return
@@ -718,6 +736,7 @@ defineExpose({
     @did-dismiss="finishDetailsDismiss"
     @select-client="handleClientSelect(detailsAppointment, $event)"
     @select-services="handleServicesSelect(detailsAppointment, $event)"
+    @select-date-time="handleDateTimeSelect(detailsAppointment, $event)"
     @select-payment-type="handlePaymentTypeSelect(detailsAppointment, $event)"
     @save-sale-amount="handleSaleAmountSave(detailsAppointment, $event)"
     @primary="handlePrimary(detailsAppointment, $event)"
