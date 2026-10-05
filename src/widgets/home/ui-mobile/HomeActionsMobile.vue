@@ -820,8 +820,10 @@ defineExpose({
   display: none;
 }
 
+/* A lone card spans the full row. Grid percentages resolve against the content
+   box (inside the 14px padding), so 100% already lines up with the page gutter. */
 .actions-carousel--single {
-  grid-auto-columns: calc(100% - 28px);
+  grid-auto-columns: 100%;
 }
 
 .actions-carousel__slide {
@@ -835,7 +837,7 @@ defineExpose({
 }
 
 .action-skeleton {
-  min-height: 190px;
+  min-height: 156px;
   margin: 0;
   padding: 14px;
   border-radius: 16px;
@@ -918,7 +920,6 @@ defineExpose({
 
 .appointment-note-modal {
   --height: min(320px, 60vh);
-  --border-radius: 20px 20px 0 0;
 }
 
 .appointment-note-modal ion-toolbar,

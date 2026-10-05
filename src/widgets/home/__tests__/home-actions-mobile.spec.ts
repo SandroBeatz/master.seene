@@ -103,7 +103,6 @@ vi.mock('@shared/lib/now', () => ({
 const passthrough = { template: '<div><slot /></div>' }
 const stubs = {
   IonAvatar: { template: '<div class="ion-avatar-stub"><slot /></div>' },
-  IonBadge: { template: '<span class="ion-badge-stub"><slot /></span>' },
   IonButton: {
     props: ['color'],
     template:
@@ -335,7 +334,7 @@ describe('HomeActionsMobile', () => {
     expect(cards[0]?.text()).toContain('Waiting 30m for your reply')
     expect(cards[0]?.text()).not.toContain('Please call before the appointment')
     expect(cards[0]?.find('.action-card__note').exists()).toBe(true)
-    expect(cards[0]?.findAll('.ion-badge-stub')).toHaveLength(2)
+    expect(cards[0]?.findAll('.action-card__status')).toHaveLength(2)
     expect(cards[0]?.find('.action-card__primary').attributes('data-color')).toBe('secondary')
     expect(cards[1]?.text()).toContain('This request’s time slot has passed')
     expect(cards[2]?.text()).toContain('Complete')

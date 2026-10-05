@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IonAvatar, IonBadge, IonButton, IonCard, IonIcon, IonSpinner } from '@ionic/vue'
+import { IonAvatar, IonButton, IonCard, IonIcon } from '@ionic/vue'
 import {
   alertCircleOutline,
   chatbubbleEllipsesOutline,
@@ -15,6 +15,7 @@ import {
 } from 'ionicons/icons'
 import { getEffectiveAppointmentStatus, type Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = withDefaults(
   defineProps<{
@@ -175,23 +176,23 @@ onBeforeUnmount(clearHoldTimer)
         <span class="action-card__date">{{ dateLabel }} · {{ timeLabel }}</span>
 
         <div class="action-card__badges">
-          <ion-badge
+          <ion-icon
             class="action-card__status"
+            :icon="statusMeta.icon"
             :color="statusMeta.color"
+            role="img"
             :aria-label="statusLabel"
             :title="statusLabel"
-          >
-            <ion-icon :icon="statusMeta.icon" aria-hidden="true" />
-          </ion-badge>
-          <ion-badge
+          />
+          <ion-icon
             v-if="isOnline"
             class="action-card__status"
+            :icon="globeOutline"
             color="tertiary"
+            role="img"
             :aria-label="t('home.nextUp.badgeOnline')"
             :title="t('home.nextUp.badgeOnlineHint')"
-          >
-            <ion-icon :icon="globeOutline" aria-hidden="true" />
-          </ion-badge>
+          />
         </div>
       </div>
 
@@ -224,7 +225,7 @@ onBeforeUnmount(clearHoldTimer)
           :aria-busy="primaryLoading"
           @click.stop="emit('primary')"
         >
-          <ion-spinner v-if="primaryLoading" slot="start" name="crescent" />
+          <button-spinner v-if="primaryLoading" slot="start" />
           <ion-icon v-else slot="start" :icon="primaryIcon" aria-hidden="true" />
           {{ primaryLabel }}
         </ion-button>
@@ -249,7 +250,7 @@ onBeforeUnmount(clearHoldTimer)
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 190px;
+  min-height: 156px;
   margin: 0;
   overflow: hidden;
   border-radius: 16px;
@@ -281,9 +282,9 @@ onBeforeUnmount(clearHoldTimer)
   position: relative;
   z-index: 1;
   display: flex;
-  min-height: 190px;
+  min-height: 156px;
   flex-direction: column;
-  padding: 14px;
+  padding: 12px 14px;
   outline: none;
 }
 
@@ -319,28 +320,20 @@ onBeforeUnmount(clearHoldTimer)
 .action-card__badges {
   display: flex;
   flex: 0 0 auto;
-  gap: 5px;
-}
-
-.action-card__status {
-  display: flex;
-  width: 27px;
-  height: 27px;
   align-items: center;
-  justify-content: center;
-  padding: 0;
-  border-radius: 999px;
+  gap: 8px;
 }
 
-.action-card__status ion-icon {
-  font-size: 15px;
+/* Bare status glyphs in their own color — no badge fill. */
+.action-card__status {
+  font-size: 20px;
 }
 
 .action-card__person {
   min-width: 0;
   align-items: flex-start;
   gap: 11px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .action-card__avatar {
@@ -421,7 +414,7 @@ onBeforeUnmount(clearHoldTimer)
 .action-card__actions {
   gap: 5px;
   margin-top: auto;
-  padding-top: 13px;
+  padding-top: 10px;
 }
 
 .action-card__primary {
@@ -436,8 +429,7 @@ onBeforeUnmount(clearHoldTimer)
   text-transform: none;
 }
 
-.action-card__primary ion-icon[slot='start'],
-.action-card__primary ion-spinner[slot='start'] {
+.action-card__primary ion-icon[slot='start'] {
   margin-inline-end: 6px;
 }
 
