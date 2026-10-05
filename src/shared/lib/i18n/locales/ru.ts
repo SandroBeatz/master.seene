@@ -324,6 +324,10 @@ export default {
       next: 'Следующий период',
       today: 'Сегодня',
     },
+    mobile: {
+      view: 'Вид',
+      jumpTo: 'Перейти к дате',
+    },
     views: {
       month: 'Месяц',
       week: 'Неделя',

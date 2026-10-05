@@ -16,22 +16,22 @@ import { InsetList } from '@shared/ui/inset-list/index.mobile'
 // "+" menu: what to create — a client booking or a time off. Content-sized
 // bottom sheet. The choice is emitted only after the sheet has fully dismissed,
 // so the next modal never presents on top of a closing one.
-type HomeCreateKind = 'appointment' | 'timeOff'
+type QuickCreateKind = 'appointment' | 'timeOff'
 
 const emit = defineEmits<{
-  select: [kind: HomeCreateKind]
+  select: [kind: QuickCreateKind]
 }>()
 
 const isOpen = defineModel<boolean>('isOpen', { required: true })
 
-const OPTIONS: readonly { kind: HomeCreateKind; icon: string; tone: string }[] = [
+const OPTIONS: readonly { kind: QuickCreateKind; icon: string; tone: string }[] = [
   { kind: 'appointment', icon: calendarOutline, tone: 'primary' },
   { kind: 'timeOff', icon: cafeOutline, tone: 'warning' },
 ]
 
-let pending: HomeCreateKind | null = null
+let pending: QuickCreateKind | null = null
 
-function choose(kind: HomeCreateKind) {
+function choose(kind: QuickCreateKind) {
   pending = kind
   isOpen.value = false
 }

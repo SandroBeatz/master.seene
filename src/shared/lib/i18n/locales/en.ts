@@ -327,6 +327,10 @@ export default {
       next: 'Next period',
       today: 'Today',
     },
+    mobile: {
+      view: 'View',
+      jumpTo: 'Go to date',
+    },
     views: {
       month: 'Month',
       week: 'Week',

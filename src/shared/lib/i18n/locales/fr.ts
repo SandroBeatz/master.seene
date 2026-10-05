@@ -327,6 +327,10 @@ export default {
       next: 'Période suivante',
       today: "Aujourd'hui",
     },
+    mobile: {
+      view: 'Vue',
+      jumpTo: 'Aller à la date',
+    },
     views: {
       month: 'Mois',
       week: 'Semaine',

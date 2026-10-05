@@ -1,24 +1,337 @@
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue'
-import { CalendarMobile } from '@widgets/calendar/index.mobile'
+import { computed, ref, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {
+  IonButton,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonPage,
+  IonProgressBar,
+  IonToolbar,
+  onIonViewDidEnter,
+  onIonViewWillLeave,
+} from '@ionic/vue'
+import { add, chevronBack, chevronDown } from 'ionicons/icons'
+import type { Appointment } from '@entities/appointment'
+import { useMasterPreferencesStore } from '@entities/master'
+import type { MobileAppointmentQuickAction } from '@features/appointment-actions/index.mobile'
+import { AppointmentPreviewHostMobile } from '@widgets/appointment-preview-panel/index.mobile'
+import {
+  CalendarJumpSheetMobile,
+  CalendarMobile,
+  CalendarViewMenuMobile,
+  formatMobileCalendarTitle,
+  isCurrentCalendarPeriod,
+  readStoredMobileCalendarView,
+  storeMobileCalendarView,
+  type CalendarDateRange,
+  type CalendarViewType,
+} from '@widgets/calendar/index.mobile'
+import { QuickCreateMobile } from '@widgets/quick-create-action/index.mobile'
+import { hapticImpact } from '@shared/lib/native'
+import { useNowMinute } from '@shared/lib/now'
+import { getDateTimeInputValue } from '@shared/lib/time-zone'
+
+interface DrillOrigin {
+  view: CalendarViewType
+  /** First visible day of the view we drilled from (`YYYY-MM-DD`). */
+  date: string
+  /** Back button label — the title of that view («Октябрь»). */
+  label: string
+}
+
+const { t, locale } = useI18n()
+const masterStore = useMasterPreferencesStore()
+const now = useNowMinute()
+const calendar = useTemplateRef('calendar')
+const preview = useTemplateRef('preview')
+const quickCreate = useTemplateRef('quickCreate')
+
+const initialView = readStoredMobileCalendarView()
+const range = ref<CalendarDateRange>()
+const drillOrigin = ref<DrillOrigin | null>(null)
+const isJumpOpen = ref(false)
+
+const view = computed(() => range.value?.viewType ?? initialView)
+const header = computed(() =>
+  formatMobileCalendarTitle(range.value, locale.value, masterStore.timeZone),
+)
+const anchorDate = computed(() =>
+  range.value
+    ? getDateTimeInputValue(range.value.currentFrom, masterStore.timeZone).date
+    : getDateTimeInputValue(now.value, masterStore.timeZone).date,
+)
+const showToday = computed(
+  () => !isCurrentCalendarPeriod(range.value, masterStore.timeZone, now.value),
+)
+
+function onRangeChange(next: CalendarDateRange) {
+  range.value = next
+}
+
+function changeView(next: CalendarViewType) {
+  drillOrigin.value = null
+  storeMobileCalendarView(next)
+  calendar.value?.show(next)
+}
+
+/** Month cell / week day header → that day, with a way back. */
+function openDay(date: string) {
+  hapticImpact()
+  drillOrigin.value = { view: view.value, date: anchorDate.value, label: header.value.title }
+  calendar.value?.show('timeGridDay', date)
+}
+
+function goBack() {
+  const origin = drillOrigin.value
+  if (!origin) return
+  drillOrigin.value = null
+  calendar.value?.show(origin.view, origin.date)
+}
+
+function goToday() {
+  hapticImpact()
+  calendar.value?.today()
+}
+
+function jumpTo(date: string) {
+  calendar.value?.show(view.value, date)
+}
+
+function handleQuickAction(appointment: Appointment, action: MobileAppointmentQuickAction) {
+  if (action === 'details') void preview.value?.openDetails(appointment)
+  else if (action === 'reschedule') void preview.value?.openReschedule(appointment)
+  else if (action === 'edit') void preview.value?.openEdit(appointment)
+  else void preview.value?.remove(appointment)
+}
+
+// Android hardware back returns from a drilled-in day before leaving the tab
+// (priority 10: above router navigation, below open overlays).
+function onHardwareBack(event: Event) {
+  if (!drillOrigin.value) return
+  const { register } = (event as CustomEvent<{ register: (p: number, h: () => void) => void }>)
+    .detail
+  register(10, goBack)
+}
+
+onIonViewDidEnter(() => document.addEventListener('ionBackButton', onHardwareBack))
+onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwareBack))
 </script>
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header class="calendar-header ion-no-border">
       <ion-toolbar>
-        <ion-title>{{ $t('nav.calendar') }}</ion-title>
+        <div class="calendar-header__bar">
+          <div class="calendar-header__heading">
+            <button v-if="drillOrigin" type="button" class="calendar-header__back" @click="goBack">
+              <ion-icon :icon="chevronBack" aria-hidden="true" />
+              <span>{{ drillOrigin.label }}</span>
+            </button>
+            <span v-else class="calendar-header__caption">{{ header.caption }}</span>
+
+            <button
+              type="button"
+              class="calendar-header__title"
+              :aria-label="t('calendar.mobile.jumpTo')"
+              @click="isJumpOpen = true"
+            >
+              <h1>{{ header.title }}</h1>
+              <ion-icon :icon="chevronDown" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div class="calendar-header__actions">
+            <ion-button
+              v-if="showToday"
+              class="calendar-header__today"
+              fill="clear"
+              @click="goToday"
+            >
+              {{ t('calendar.controls.today') }}
+            </ion-button>
+            <calendar-view-menu-mobile :view="view" @select="changeView" />
+            <ion-button
+              class="calendar-header__add"
+              shape="round"
+              :aria-label="t('quickCreate.menu.title')"
+              @click="quickCreate?.openMenu()"
+            >
+              <ion-icon slot="icon-only" :icon="add" aria-hidden="true" />
+            </ion-button>
+          </div>
+        </div>
       </ion-toolbar>
+      <ion-progress-bar
+        class="calendar-header__progress"
+        :class="{ 'calendar-header__progress--active': calendar?.isLoading }"
+        type="indeterminate"
+      />
     </ion-header>
 
     <ion-content :scroll-y="false" class="calendar-content">
-      <calendar-mobile />
+      <calendar-mobile
+        ref="calendar"
+        :initial-view="initialView"
+        @range-change="onRangeChange"
+        @day-select="openDay"
+        @appointment-select="preview?.openDetails($event)"
+        @appointment-action="handleQuickAction"
+        @slot-hold="quickCreate?.openAppointment({ startAt: $event })"
+      />
     </ion-content>
+
+    <calendar-jump-sheet-mobile
+      v-model:is-open="isJumpOpen"
+      :date="anchorDate"
+      :first-day-of-week="masterStore.calendarFirstDay"
+      @select="jumpTo"
+    />
+    <appointment-preview-host-mobile ref="preview" />
+    <quick-create-mobile ref="quickCreate" />
   </ion-page>
 </template>
 
 <style scoped>
+.calendar-header ion-toolbar {
+  --background: var(--se-surface-card);
+  --min-height: 64px;
+  --padding-start: max(16px, var(--safe-area-left, 0px));
+  --padding-end: max(10px, var(--safe-area-right, 0px));
+  --padding-top: 4px;
+  --padding-bottom: 6px;
+  --border-width: 0;
+}
+
+.calendar-header__bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.calendar-header__heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.calendar-header__caption,
+.calendar-header__back {
+  height: 20px;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.calendar-header__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: -6px;
+  padding: 0 6px 0 2px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ion-color-primary);
+  animation: calendar-header-fade-in 220ms ease;
+}
+
+.calendar-header__back ion-icon {
+  font-size: 18px;
+}
+
+.calendar-header__title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ion-text-color);
+}
+
+.calendar-header__title h1 {
+  overflow: hidden;
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-header__title ion-icon {
+  flex: 0 0 auto;
+  color: var(--ion-color-medium);
+  font-size: 16px;
+}
+
+.calendar-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 2px;
+}
+
+.calendar-header__today {
+  --color: var(--ion-color-primary);
+  --padding-start: 8px;
+  --padding-end: 8px;
+
+  height: 34px;
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-transform: none;
+  animation: calendar-header-fade-in 220ms ease;
+}
+
+.calendar-header__add {
+  --padding-start: 0;
+  --padding-end: 0;
+  --box-shadow: none;
+
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  font-size: 20px;
+}
+
+.calendar-header__progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.calendar-header__progress--active {
+  opacity: 1;
+}
+
 .calendar-content {
   --background: var(--se-surface-card);
+}
+
+@keyframes calendar-header-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-header__back,
+  .calendar-header__today {
+    animation: none;
+  }
 }
 </style>

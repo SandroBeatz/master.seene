@@ -58,7 +58,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'range-change': [range: CalendarDateRange]
-  /** A month cell was tapped — `YYYY-MM-DD` in the master's zone. */
+  /** A month cell or week day header was tapped — `YYYY-MM-DD`, master's zone. */
   'day-select': [date: string]
   'appointment-select': [appointment: Appointment]
   'appointment-action': [appointment: Appointment, action: MobileAppointmentQuickAction]
@@ -93,7 +93,17 @@ const scheduleDisplay = computed(() =>
   buildCalendarScheduleDisplay(masterStore.preferences.profile?.schedule),
 )
 const gridBounds = computed(() => resolveMobileTimeGridBounds(scheduleDisplay.value, events.value))
-const hasAllDayEvents = computed(() => events.value.some((event) => event.allDay))
+// Wall-clock bounds of the rendered range — the all-day row only appears when
+// something all-day actually falls inside it.
+const visibleWindow = ref({ start: '', end: '' })
+const hasAllDayEvents = computed(() =>
+  events.value.some(
+    (event) =>
+      event.allDay &&
+      String(event.start) < visibleWindow.value.end &&
+      String(event.end) > visibleWindow.value.start,
+  ),
+)
 // Breaks are recurring timed background events: meaningful on the time grid,
 // but on the month grid they would tint whole day cells.
 const displayedEvents = computed<EventInput[]>(() =>
@@ -222,6 +232,7 @@ function handleSelect(info: DateSelectArg) {
 function handleDatesSet(info: DatesSetArg) {
   const range = toCalendarDateRange(info, timeZone.value)
   currentView.value = range.viewType
+  visibleWindow.value = { start: info.startStr.slice(0, 19), end: info.endStr.slice(0, 19) }
   closeActionMenu()
   setVisibleRange(range)
   emit('range-change', range)
@@ -255,7 +266,7 @@ function weekHeader(date: Date) {
     timeZone: 'UTC',
   }).format(new Date(`${wallDate}T12:00:00Z`))
 
-  return { weekday, day: Number(wallDate.slice(8, 10)) }
+  return { date: wallDate, weekday, day: Number(wallDate.slice(8, 10)) }
 }
 
 const calendarOptions = computed<CalendarOptions>(() => {
@@ -284,7 +295,6 @@ const calendarOptions = computed<CalendarOptions>(() => {
     moreLinkContent: (arg) => `+${arg.num}`,
     nowIndicator: true,
     allDaySlot: hasAllDayEvents.value,
-    allDayText: t('calendar.allDay'),
     slotDuration: { minutes: masterStore.calendarSlotStepMinutes },
     slotLabelInterval: { hours: 1 },
     slotLabelFormat: timeFormat,
@@ -351,17 +361,26 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
   >
     <FullCalendar :key="renderKey" ref="calendarRef" :options="calendarOptions">
       <template #dayHeaderContent="arg">
-        <span v-if="arg.view.type === 'timeGridWeek'" class="se-calendar__week-head">
+        <button
+          v-if="arg.view.type === 'timeGridWeek'"
+          type="button"
+          class="se-calendar__week-head"
+          @click="emit('day-select', weekHeader(arg.date).date)"
+        >
           <small>{{ weekHeader(arg.date).weekday }}</small>
           <strong>{{ weekHeader(arg.date).day }}</strong>
-        </span>
+        </button>
         <span v-else class="se-calendar__month-head">{{ arg.text }}</span>
       </template>
 
       <template #dayCellContent="arg">
-        <span class="se-calendar__day-number">{{
+        <span v-if="arg.view.type === 'dayGridMonth'" class="se-calendar__day-number">{{
           getCalendarDateString(arg.date, timeZone).slice(8, 10).replace(/^0/, '')
         }}</span>
+      </template>
+
+      <template #allDayContent>
+        <span class="se-calendar__all-day">{{ t('calendar.allDay') }}</span>
       </template>
 
       <template #nowIndicatorContent="arg">
@@ -504,6 +523,11 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
 
 .se-calendar__week-head {
   display: inline-flex;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
   align-items: center;
   gap: 6px;
   padding: 3px 4px;
@@ -731,6 +755,16 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
   border: 0;
   margin: 0;
   transform: translateY(-50%);
+}
+
+.se-calendar__all-day {
+  display: block;
+  padding-inline-end: 6px;
+  color: var(--se-calendar-muted);
+  font-size: 0.58rem;
+  line-height: 1.15;
+  text-align: end;
+  white-space: normal;
 }
 
 .se-calendar__now-pill {
