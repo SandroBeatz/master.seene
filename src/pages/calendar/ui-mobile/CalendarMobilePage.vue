@@ -2,6 +2,7 @@
 import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
+  actionSheetController,
   IonButton,
   IonContent,
   IonHeader,
@@ -10,11 +11,15 @@ import {
   IonProgressBar,
   IonToolbar,
   onIonViewDidEnter,
+  onIonViewWillEnter,
   onIonViewWillLeave,
+  toastController,
 } from '@ionic/vue'
 import { add, chevronBack, chevronDown } from 'ionicons/icons'
 import type { Appointment } from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
+import { useSessionStore } from '@entities/session'
+import { useRemoveTimeBlockMutation, type TimeBlock } from '@entities/time-block'
 import type { MobileAppointmentQuickAction } from '@features/appointment-actions/index.mobile'
 import { AppointmentPreviewHostMobile } from '@widgets/appointment-preview-panel/index.mobile'
 import {
@@ -43,6 +48,10 @@ interface DrillOrigin {
 
 const { t, locale } = useI18n()
 const masterStore = useMasterPreferencesStore()
+const sessionStore = useSessionStore()
+const removeTimeBlockMutation = useRemoveTimeBlockMutation(
+  computed(() => sessionStore.session?.user.id ?? ''),
+)
 const now = useNowMinute()
 const calendar = useTemplateRef('calendar')
 const preview = useTemplateRef('preview')
@@ -105,6 +114,41 @@ function handleQuickAction(appointment: Appointment, action: MobileAppointmentQu
   else if (action === 'edit') void preview.value?.openEdit(appointment)
   else void preview.value?.remove(appointment)
 }
+
+async function showToast(message: string, color: 'success' | 'danger') {
+  const toast = await toastController.create({ message, duration: 2200, color, position: 'top' })
+  await toast.present()
+}
+
+// Time off has no detail screen on mobile: a tap offers to remove it.
+async function onTimeBlockSelect(timeBlock: TimeBlock) {
+  hapticImpact()
+  const sheet = await actionSheetController.create({
+    header: timeBlock.notes || t('timeBlocks.calendarTitle'),
+    buttons: [
+      { text: t('timeBlocks.form.delete'), role: 'destructive' },
+      { text: t('common.cancel'), role: 'cancel' },
+    ],
+  })
+  await sheet.present()
+  const { role } = await sheet.onDidDismiss()
+  if (role !== 'destructive') return
+
+  try {
+    await removeTimeBlockMutation.mutateAsync(timeBlock.id)
+    await showToast(t('timeBlocks.form.successDelete'), 'success')
+  } catch {
+    await showToast(t('timeBlocks.form.errorDelete'), 'danger')
+  }
+}
+
+// Coming back to the tab refreshes the period: bookings may have arrived
+// online or been changed on another device meanwhile.
+let hasEntered = false
+onIonViewWillEnter(() => {
+  if (hasEntered) void calendar.value?.refetch()
+  hasEntered = true
+})
 
 // Android hardware back returns from a drilled-in day before leaving the tab
 // (priority 10: above router navigation, below open overlays).
@@ -178,6 +222,7 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
         @day-select="openDay"
         @appointment-select="preview?.openDetails($event)"
         @appointment-action="handleQuickAction"
+        @time-block-select="onTimeBlockSelect"
         @slot-hold="quickCreate?.openAppointment({ startAt: $event })"
       />
     </ion-content>
