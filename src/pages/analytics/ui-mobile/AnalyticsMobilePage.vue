@@ -11,19 +11,13 @@ import {
   IonButton,
   IonButtons,
   IonIcon,
-  IonItem,
-  IonToggle,
-  IonLabel,
-  IonModal,
-  IonList,
-  IonListHeader,
 } from '@ionic/vue'
 import {
   chevronBack,
+  chevronDown,
   chevronForward,
   alertCircleOutline,
-  ellipsisVertical,
-  checkmark,
+  ellipsisHorizontal,
 } from 'ionicons/icons'
 import type {
   AnalyticsAnchoredKind,
@@ -47,6 +41,8 @@ import AnalyticsRevenueCardMobile from './AnalyticsRevenueCardMobile.vue'
 import AnalyticsTopServicesMobile from './AnalyticsTopServicesMobile.vue'
 import AnalyticsClientMixMobile from './AnalyticsClientMixMobile.vue'
 import AnalyticsBusiestDaysMobile from './AnalyticsBusiestDaysMobile.vue'
+import AnalyticsOptionsSheetMobile from './AnalyticsOptionsSheetMobile.vue'
+import AnalyticsPeriodPickerMobile from './AnalyticsPeriodPickerMobile.vue'
 
 const { t, locale } = useI18n()
 const formats = useFormats()
@@ -112,21 +108,32 @@ const EMPTY_DAYS = [0, 0, 0, 0, 0, 0, 0]
 
 // Only the very first load (no data yet) blocks the screen with the error state;
 // a failed background refetch keeps the last data on screen.
-const showError = computed(() => (!!error.value && !data.value) || (!!widgetsError.value && !widgets.value))
+const showError = computed(
+  () => (!!error.value && !data.value) || (!!widgetsError.value && !widgets.value),
+)
 
 function retry() {
   void refetch()
   void refetchWidgets()
 }
 
-// --- Period granularity (picked from the "⋯" sheet modal) -------------------
-const PERIOD_KINDS: readonly AnalyticsAnchoredKind[] = ['day', 'week', 'month', 'year']
-const isPeriodSheetOpen = ref(false)
+// --- Options sheet ("⋯"): granularity + compare toggle ----------------------
+const isOptionsOpen = ref(false)
+// Custom ranges aren't pickable on mobile (see loadStoredPeriod), so the period
+// is always anchored here.
+const anchoredKind = computed(() => period.value.kind as AnalyticsAnchoredKind)
+const anchorDate = computed(() => ('date' in period.value ? period.value.date : todayISO()))
 
-/** Choosing a granularity jumps to its current period, then closes the sheet. */
+/** Choosing a granularity jumps to its current period. */
 function selectKind(kind: AnalyticsAnchoredKind) {
   if (kind !== period.value.kind) period.value = currentPeriod(kind)
-  isPeriodSheetOpen.value = false
+}
+
+// --- Calendar sheet behind the caption: jump to any past period -------------
+const isPickerOpen = ref(false)
+
+function selectDate(date: string) {
+  period.value = { kind: anchoredKind.value, date } as AnalyticsPeriodV2
 }
 
 // --- Prev / next stepping + "jump to current" -------------------------------
@@ -142,7 +149,7 @@ const JUMP_KEYS: Record<AnalyticsAnchoredKind, string> = {
   month: 'analytics.period.thisMonth',
   year: 'analytics.period.thisYear',
 }
-const jumpLabel = computed(() => t(JUMP_KEYS[period.value.kind as AnalyticsAnchoredKind]))
+const jumpLabel = computed(() => t(JUMP_KEYS[anchoredKind.value]))
 function jumpToCurrent() {
   period.value = currentPeriod(period.value.kind)
 }
@@ -186,15 +193,22 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
 
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-title>{{ $t('analytics.title') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button v-if="showJump" size="small" @click="jumpToCurrent">
             {{ jumpLabel }}
           </ion-button>
-          <ion-button :aria-label="$t('analytics.period.title')" @click="isPeriodSheetOpen = true">
-            <ion-icon slot="icon-only" :icon="ellipsisVertical" />
+          <ion-button
+            class="options-button"
+            fill="clear"
+            color="dark"
+            shape="round"
+            :aria-label="$t('analytics.options.title')"
+            @click="isOptionsOpen = true"
+          >
+            <ion-icon slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -205,38 +219,41 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
       <div v-if="showError" class="state">
         <ion-icon :icon="alertCircleOutline" class="state-icon" color="danger" />
         <p class="state-text">{{ $t('analytics.loadError') }}</p>
-        <ion-button fill="outline" size="small" @click="retry">{{ $t('analytics.retry') }}</ion-button>
+        <ion-button fill="outline" size="small" @click="retry">{{
+          $t('analytics.retry')
+        }}</ion-button>
       </div>
 
       <div v-else class="page">
-        <!-- Period stepper + compare toggle -->
-        <div class="controls">
-          <div class="stepper">
-            <ion-button
-              fill="clear"
-              :aria-label="$t('analytics.toolbar.prevPeriod')"
-              @click="step(-1)"
-            >
-              <ion-icon slot="icon-only" :icon="chevronBack" />
-            </ion-button>
-            <div class="caption">
-              <span class="caption-main">{{ centerLabel }}</span>
-              <span v-if="compare" class="caption-sub">{{ compareCaption }}</span>
-            </div>
-            <ion-button
-              fill="clear"
-              :disabled="!canStepForward"
-              :aria-label="$t('analytics.toolbar.nextPeriod')"
-              @click="step(1)"
-            >
-              <ion-icon slot="icon-only" :icon="chevronForward" />
-            </ion-button>
-          </div>
-
-          <ion-item class="compare-row" :lines="'none'">
-            <ion-label>{{ $t('analytics.options.compare') }}</ion-label>
-            <ion-toggle slot="end" v-model="compare" />
-          </ion-item>
+        <!-- Period stepper; the caption opens the calendar for the granularity -->
+        <div class="stepper">
+          <ion-button
+            fill="clear"
+            :aria-label="$t('analytics.toolbar.prevPeriod')"
+            @click="step(-1)"
+          >
+            <ion-icon slot="icon-only" :icon="chevronBack" />
+          </ion-button>
+          <button
+            type="button"
+            class="caption"
+            :aria-label="$t('analytics.period.title')"
+            @click="isPickerOpen = true"
+          >
+            <span class="caption-main">
+              {{ centerLabel }}
+              <ion-icon :icon="chevronDown" class="caption-chevron" aria-hidden="true" />
+            </span>
+            <span v-if="compare" class="caption-sub">{{ compareCaption }}</span>
+          </button>
+          <ion-button
+            fill="clear"
+            :disabled="!canStepForward"
+            :aria-label="$t('analytics.toolbar.nextPeriod')"
+            @click="step(1)"
+          >
+            <ion-icon slot="icon-only" :icon="chevronForward" />
+          </ion-button>
         </div>
 
         <!-- Period-driven blocks: dimmed while a new period loads. -->
@@ -275,37 +292,18 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
       </div>
     </ion-content>
 
-    <!-- Period granularity picker as a bottom sheet modal
-         (https://ionicframework.com/docs/api/modal#sheet-modal). -->
-    <ion-modal
-      :is-open="isPeriodSheetOpen"
-      :breakpoints="[0, 0.4]"
-      :initial-breakpoint="0.4"
-      :handle="true"
-      @did-dismiss="isPeriodSheetOpen = false"
-    >
-      <ion-content>
-        <ion-list>
-          <ion-list-header>{{ $t('analytics.period.title') }}</ion-list-header>
-          <ion-item
-            v-for="kind in PERIOD_KINDS"
-            :key="kind"
-            button
-            :detail="false"
-            @click="selectKind(kind)"
-          >
-            <ion-label>{{ $t(`analytics.period.${kind}`) }}</ion-label>
-            <ion-icon
-              v-if="kind === period.kind"
-              slot="end"
-              :icon="checkmark"
-              color="primary"
-              aria-hidden="true"
-            />
-          </ion-item>
-        </ion-list>
-      </ion-content>
-    </ion-modal>
+    <analytics-options-sheet-mobile
+      v-model:is-open="isOptionsOpen"
+      v-model:compare="compare"
+      :kind="anchoredKind"
+      @select="selectKind"
+    />
+    <analytics-period-picker-mobile
+      v-model:is-open="isPickerOpen"
+      :kind="anchoredKind"
+      :date="anchorDate"
+      @select="selectDate"
+    />
   </ion-page>
 </template>
 
@@ -317,12 +315,6 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
   padding: 14px;
   /* Keep the last card clear of the home indicator / tab bar. */
   padding-bottom: calc(14px + var(--safe-area-bottom, 0px));
-}
-
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .stepper {
@@ -338,15 +330,35 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
   flex: 1;
   flex-direction: column;
   align-items: center;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.caption:active {
+  background: var(--se-surface-card);
 }
 
 .caption-main {
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
   overflow: hidden;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
+}
+
+.caption-chevron {
+  flex-shrink: 0;
+  color: var(--ion-color-medium);
+  font-size: 14px;
 }
 
 .caption-sub {
@@ -354,15 +366,24 @@ const compareLabel = computed(() => t(`analytics.compareVs.${COMPARE_KEYS[period
   color: var(--ion-color-medium);
 }
 
-.compare-row {
-  --background: var(--se-surface-card);
-  --border-radius: 12px;
-  --padding-start: 14px;
-  --inner-padding-end: 10px;
-  --min-height: 46px;
-  border-radius: 12px;
-  overflow: hidden;
-  font-size: 0.9rem;
+ion-header ion-toolbar {
+  --background: var(--se-surface-page, var(--ion-background-color));
+}
+
+/* Both modes: on MD the title is left-aligned and Tailwind's preflight resets
+   ion-title's own 20px inset, so the toolbar padding is the only gutter. */
+ion-header ion-toolbar {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.options-button {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  --padding-start: 0;
+  --padding-end: 0;
+  --border-radius: 50%;
 }
 
 .blocks {
