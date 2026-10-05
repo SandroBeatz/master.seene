@@ -1,23 +1,20 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  IonAvatar,
   IonButton,
   IonButtons,
   IonContent,
   IonHeader,
   IonIcon,
-  IonItem,
-  IonLabel,
   IonModal,
   IonSearchbar,
   IonTitle,
   IonToolbar,
 } from '@ionic/vue'
-import { checkmarkCircle, closeOutline, peopleOutline } from 'ionicons/icons'
-import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { closeOutline } from 'ionicons/icons'
 import type { Client } from '../model/types'
+import ClientSelectListMobile from './ClientSelectListMobile.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -34,48 +31,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const query = ref('')
-
-function clientName(client: Client): string {
-  return [client.first_name, client.last_name].filter(Boolean).join(' ') || client.phone
-}
-
-function initials(client: Client): string {
-  return (
-    [client.first_name, client.last_name]
-      .filter(Boolean)
-      .map((part) => part?.[0]?.toUpperCase() ?? '')
-      .join('')
-      .slice(0, 2) || '?'
-  )
-}
-
-const filteredClients = computed(() => {
-  const value = query.value.trim().toLocaleLowerCase()
-  const clients = value
-    ? props.clients.filter((client) =>
-        `${clientName(client)} ${client.phone}`.toLocaleLowerCase().includes(value),
-      )
-    : props.clients
-
-  return [...clients].sort((first, second) =>
-    clientName(first).localeCompare(clientName(second), undefined, { sensitivity: 'base' }),
-  )
-})
-
-const sections = computed(() =>
-  [
-    {
-      key: 'favorites',
-      title: t('clients.section.favorites'),
-      clients: filteredClients.value.filter((client) => client.is_favorite),
-    },
-    {
-      key: 'others',
-      title: t('clients.section.others'),
-      clients: filteredClients.value.filter((client) => !client.is_favorite),
-    },
-  ].filter((section) => section.clients.length > 0),
-)
 
 watch(
   () => props.isOpen,
@@ -122,51 +77,12 @@ function select(client: Client) {
     </ion-header>
 
     <ion-content class="client-picker-modal__content ion-padding-vertical">
-      <template v-if="filteredClients.length">
-        <inset-list
-          v-for="section in sections"
-          :key="section.key"
-          class="client-picker-modal__list"
-          :header="section.title"
-          sticky-header
-          :data-testid="`client-picker-section-${section.key}`"
-        >
-          <ion-item
-            v-for="client in section.clients"
-            :key="client.id"
-            button
-            :detail="false"
-            class="client-picker-modal__item"
-            :class="{ 'client-picker-modal__item--selected': client.id === modelValue }"
-            :aria-pressed="client.id === modelValue"
-            @click="select(client)"
-          >
-            <ion-avatar slot="start" class="client-picker-modal__avatar" aria-hidden="true">
-              <span v-if="client.emoji">{{ client.emoji }}</span>
-              <span v-else>{{ initials(client) }}</span>
-            </ion-avatar>
-            <ion-label>
-              <h2>{{ clientName(client) }}</h2>
-              <p>{{ client.phone }}</p>
-            </ion-label>
-            <ion-icon
-              v-if="client.id === modelValue"
-              slot="end"
-              :icon="checkmarkCircle"
-              color="primary"
-              aria-hidden="true"
-            />
-          </ion-item>
-        </inset-list>
-      </template>
-
-      <div v-else class="client-picker-modal__empty">
-        <ion-icon :icon="peopleOutline" color="medium" aria-hidden="true" />
-        <h2>
-          {{ clients.length ? t('clients.picker.noResults') : t('clients.emptyTitle') }}
-        </h2>
-        <p v-if="!clients.length">{{ t('clients.emptyDescription') }}</p>
-      </div>
+      <client-select-list-mobile
+        :clients="clients"
+        :model-value="modelValue"
+        :query="query"
+        @select="select"
+      />
     </ion-content>
   </ion-modal>
 </template>
@@ -179,74 +95,5 @@ function select(client: Client) {
 
 .client-picker-modal ion-searchbar {
   padding-block: 0 8px;
-}
-
-.client-picker-modal__list {
-  --se-sticky-header-cover: 16px;
-  --se-sticky-header-top: -8px;
-}
-
-.client-picker-modal__item {
-  --min-height: 64px;
-}
-
-.client-picker-modal__item--selected {
-  --background: rgba(var(--ion-color-primary-rgb), 0.1);
-}
-
-.client-picker-modal__avatar {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  margin-inline: 0 12px;
-  background: var(--ion-background-color-step-100);
-  color: var(--ion-text-color);
-  place-items: center;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.client-picker-modal__item ion-label h2,
-.client-picker-modal__item ion-label p {
-  margin: 0;
-}
-
-.client-picker-modal__item ion-label h2 {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.client-picker-modal__item ion-label p {
-  margin-top: 2px;
-  color: var(--ion-color-medium);
-  font-size: 0.8rem;
-}
-
-.client-picker-modal__item > ion-icon[slot='end'] {
-  font-size: 22px;
-}
-
-.client-picker-modal__empty {
-  display: grid;
-  min-height: 50vh;
-  align-content: center;
-  justify-items: center;
-  gap: 8px;
-  padding: 24px;
-  text-align: center;
-}
-
-.client-picker-modal__empty > ion-icon {
-  font-size: 2.5rem;
-}
-
-.client-picker-modal__empty h2,
-.client-picker-modal__empty p {
-  margin: 0;
-}
-
-.client-picker-modal__empty p {
-  max-width: 280px;
-  color: var(--ion-color-medium);
 }
 </style>

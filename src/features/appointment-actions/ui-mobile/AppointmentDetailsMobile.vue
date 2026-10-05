@@ -19,7 +19,6 @@ import {
   IonPopover,
   IonSkeletonText,
   IonSpinner,
-  IonTitle,
   IonToolbar,
   isPlatform,
   toastController,
@@ -67,6 +66,7 @@ import {
   getMobileAppointmentMenuActions,
   type MobileAppointmentMenuAction,
 } from '../model/action-set'
+import AppointmentRescheduleMobile from './AppointmentRescheduleMobile.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -88,6 +88,8 @@ const emit = defineEmits<{
   'did-dismiss': []
   'select-client': [client: Client]
   'select-services': [services: Service[]]
+  /** New start as a UTC ISO string. */
+  'select-date-time': [startAt: string]
   'select-payment-type': [paymentType: PaymentType]
   'save-sale-amount': [details: UpdateSaleDetailsDto]
   primary: [presentingElement: HTMLElement | null]
@@ -436,7 +438,13 @@ function runPrimary() {
           class="appointment-summary-group appointment-date-group"
           :style="{ '--se-list-inset-x': '0px', '--se-group-gap': '0px' }"
         >
-          <ion-item button :detail="true" lines="none" @click="dateTimeModalOpen = true">
+          <ion-item
+            button
+            :detail="true"
+            lines="none"
+            :disabled="primaryLoading"
+            @click="dateTimeModalOpen = true"
+          >
             <ion-icon
               slot="start"
               class="appointment-date-group__icon"
@@ -565,35 +573,13 @@ function runPrimary() {
         </ion-list>
       </ion-popover>
 
-      <ion-modal
-        :is-open="dateTimeModalOpen"
-        :presenting-element="detailsModalEl ?? undefined"
-        @did-dismiss="dateTimeModalOpen = false"
-      >
-        <ion-header class="ion-no-border">
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-button
-                fill="clear"
-                color="dark"
-                :aria-label="t('common.close')"
-                @click="dateTimeModalOpen = false"
-              >
-                <ion-icon slot="icon-only" :icon="closeOutline" aria-hidden="true" />
-              </ion-button>
-            </ion-buttons>
-            <ion-title>{{ t('appointments.preview.dateTimeTitle') }}</ion-title>
-          </ion-toolbar>
-        </ion-header>
-
-        <ion-content class="date-time-placeholder ion-padding">
-          <div class="date-time-placeholder__content">
-            <ion-icon :icon="calendarOutline" color="primary" aria-hidden="true" />
-            <h2>{{ t('common.comingSoon') }}</h2>
-            <p>{{ t('appointments.preview.dateTimeComingSoon') }}</p>
-          </div>
-        </ion-content>
-      </ion-modal>
+      <appointment-reschedule-mobile
+        v-model:is-open="dateTimeModalOpen"
+        :appointment="appointment"
+        :time-zone="timeZone"
+        :presenting-element="detailsModalEl"
+        @save="emit('select-date-time', $event)"
+      />
 
       <client-picker-modal-mobile
         v-model:is-open="clientPickerOpen"
@@ -922,34 +908,6 @@ function runPrimary() {
   font-size: 0.9rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-}
-
-.date-time-placeholder {
-  --background: var(--se-surface-page, var(--ion-background-color));
-}
-
-.date-time-placeholder__content {
-  display: grid;
-  min-height: 100%;
-  align-content: center;
-  justify-items: center;
-  gap: 8px;
-  padding: 24px;
-  text-align: center;
-}
-
-.date-time-placeholder__content > ion-icon {
-  font-size: 3rem;
-}
-
-.date-time-placeholder__content h2,
-.date-time-placeholder__content p {
-  margin: 0;
-}
-
-.date-time-placeholder__content p {
-  max-width: 280px;
-  color: var(--ion-color-medium);
 }
 
 .payment-card ion-icon[slot='end'] {
