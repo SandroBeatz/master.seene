@@ -319,6 +319,10 @@ const calendarOptions = computed<CalendarOptions>(() => {
       timeGridWeek: { dayMinWidth: MOBILE_CALENDAR_WEEK_DAY_WIDTH_PX },
       timeGridDay: { dayHeaders: false },
     },
+    // Ionic's tap-click marks `.ion-activatable` with `.ion-activated` on touch,
+    // giving month cells the same pressed state as native list rows.
+    dayCellClassNames: (arg) =>
+      arg.view.type === 'dayGridMonth' && !arg.isDisabled ? ['ion-activatable'] : [],
     dateClick: handleDateClick,
     select: handleSelect,
     datesSet: handleDatesSet,
@@ -567,7 +571,7 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
   transition: background-color 160ms ease;
 }
 
-.se-calendar :deep(.fc-daygrid-day:active) {
+.se-calendar :deep(.fc-daygrid-day.ion-activated) {
   background: var(--se-surface-muted);
 }
 
@@ -720,10 +724,11 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
   opacity: 1;
 }
 
-.se-calendar :deep(.fc .fc-timegrid-event),
-.se-calendar :deep(.fc .fc-daygrid-block-event:not(.fc-daygrid-dot-event)) {
-  border: 0;
-  background: transparent;
+/* FullCalendar paints each event's border/background colours inline; our
+   cards and stripes draw their own surface, so the inline paint must yield. */
+.se-calendar :deep(.fc .fc-event) {
+  border-color: transparent !important;
+  background-color: transparent !important;
   box-shadow: none;
 }
 
