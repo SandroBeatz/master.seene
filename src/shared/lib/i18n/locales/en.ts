@@ -112,7 +112,6 @@ export default {
       options: 'Options',
       loadError: 'Couldn’t load the schedule',
       retry: 'Try again',
-      details: 'Appointment details',
     },
     overview: {
       title: 'Overview',
@@ -1208,6 +1207,10 @@ export default {
     },
   },
   appointments: {
+    quickMenu: {
+      details: 'Appointment details',
+      reschedule: 'Reschedule',
+    },
     status: {
       pending: 'Awaiting confirmation',
       confirmed: 'Confirmed',

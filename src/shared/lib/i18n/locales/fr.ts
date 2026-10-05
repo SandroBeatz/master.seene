@@ -112,7 +112,6 @@ export default {
       options: 'Options',
       loadError: 'Impossible de charger le planning',
       retry: 'Réessayer',
-      details: 'Détails du rendez-vous',
     },
     overview: {
       title: "Vue d'ensemble",
@@ -1218,6 +1217,10 @@ export default {
     },
   },
   appointments: {
+    quickMenu: {
+      details: 'Détails du rendez-vous',
+      reschedule: 'Déplacer',
+    },
     status: {
       pending: 'En attente de confirmation',
       confirmed: 'Confirmé',

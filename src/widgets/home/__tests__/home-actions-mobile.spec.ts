@@ -1,13 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { ref } from 'vue'
+import { defineComponent, ref } from 'vue'
 import { createI18n } from 'vue-i18n'
 import type { Appointment, AppointmentStatus } from '@entities/appointment/model/types'
 import type { Client } from '@entities/client/model/types'
 import type { Service } from '@entities/service/model/types'
 import { formatsPlugin } from '@shared/lib/formats'
 import en from '@shared/lib/i18n/locales/en'
+import { AppointmentPreviewHostMobile } from '@widgets/appointment-preview-panel/index.mobile'
 import HomeActionsMobile from '../ui-mobile/HomeActionsMobile.vue'
+
+// Wires the carousel to the preview host exactly like HomeMobilePage does, so
+// these specs cover the whole card → overlay → mutation flow.
+const HomeActionsHarness = defineComponent({
+  components: { HomeActionsMobile, AppointmentPreviewHostMobile },
+  setup(_, { expose }) {
+    const preview = ref<InstanceType<typeof AppointmentPreviewHostMobile> | null>(null)
+    expose({
+      openAppointment: (item: Appointment) => preview.value?.openDetails(item),
+      rescheduleAppointment: (item: Appointment) => preview.value?.openReschedule(item),
+      deleteAppointment: (item: Appointment) => preview.value?.remove(item),
+    })
+    return { preview }
+  },
+  template: `
+    <home-actions-mobile
+      :busy-ids="preview?.processingIds"
+      @open="preview?.openDetails($event)"
+      @primary="preview?.primary($event)"
+      @actions="preview?.openActions($event)"
+    />
+    <appointment-preview-host-mobile ref="preview" />
+  `,
+})
 
 const queryMock = vi.hoisted(() => ({
   appointments: null as Record<string, unknown> | null,
@@ -139,6 +164,12 @@ const stubs = {
       '<div v-if="isOpen" class="details-wrapper-stub"><button class="details-mobile-stub">Details</button><span class="details-client-name">{{ client && client.first_name }}</span><span class="details-service-ids">{{ appointment.service_ids.join(\',\') }}</span><span class="details-status">{{ appointment.status }}</span><button class="details-client-stub" @click="$emit(\'select-client\', clients[1])">Select client</button><button class="details-services-stub" @click="$emit(\'select-services\', services.slice(-2))">Select services</button><button v-if="paymentTypes[0]" class="details-payment-stub" @click="$emit(\'select-payment-type\', paymentTypes[0])">Select payment</button><button class="details-amount-stub" @click="$emit(\'save-sale-amount\', { amount: 90, items: [{ id: \'item-1\', price: 90 }] })">Save amount</button><button class="details-decline-stub" @click="$emit(\'action\', \'decline\')">Decline</button><button class="details-no-show-stub" @click="$emit(\'action\', \'no_show\')">No-show</button><button class="details-close-stub" @click="$emit(\'update:isOpen\', false); $emit(\'did-dismiss\')">Close</button><button v-if="appointment.status !== \'completed\'" class="details-primary-stub" @click="$emit(\'primary\', $el)">Primary</button><button class="details-delete-stub" @click="$emit(\'action\', \'delete\')">Delete</button></div>',
   },
   AppointmentEditMobile: { template: '<div class="edit-mobile-stub" />' },
+  AppointmentRescheduleMobile: {
+    props: ['isOpen'],
+    emits: ['save', 'update:isOpen'],
+    template:
+      '<button v-if="isOpen" class="reschedule-save-stub" @click="$emit(\'save\', \'2026-06-09T09:00:00.000Z\')">Save</button>',
+  },
   AppointmentActionsDrawerMobile: {
     props: ['isOpen'],
     emits: ['select', 'update:isOpen'],
@@ -249,7 +280,7 @@ function mountWidget(
   }
 
   const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
-  const wrapper = mount(HomeActionsMobile, {
+  const wrapper = mount(HomeActionsHarness, {
     global: {
       plugins: [i18n, [formatsPlugin, { getCurrency: () => 'USD', getLocale: () => 'en' }]],
       stubs,
@@ -358,8 +389,9 @@ describe('HomeActionsMobile', () => {
     await wrapper.find('.action-card__primary').trigger('click')
     await flushPromises()
 
-    expect(wrapper.emitted('open')?.[0]).toEqual([item])
-    expect(wrapper.emitted('primary')?.[0]).toEqual([item])
+    const widget = wrapper.findComponent(HomeActionsMobile)
+    expect(widget.emitted('open')?.[0]).toEqual([item])
+    expect(widget.emitted('primary')?.[0]).toEqual([item])
   })
 
   it('can dismiss and reopen appointment details repeatedly', async () => {
@@ -604,6 +636,26 @@ describe('HomeActionsMobile', () => {
 
     expect(queryMock.alertCreate).toHaveBeenCalledOnce()
     expect(queryMock.remove).toHaveBeenCalledWith('request')
+  })
+
+  it('reschedules from the quick menu and toasts the result', async () => {
+    const item = appointment('request', '2026-06-08T14:00:00.000Z', 'pending')
+    ;({ wrapper } = mountWidget({ appointments: [item] }))
+
+    const exposed = wrapper.vm as unknown as {
+      rescheduleAppointment: (appointment: Appointment) => Promise<void>
+    }
+    await exposed.rescheduleAppointment(item)
+    await wrapper.get('.reschedule-save-stub').trigger('click')
+    await flushPromises()
+
+    expect(queryMock.update).toHaveBeenCalledWith({
+      id: 'request',
+      start_at: '2026-06-09T09:00:00.000Z',
+    })
+    expect(queryMock.toastCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Date and time updated', color: 'success' }),
+    )
   })
 
   it('marks a confirmed appointment as no-show after confirmation', async () => {

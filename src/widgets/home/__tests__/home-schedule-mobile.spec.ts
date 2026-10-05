@@ -239,7 +239,7 @@ describe('HomeScheduleMobile', () => {
       ],
     })
 
-    expect(wrapper.findAll('.schedule-appointment__services li')).toHaveLength(2)
+    expect(wrapper.findAll('.appointment-block__services li')).toHaveLength(2)
     expect(wrapper.find('.timed-time-off').text()).toContain('Lunch')
     expect(wrapper.find('.all-day-time-off').text()).toContain('Vacation')
   })
@@ -251,9 +251,9 @@ describe('HomeScheduleMobile', () => {
       ],
     })
 
-    const card = wrapper.find('.schedule-appointment--compact')
+    const card = wrapper.find('.appointment-block--compact')
     expect(card.exists()).toBe(true)
-    expect(card.find('.schedule-appointment__compact-meta').text()).toContain('Haircut')
+    expect(card.find('.appointment-block__compact-meta').text()).toContain('Haircut')
   })
 
   it('emits the selected appointment when a timeline card is tapped', async () => {
@@ -282,7 +282,7 @@ describe('HomeScheduleMobile', () => {
     await card.trigger('click')
     expect(wrapper.emitted('select')).toBeUndefined()
 
-    await wrapper.findAll('.ion-item-stub')[1]?.trigger('click')
+    await wrapper.findAll('.ion-item-stub')[2]?.trigger('click')
     expect(wrapper.emitted('action')?.[0]).toEqual([item, 'edit'])
     expect(wrapper.find('.schedule-action-popover-stub').exists()).toBe(false)
   })

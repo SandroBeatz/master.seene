@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IonContent, IonFab, IonFabButton, IonIcon, IonPage } from '@ionic/vue'
 import { add } from 'ionicons/icons'
 import type { Appointment } from '@entities/appointment'
+import type { MobileAppointmentQuickAction } from '@features/appointment-actions/index.mobile'
 import { AppointmentWizardMobile } from '@features/appointment-wizard/index.mobile'
 import { TimeOffWizardMobile } from '@features/time-off-wizard/index.mobile'
+import { AppointmentPreviewHostMobile } from '@widgets/appointment-preview-panel/index.mobile'
 import {
   HomeActionsMobile,
   HomeHeaderMobile,
@@ -14,14 +16,8 @@ import {
 } from '@widgets/home/index.mobile'
 import HomeCreateSheetMobile from './HomeCreateSheetMobile.vue'
 
-interface HomeActionsExpose {
-  openAppointment: (appointment: Appointment) => void
-  editAppointment: (appointment: Appointment) => void
-  deleteAppointment: (appointment: Appointment) => Promise<void>
-}
-
 const { t } = useI18n()
-const actions = ref<HomeActionsExpose | null>(null)
+const preview = useTemplateRef('preview')
 const isCreateSheetOpen = ref(false)
 const isWizardOpen = ref(false)
 const isTimeOffOpen = ref(false)
@@ -36,14 +32,11 @@ function onCreateSelect(kind: 'appointment' | 'timeOff') {
   else isTimeOffOpen.value = true
 }
 
-function openAppointment(appointment: Appointment) {
-  actions.value?.openAppointment(appointment)
-}
-
-function handleScheduleAction(appointment: Appointment, action: 'details' | 'edit' | 'delete') {
-  if (action === 'details') actions.value?.openAppointment(appointment)
-  else if (action === 'edit') actions.value?.editAppointment(appointment)
-  else void actions.value?.deleteAppointment(appointment)
+function handleQuickAction(appointment: Appointment, action: MobileAppointmentQuickAction) {
+  if (action === 'details') void preview.value?.openDetails(appointment)
+  else if (action === 'reschedule') void preview.value?.openReschedule(appointment)
+  else if (action === 'edit') void preview.value?.openEdit(appointment)
+  else void preview.value?.remove(appointment)
 }
 </script>
 
@@ -53,8 +46,13 @@ function handleScheduleAction(appointment: Appointment, action: 'details' | 'edi
     <ion-content :fullscreen="true">
       <main class="home-content">
         <home-overview-mobile />
-        <home-actions-mobile ref="actions" />
-        <home-schedule-mobile @select="openAppointment" @action="handleScheduleAction" />
+        <home-actions-mobile
+          :busy-ids="preview?.processingIds"
+          @open="preview?.openDetails($event)"
+          @primary="preview?.primary($event)"
+          @actions="preview?.openActions($event)"
+        />
+        <home-schedule-mobile @select="preview?.openDetails($event)" @action="handleQuickAction" />
       </main>
 
       <ion-fab slot="fixed" vertical="bottom" horizontal="end" class="home-fab">
@@ -64,6 +62,7 @@ function handleScheduleAction(appointment: Appointment, action: 'details' | 'edi
       </ion-fab>
     </ion-content>
 
+    <appointment-preview-host-mobile ref="preview" />
     <home-create-sheet-mobile v-model:is-open="isCreateSheetOpen" @select="onCreateSelect" />
     <appointment-wizard-mobile
       v-model:is-open="isWizardOpen"
