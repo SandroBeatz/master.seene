@@ -1,8 +1,10 @@
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  getAppointmentDates,
   getMobileCalendarEventDensity,
   getMobileCalendarScrollTime,
   getMobileCalendarSlotHeight,
+  getWeekDates,
   getWorkdayStart,
   readStoredMobileCalendarView,
   resolveMobileTimeGridBounds,
@@ -89,6 +91,30 @@ describe('mobile calendar model', () => {
       getWorkdayStart([{ startTime: '10:00:00' }, { startTime: '09:00:00' }, { startTime: 1 }]),
     ).toBe('09:00:00')
     expect(getWorkdayStart(undefined)).toBeUndefined()
+  })
+
+  it('lists the week of a date from the configured first day', () => {
+    expect(getWeekDates('2026-10-08', 1)).toEqual([
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
+      '2026-10-08',
+      '2026-10-09',
+      '2026-10-10',
+      '2026-10-11',
+    ])
+    expect(getWeekDates('2026-10-08', 0)[0]).toBe('2026-10-04')
+    expect(getWeekDates('2026-10-04', 1)[0]).toBe('2026-09-28')
+  })
+
+  it('collects the dates that hold appointments', () => {
+    expect(
+      getAppointmentDates([
+        { start: '2026-10-05T09:00:00', extendedProps: { type: 'appointment' } },
+        { start: '2026-10-05T12:00:00', extendedProps: { type: 'appointment' } },
+        { start: '2026-10-06T09:00:00', extendedProps: { type: 'time-block' } },
+      ]),
+    ).toEqual(new Set(['2026-10-05']))
   })
 
   it('aligns the query window to whole months so paging days reuses it', () => {

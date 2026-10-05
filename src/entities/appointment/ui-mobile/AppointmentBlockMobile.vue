@@ -122,6 +122,10 @@ const statusLabel = computed(() => t(`appointments.status.${props.status}`))
   background: var(--se-surface-muted);
 }
 
+.appointment-block--compact {
+  padding-block: 4px;
+}
+
 .appointment-block--micro {
   justify-content: center;
   padding-block: 0;
@@ -191,7 +195,7 @@ const statusLabel = computed(() => t(`appointments.status.${props.status}`))
 
 .appointment-block__compact-meta {
   overflow: hidden;
-  margin-top: 3px !important;
+  margin-top: 2px !important;
   color: var(--ion-color-medium);
   font-size: 0.64rem;
   line-height: 1.2;

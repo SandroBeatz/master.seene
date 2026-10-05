@@ -33,6 +33,7 @@ import type { CalendarAppointmentEventDetails } from '../model/calendar-events'
 import type { CalendarDateRange, CalendarViewType } from '../model/calendar-controls'
 import { normalizeCalendarLocale } from '../model/calendar-locale'
 import {
+  getAppointmentDates,
   getMobileCalendarEventDensity,
   getMobileCalendarScrollTime,
   getMobileCalendarSlotHeight,
@@ -44,6 +45,8 @@ import {
 import { getCalendarDateString, toCalendarDateRange } from '../model/calendar-range'
 import { buildCalendarScheduleDisplay } from '../model/calendar-schedule'
 import { useMobileCalendarEvents } from '../model/use-mobile-calendar-events'
+import CalendarWeekStripMobile from './CalendarWeekStripMobile.vue'
+import { useCalendarSwipe } from './use-calendar-swipe'
 
 // Native-feeling FullCalendar for the Ionic build: month (service-coloured
 // stripes), week (fixed-width, 2D-scrolling day columns) and day (full width).
@@ -85,6 +88,7 @@ const { events, now, isLoading, error, setVisibleRange, refetch } = useMobileCal
 
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
 const rootRef = ref<HTMLElement | null>(null)
+const gridRef = ref<HTMLElement | null>(null)
 const currentView = ref<CalendarViewType>(props.initialView)
 const isTimeGrid = computed(() => currentView.value !== 'dayGridMonth')
 let alignWeekOnNextRange = props.initialView === 'timeGridWeek'
@@ -129,7 +133,25 @@ const renderKey = computed(() =>
   }),
 )
 
-watch(hasAllDayEvents, () => void nextTick(() => getCalendarApi()?.updateSize()))
+const shownDate = computed(() => visibleWindow.value.start.slice(0, 10))
+const todayDate = computed(() => getDateTimeInputValue(now.value, timeZone.value).date)
+const appointmentDates = computed(() => getAppointmentDates(events.value))
+const isDayView = computed(() => currentView.value === 'timeGridDay')
+
+// The grid's box changes when the all-day row collapses or the day view's
+// week strip comes and goes — FullCalendar only re-measures on request.
+watch([hasAllDayEvents, isDayView], () => void nextTick(() => getCalendarApi()?.updateSize()))
+
+const { slide } = useCalendarSwipe({
+  target: gridRef,
+  surface: () => gridRef.value?.querySelector<HTMLElement>('.fc-view-harness') ?? null,
+  enabled: () => currentView.value !== 'timeGridWeek' && !actionAppointment.value,
+  onPage: (direction) => (direction === 'next' ? next() : prev()),
+})
+
+function selectStripDate(date: string) {
+  void slide(date > shownDate.value ? 'next' : 'prev', () => getCalendarApi()?.gotoDate(date))
+}
 
 const actionAppointment = ref<Appointment | null>(null)
 const actionEvent = shallowRef<Event | undefined>(undefined)
@@ -415,76 +437,87 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
       '--se-calendar-slot-height': `${getMobileCalendarSlotHeight(masterStore.calendarSlotStepMinutes)}px`,
     }"
   >
-    <FullCalendar :key="renderKey" ref="calendarRef" :options="calendarOptions">
-      <template #dayHeaderContent="arg">
-        <button
-          v-if="arg.view.type === 'timeGridWeek'"
-          type="button"
-          class="se-calendar__week-head"
-          @click="emit('day-select', weekHeader(arg.date).date)"
-        >
-          <small>{{ weekHeader(arg.date).weekday }}</small>
-          <strong>{{ weekHeader(arg.date).day }}</strong>
-        </button>
-        <span v-else class="se-calendar__month-head">{{ arg.text }}</span>
-      </template>
+    <calendar-week-strip-mobile
+      v-if="isDayView && shownDate"
+      :date="shownDate"
+      :today="todayDate"
+      :first-day="masterStore.calendarFirstDay"
+      :marked-dates="appointmentDates"
+      @select="selectStripDate"
+    />
 
-      <template #dayCellContent="arg">
-        <span v-if="arg.view.type === 'dayGridMonth'" class="se-calendar__day-number">{{
-          getCalendarDateString(arg.date, timeZone).slice(8, 10).replace(/^0/, '')
-        }}</span>
-      </template>
+    <div ref="gridRef" class="se-calendar__grid">
+      <FullCalendar :key="renderKey" ref="calendarRef" :options="calendarOptions">
+        <template #dayHeaderContent="arg">
+          <button
+            v-if="arg.view.type === 'timeGridWeek'"
+            type="button"
+            class="se-calendar__week-head"
+            @click="emit('day-select', weekHeader(arg.date).date)"
+          >
+            <small>{{ weekHeader(arg.date).weekday }}</small>
+            <strong>{{ weekHeader(arg.date).day }}</strong>
+          </button>
+          <span v-else class="se-calendar__month-head">{{ arg.text }}</span>
+        </template>
 
-      <template #allDayContent>
-        <span class="se-calendar__all-day">{{ t('calendar.allDay') }}</span>
-      </template>
+        <template #dayCellContent="arg">
+          <span v-if="arg.view.type === 'dayGridMonth'" class="se-calendar__day-number">{{
+            getCalendarDateString(arg.date, timeZone).slice(8, 10).replace(/^0/, '')
+          }}</span>
+        </template>
 
-      <template #nowIndicatorContent="arg">
-        <span v-if="arg.isAxis" class="se-calendar__now-pill">{{ nowLabel() }}</span>
-      </template>
+        <template #allDayContent>
+          <span class="se-calendar__all-day">{{ t('calendar.allDay') }}</span>
+        </template>
 
-      <template #eventContent="arg">
-        <span
-          v-if="arg.view.type === 'dayGridMonth'"
-          class="se-calendar__stripe"
-          :class="{ 'se-calendar__stripe--muted': eventType(arg.event) === 'time-block' }"
-          :style="{ '--se-stripe-color': arg.event.borderColor }"
-        >
-          {{ eventType(arg.event) === 'appointment' ? stripeLabel(arg.event) : arg.event.title }}
-        </span>
+        <template #nowIndicatorContent="arg">
+          <span v-if="arg.isAxis" class="se-calendar__now-pill">{{ nowLabel() }}</span>
+        </template>
 
-        <div
-          v-else-if="eventType(arg.event) === 'appointment'"
-          class="se-calendar__event"
-          role="button"
-          tabindex="0"
-          @click.stop="openAppointment(arg.event)"
-          @keydown.enter="openAppointment(arg.event)"
-          @pointerdown="longPress.start($event, arg.event.id)"
-          @pointermove="longPress.move"
-          @pointerup="longPress.cancel"
-          @pointercancel="longPress.cancel"
-          @pointerleave="longPress.cancel"
-          @contextmenu.prevent="longPress.trigger($event, arg.event.id)"
-        >
-          <appointment-block-mobile
-            v-bind="appointmentBlock(arg.event)"
-            :active="longPress.pressedId.value === arg.event.id"
-          />
-        </div>
+        <template #eventContent="arg">
+          <span
+            v-if="arg.view.type === 'dayGridMonth'"
+            class="se-calendar__stripe"
+            :class="{ 'se-calendar__stripe--muted': eventType(arg.event) === 'time-block' }"
+            :style="{ '--se-stripe-color': arg.event.borderColor }"
+          >
+            {{ eventType(arg.event) === 'appointment' ? stripeLabel(arg.event) : arg.event.title }}
+          </span>
 
-        <div
-          v-else-if="eventType(arg.event) === 'time-block'"
-          class="se-calendar__event"
-          role="button"
-          tabindex="0"
-          @click.stop="openTimeBlock(arg.event)"
-          @keydown.enter="openTimeBlock(arg.event)"
-        >
-          <time-off-block-mobile v-bind="timeOffBlock(arg.event)" />
-        </div>
-      </template>
-    </FullCalendar>
+          <div
+            v-else-if="eventType(arg.event) === 'appointment'"
+            class="se-calendar__event"
+            role="button"
+            tabindex="0"
+            @click.stop="openAppointment(arg.event)"
+            @keydown.enter="openAppointment(arg.event)"
+            @pointerdown="longPress.start($event, arg.event.id)"
+            @pointermove="longPress.move"
+            @pointerup="longPress.cancel"
+            @pointercancel="longPress.cancel"
+            @pointerleave="longPress.cancel"
+            @contextmenu.prevent="longPress.trigger($event, arg.event.id)"
+          >
+            <appointment-block-mobile
+              v-bind="appointmentBlock(arg.event)"
+              :active="longPress.pressedId.value === arg.event.id"
+            />
+          </div>
+
+          <div
+            v-else-if="eventType(arg.event) === 'time-block'"
+            class="se-calendar__event"
+            role="button"
+            tabindex="0"
+            @click.stop="openTimeBlock(arg.event)"
+            @keydown.enter="openTimeBlock(arg.event)"
+          >
+            <time-off-block-mobile v-bind="timeOffBlock(arg.event)" />
+          </div>
+        </template>
+      </FullCalendar>
+    </div>
 
     <appointment-quick-menu-mobile
       :is-open="Boolean(actionAppointment)"
@@ -504,12 +537,21 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
   --se-calendar-axis-width: 48px;
 
   position: relative;
+  display: flex;
   height: 100%;
   min-height: 0;
+  flex-direction: column;
   background: var(--se-calendar-bg);
   color: var(--ion-text-color);
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+.se-calendar__grid {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 /* ---- FullCalendar theme (its own CSS variables first) ---- */

@@ -1,4 +1,5 @@
 import type { EventInput } from '@fullcalendar/core'
+import { addDateInputDays } from '@shared/lib/time-zone'
 import { CALENDAR_VIEW_TYPES, type CalendarViewType } from './calendar-controls'
 
 /** Vertical scale of the mobile time grid — one hour of the day in pixels. */
@@ -97,6 +98,25 @@ export function getWorkdayStart(businessHours: readonly object[] | undefined): s
     .filter((value): value is string => typeof value === 'string')
     .sort()
   return starts[0]
+}
+
+/** The seven `YYYY-MM-DD` dates of the week holding `date`, from `firstDay`. */
+export function getWeekDates(date: string, firstDay: number): string[] {
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay()
+  const start = addDateInputDays(date, -((weekday - firstDay + 7) % 7))
+  return Array.from({ length: 7 }, (_, index) => addDateInputDays(start, index))
+}
+
+/** Wall dates (`YYYY-MM-DD`) that hold at least one appointment. */
+export function getAppointmentDates(events: readonly EventInput[]): Set<string> {
+  const dates = new Set<string>()
+  for (const event of events) {
+    const type = (event.extendedProps as { type?: string } | undefined)?.type
+    if (type === 'appointment' && typeof event.start === 'string') {
+      dates.add(event.start.slice(0, 10))
+    }
+  }
+  return dates
 }
 
 /**
