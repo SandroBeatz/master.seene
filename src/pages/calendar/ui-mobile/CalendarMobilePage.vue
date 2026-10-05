@@ -14,7 +14,7 @@ import { calendarOutline } from 'ionicons/icons'
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content :fullscreen="true">
       <div class="flex min-h-full flex-col items-center justify-center px-6 text-center">
         <ion-icon :icon="calendarOutline" class="mb-3 text-5xl text-gray-400" aria-hidden="true" />
         <p class="text-base text-gray-500">{{ $t('common.comingSoon') }}</p>

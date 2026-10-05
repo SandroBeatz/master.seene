@@ -92,6 +92,9 @@
  */
 :root {
   --se-surface-page: var(--ion-background-color-step-50);
+  /* RGB triplet of the page surface for components that tint with rgba()
+     (e.g. ion-datetime's wheel fade). Light mirrors step-50 of the grid above. */
+  --se-surface-page-rgb: 242, 242, 242;
   --se-surface-card: var(--ion-background-color);
   --se-surface-muted: var(--ion-background-color-step-50);
   --se-separator: var(--ion-background-color-step-150);
@@ -101,6 +104,7 @@
 
 .ion-palette-dark {
   --se-surface-page: var(--ion-background-color);
+  --se-surface-page-rgb: var(--ion-background-color-rgb);
   --se-surface-card: var(--ion-background-color-step-100);
   --se-surface-muted: var(--ion-background-color-step-50);
   --se-separator: var(--ion-background-color-step-200);
@@ -120,4 +124,83 @@ ion-content {
   --safe-area-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --safe-area-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
   --safe-area-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}
+
+/*
+ * Bottom tab bar floats over the content as frosted glass — a mostly-opaque
+ * page tint plus a soft blur, so scrolled content shows through just barely.
+ * Tab-root pages use `<ion-content fullscreen>` so their content scrolls under
+ * it. Applied to every mode (Ionic's own `translucent` is iOS-only).
+ */
+:root {
+  --se-chrome-background: color-mix(in srgb, var(--se-surface-page) 78%, transparent);
+  --se-chrome-blur: saturate(180%) blur(18px);
+  --se-tab-bar-height: 62px;
+}
+
+ion-tab-bar {
+  --background: var(--se-chrome-background);
+  --border: 0;
+  height: var(--se-tab-bar-height);
+  -webkit-backdrop-filter: var(--se-chrome-blur);
+  backdrop-filter: var(--se-chrome-blur);
+  box-shadow: 0 -0.5px 0 var(--se-separator);
+}
+
+/* Five tabs must fit a 320px phone. MD gives each button 12px side padding
+   (5 × ~85px overflows even 412px screens), so pin a tight, mode-independent
+   padding and let buttons shrink evenly. */
+ion-tab-button {
+  --color: var(--ion-color-medium);
+  --color-selected: var(--ion-color-primary);
+  --padding-top: 6px;
+  --padding-bottom: 4px;
+  --padding-start: 2px;
+  --padding-end: 2px;
+  min-width: 0;
+}
+
+ion-tab-button ion-icon {
+  /* Pill behind the active icon (Material 3 style indicator). */
+  box-sizing: content-box;
+  margin: 0;
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-size: 22px;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+ion-tab-button.tab-selected ion-icon {
+  background-color: color-mix(in srgb, var(--ion-color-primary) 16%, transparent);
+}
+
+ion-tab-button:active ion-icon {
+  transform: scale(0.92);
+}
+
+ion-tab-button ion-label {
+  max-width: 100%;
+  margin: 3px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+ion-tab-button.tab-selected ion-label {
+  font-weight: 600;
+}
+
+/* Small phones: slimmer pill and label so long labels ("Аналитика") fit. */
+@media (max-width: 360px) {
+  ion-tab-button ion-icon {
+    padding-inline: 11px;
+  }
+
+  ion-tab-button ion-label {
+    font-size: 10px;
+  }
 }
