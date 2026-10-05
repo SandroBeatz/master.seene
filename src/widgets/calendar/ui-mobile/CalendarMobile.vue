@@ -14,7 +14,7 @@ import interactionPlugin, { type DateClickArg } from '@fullcalendar/interaction'
 import scrollGridPlugin from '@fullcalendar/scrollgrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import FullCalendar from '@fullcalendar/vue3'
-import { computed, nextTick, ref, shallowRef } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getEffectiveAppointmentStatus, type Appointment } from '@entities/appointment'
 import { AppointmentBlockMobile } from '@entities/appointment/index.mobile'
@@ -34,7 +34,9 @@ import type { CalendarDateRange, CalendarViewType } from '../model/calendar-cont
 import { normalizeCalendarLocale } from '../model/calendar-locale'
 import {
   getMobileCalendarEventDensity,
+  getMobileCalendarScrollTime,
   getMobileCalendarSlotHeight,
+  getWorkdayStart,
   MOBILE_CALENDAR_DEFAULT_VIEW,
   MOBILE_CALENDAR_WEEK_DAY_WIDTH_PX,
   resolveMobileTimeGridBounds,
@@ -86,6 +88,9 @@ const rootRef = ref<HTMLElement | null>(null)
 const currentView = ref<CalendarViewType>(props.initialView)
 const isTimeGrid = computed(() => currentView.value !== 'dayGridMonth')
 let alignWeekOnNextRange = props.initialView === 'timeGridWeek'
+// Re-focus the time grid (now / start of the workday) after opening a view or
+// jumping; plain prev/next paging keeps the vertical position like iOS.
+let focusOnNextRange = true
 
 const timeZone = computed(() => masterStore.timeZone)
 const fullCalendarLocale = computed(() => normalizeCalendarLocale(locale.value))
@@ -93,8 +98,10 @@ const scheduleDisplay = computed(() =>
   buildCalendarScheduleDisplay(masterStore.preferences.profile?.schedule),
 )
 const gridBounds = computed(() => resolveMobileTimeGridBounds(scheduleDisplay.value, events.value))
-// Wall-clock bounds of the rendered range — the all-day row only appears when
-// something all-day actually falls inside it.
+// Wall-clock bounds of the rendered range — the all-day row only shows when
+// something all-day falls inside it. FullCalendar stops painting all-day events
+// if `allDaySlot` is toggled at runtime, so the slot stays on and an empty row
+// is collapsed with CSS instead (then the grid re-measures).
 const visibleWindow = ref({ start: '', end: '' })
 const hasAllDayEvents = computed(() =>
   events.value.some(
@@ -121,6 +128,8 @@ const renderKey = computed(() =>
     timeFormat: masterStore.timeFormat,
   }),
 )
+
+watch(hasAllDayEvents, () => void nextTick(() => getCalendarApi()?.updateSize()))
 
 const actionAppointment = ref<Appointment | null>(null)
 const actionEvent = shallowRef<Event | undefined>(undefined)
@@ -175,12 +184,13 @@ function timeOffBlock(event: EventApi) {
   const minutes =
     (new Date(timeBlock.end_at).getTime() - new Date(timeBlock.start_at).getTime()) / 60_000
 
+  // The all-day row already says "all day" — the pill only needs the note.
+  if (event.allDay) return { timeRange: event.title, label: '', micro: true }
+
   return {
-    timeRange: timeBlock.all_day
-      ? t('timeBlocks.allDayLabel')
-      : `${formatClock(timeBlock.start_at)}–${formatClock(timeBlock.end_at)}`,
+    timeRange: `${formatClock(timeBlock.start_at)}–${formatClock(timeBlock.end_at)}`,
     label: event.title,
-    micro: event.allDay || getMobileCalendarEventDensity(minutes) !== 'full',
+    micro: getMobileCalendarEventDensity(minutes) !== 'full',
   }
 }
 
@@ -241,21 +251,58 @@ function handleDatesSet(info: DatesSetArg) {
     alignWeekOnNextRange = false
     void nextTick(alignWeek)
   }
+  if (focusOnNextRange) {
+    focusOnNextRange = false
+    // FullCalendar applies its own scroll once the new view has laid out —
+    // after this hook and after the next tick — so focus after paint.
+    if (range.viewType !== 'dayGridMonth') afterPaint(focusTimeGrid)
+  }
 }
 
-// FullCalendar scrolls a week from its first column. Inside the current week,
-// bring today to the left edge instead — that is the column the master wants.
+// A new week opens on its first day — or, inside the current week, on today,
+// the column the master actually wants.
 function alignWeek() {
   if (currentView.value !== 'timeGridWeek') return
-  const root = rootRef.value
-  const today = root?.querySelector<HTMLElement>('.fc-timegrid-col.fc-day-today')
-  const scroller = today?.closest<HTMLElement>('.fc-scroller')
-  if (!today || !scroller) return
-  scroller.scrollLeft = today.offsetLeft
+  const columns = rootRef.value?.querySelectorAll<HTMLElement>(
+    '.fc-timegrid-col:not(.fc-timegrid-axis)',
+  )
+  const first = columns?.[0]
+  const target = [...(columns ?? [])].find((column) => column.classList.contains('fc-day-today'))
+  const scroller = first?.closest<HTMLElement>('.fc-scroller')
+  if (!first || !scroller) return
+  scroller.scrollLeft = target ? target.offsetLeft - first.offsetLeft : 0
 }
 
 function nowLabel(): string {
   return formatClock(now.value)
+}
+
+function afterPaint(callback: () => void) {
+  requestAnimationFrame(() => requestAnimationFrame(callback))
+}
+
+function focusTimeGrid() {
+  const { date, time } = getDateTimeInputValue(now.value, timeZone.value)
+  const visible = visibleWindow.value
+  const todayInView = date >= visible.start.slice(0, 10) && date < visible.end.slice(0, 10)
+  const [hours = 0, minutes = 0] = time.split(':').map(Number)
+  const businessHours = scheduleDisplay.value.businessHours
+
+  const target = getMobileCalendarScrollTime({
+    bounds: gridBounds.value,
+    workdayStart: getWorkdayStart(Array.isArray(businessHours) ? businessHours : undefined),
+    nowMinutes: todayInView ? hours * 60 + minutes : undefined,
+  })
+
+  // `CalendarApi.scrollToTime` does not reach the scrollgrid body scroller on
+  // touch layouts, so scroll it directly to the slot row; the time axis
+  // scroller follows through scrollgrid's own scroll syncing.
+  const slot = rootRef.value?.querySelector<HTMLElement>(
+    `.fc-timegrid-slot-lane[data-time="${target}"]`,
+  )
+  const scroller = slot?.closest<HTMLElement>('.fc-scroller')
+  if (!slot || !scroller) return
+  scroller.scrollTop += slot.getBoundingClientRect().top - scroller.getBoundingClientRect().top
 }
 
 // FullCalendar dates are UTC-coerced under a named zone; read the wall date.
@@ -291,10 +338,9 @@ const calendarOptions = computed<CalendarOptions>(() => {
     handleWindowResize: true,
     fixedWeekCount: false,
     showNonCurrentDates: false,
-    dayMaxEventRows: true,
     moreLinkContent: (arg) => `+${arg.num}`,
     nowIndicator: true,
-    allDaySlot: hasAllDayEvents.value,
+    allDaySlot: true,
     slotDuration: { minutes: masterStore.calendarSlotStepMinutes },
     slotLabelInterval: { hours: 1 },
     slotLabelFormat: timeFormat,
@@ -302,7 +348,6 @@ const calendarOptions = computed<CalendarOptions>(() => {
     slotMinTime: gridBounds.value.slotMinTime,
     slotMaxTime: gridBounds.value.slotMaxTime,
     businessHours: scheduleDisplay.value.businessHours,
-    scrollTime: scheduleDisplay.value.slotMinTime ?? '08:00:00',
     scrollTimeReset: false,
     slotEventOverlap: false,
     eventMinHeight: 20,
@@ -315,7 +360,12 @@ const calendarOptions = computed<CalendarOptions>(() => {
     selectLongPressDelay: 500,
     selectAllow: (info) => !info.allDay,
     views: {
-      dayGridMonth: { eventDisplay: 'block', dayHeaderFormat: { weekday: 'short' } },
+      dayGridMonth: {
+        eventDisplay: 'block',
+        dayHeaderFormat: { weekday: 'short' },
+        // Fit stripes to the cell height and fold the rest into "+N".
+        dayMaxEventRows: true,
+      },
       timeGridWeek: { dayMinWidth: MOBILE_CALENDAR_WEEK_DAY_WIDTH_PX },
       timeGridDay: { dayHeaders: false },
     },
@@ -342,12 +392,14 @@ function next() {
 
 function today() {
   alignWeekOnNextRange = currentView.value === 'timeGridWeek'
+  focusOnNextRange = true
   getCalendarApi()?.today()
 }
 
 /** Switches view and/or date (`YYYY-MM-DD`); keeps the date when omitted. */
 function show(view: CalendarViewType, date?: string) {
   alignWeekOnNextRange = view === 'timeGridWeek'
+  focusOnNextRange = true
   getCalendarApi()?.changeView(view, date)
 }
 
@@ -358,7 +410,7 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
   <div
     ref="rootRef"
     class="se-calendar"
-    :class="`se-calendar--${currentView}`"
+    :class="[`se-calendar--${currentView}`, { 'se-calendar--no-all-day': !hasAllDayEvents }]"
     :style="{
       '--se-calendar-slot-height': `${getMobileCalendarSlotHeight(masterStore.calendarSlotStepMinutes)}px`,
     }"
@@ -674,9 +726,34 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
 }
 
 /* ---- Time grid ---- */
+/* Empty all-day row + its divider (the non-header, non-body section). */
+.se-calendar--no-all-day
+  :deep(.fc-timegrid .fc-scrollgrid-section-body:not(.fc-scrollgrid-section-liquid)),
+.se-calendar--no-all-day
+  :deep(
+    .fc-timegrid
+      .fc-scrollgrid-section:not(.fc-scrollgrid-section-header):not(.fc-scrollgrid-section-body)
+  ) {
+  display: none;
+}
+
+/* Week: day columns settle on the left edge after a horizontal fling. Only the
+   grid body scroller overflows sideways, so the time axis is unaffected. */
+.se-calendar--timeGridWeek :deep(.fc-scroller-liquid-absolute) {
+  scroll-snap-type: x proximity;
+}
+
+.se-calendar--timeGridWeek :deep(.fc-timegrid-col:not(.fc-timegrid-axis)) {
+  scroll-snap-align: start;
+}
+
+/* Rows take exactly the scale's height: FullCalendar props empty cells open
+   with a font-sized &nbsp;, which would otherwise stretch short slots. */
 .se-calendar :deep(.fc .fc-timegrid-slot) {
   height: var(--se-calendar-slot-height);
   border-bottom: 0;
+  font-size: 0;
+  line-height: 0;
 }
 
 .se-calendar :deep(.fc .fc-timegrid-slot-minor) {
@@ -692,6 +769,7 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
 
 .se-calendar :deep(.fc .fc-timegrid-slot-label-cushion) {
   padding-inline-end: 6px;
+  line-height: 1;
   color: var(--se-calendar-muted);
   font-size: 0.62rem;
   font-variant-numeric: tabular-nums;
@@ -742,6 +820,7 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
 
 .se-calendar__event {
   height: 100%;
+  min-height: 20px;
   outline: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

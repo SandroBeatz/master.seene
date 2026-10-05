@@ -1,7 +1,9 @@
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getMobileCalendarEventDensity,
+  getMobileCalendarScrollTime,
   getMobileCalendarSlotHeight,
+  getWorkdayStart,
   readStoredMobileCalendarView,
   resolveMobileTimeGridBounds,
   storeMobileCalendarView,
@@ -69,6 +71,24 @@ describe('mobile calendar model', () => {
         { start: '2026-10-05T22:00:00', end: '2026-10-06T00:00:00' },
       ]).slotMaxTime,
     ).toBe('24:00:00')
+  })
+
+  it('focuses an hour before now, else just before the workday, on whole hours', () => {
+    const bounds = { slotMinTime: '07:00:00', slotMaxTime: '22:00:00' }
+
+    expect(getMobileCalendarScrollTime({ bounds, nowMinutes: 14 * 60 + 40 })).toBe('13:00:00')
+    expect(getMobileCalendarScrollTime({ bounds, workdayStart: '09:00:00' })).toBe('08:00:00')
+    // Clamped: late evening keeps the last hour on screen, early morning the top.
+    expect(getMobileCalendarScrollTime({ bounds, nowMinutes: 23 * 60 + 50 })).toBe('21:00:00')
+    expect(getMobileCalendarScrollTime({ bounds, nowMinutes: 30 })).toBe('07:00:00')
+    expect(getMobileCalendarScrollTime({ bounds })).toBe('07:00:00')
+  })
+
+  it('finds the earliest workday start among business hours', () => {
+    expect(
+      getWorkdayStart([{ startTime: '10:00:00' }, { startTime: '09:00:00' }, { startTime: 1 }]),
+    ).toBe('09:00:00')
+    expect(getWorkdayStart(undefined)).toBeUndefined()
   })
 
   it('aligns the query window to whole months so paging days reuses it', () => {

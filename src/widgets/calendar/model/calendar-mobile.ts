@@ -69,6 +69,37 @@ export function resolveMobileTimeGridBounds(
 }
 
 /**
+ * Where the time grid opens vertically: an hour before "now" while today is on
+ * screen (what's next matters most), otherwise the start of the working day.
+ * Whole hours (a slot row exists for every step), clamped into the grid.
+ */
+export function getMobileCalendarScrollTime(options: {
+  bounds: MobileTimeGridBounds
+  workdayStart?: string
+  /** Minutes since midnight now, when today is inside the visible range. */
+  nowMinutes?: number
+}): string {
+  const min = parseSlotMinutes(options.bounds.slotMinTime) ?? 0
+  const max = parseSlotMinutes(options.bounds.slotMaxTime) ?? MINUTES_PER_DAY
+  const target =
+    options.nowMinutes !== undefined
+      ? options.nowMinutes - 60
+      : (parseSlotMinutes(options.workdayStart) ?? min) - 30
+
+  const hour = Math.floor(Math.max(min, Math.min(target, max - 60)) / 60) * 60
+  return formatSlotTime(Math.max(min, hour))
+}
+
+/** Earliest working-day start among FullCalendar business-hours entries. */
+export function getWorkdayStart(businessHours: readonly object[] | undefined): string | undefined {
+  const starts = (businessHours ?? [])
+    .map((entry) => (entry as { startTime?: unknown }).startTime)
+    .filter((value): value is string => typeof value === 'string')
+    .sort()
+  return starts[0]
+}
+
+/**
  * Query window for a visible range, widened to whole calendar months (in UTC
  * terms, with a day of slack each side for zone offsets). Paging days or
  * weeks inside a month then reuses one cached query instead of refetching.
