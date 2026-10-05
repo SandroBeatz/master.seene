@@ -8,8 +8,11 @@ interface CalendarSwipeOptions {
   target: Ref<HTMLElement | null>
   /** The calendar view surface that follows the finger and slides. */
   surface: () => HTMLElement | null
-  /** Swipe paging is on (month/day — the week scrolls sideways itself). */
-  enabled: () => boolean
+  /**
+   * Directions that may page right now, read when a drag begins. Month and day
+   * allow both; the week only past the ends of its own sideways scroll.
+   */
+  pageable: () => Record<CalendarPageDirection, boolean>
   /** Moves the calendar one period; runs between the slide-out and slide-in. */
   onPage: (direction: CalendarPageDirection) => void
 }
@@ -29,11 +32,24 @@ function prefersReducedMotion(): boolean {
  * slides the new period in from the other side; a short one springs back.
  * `slide(direction, change)` plays the same transition for taps (week strip).
  */
-export function useCalendarSwipe({ target, surface, enabled, onPage }: CalendarSwipeOptions) {
+export function useCalendarSwipe({ target, surface, pageable, onPage }: CalendarSwipeOptions) {
   let gesture: Gesture | undefined
   let element: HTMLElement | null = null
   let width = 0
   let busy = false
+  let allowed: Record<CalendarPageDirection, boolean> = { prev: false, next: false }
+
+  // A drag to the left pages forward, to the right back; a direction that may
+  // not page (the week still has columns that way) is left to native scroll.
+  function directionOf(deltaX: number): CalendarPageDirection {
+    return deltaX < 0 ? 'next' : 'prev'
+  }
+
+  function canStart() {
+    if (busy) return false
+    allowed = pageable()
+    return allowed.prev || allowed.next
+  }
 
   function offsetFor(deltaX: number) {
     return `translate3d(${deltaX}px, 0, 0)`
@@ -101,7 +117,7 @@ export function useCalendarSwipe({ target, surface, enabled, onPage }: CalendarS
   }
 
   function onMove(detail: GestureDetail) {
-    track(detail.deltaX)
+    track(allowed[directionOf(detail.deltaX)] ? detail.deltaX : 0)
   }
 
   // The pointer-up of a drag still produces a click on whatever card is under
@@ -118,17 +134,19 @@ export function useCalendarSwipe({ target, surface, enabled, onPage }: CalendarS
   }
 
   function onEnd(detail: GestureDetail) {
-    suppressNextClick()
+    if (Math.abs(detail.deltaX) > 4) suppressNextClick()
+    const direction = directionOf(detail.deltaX)
+    const offset = allowed[direction] ? detail.deltaX : 0
     const committed =
-      Math.abs(detail.deltaX) > width * COMMIT_DISTANCE_RATIO ||
-      Math.abs(detail.velocityX) > COMMIT_VELOCITY
+      allowed[direction] &&
+      (Math.abs(detail.deltaX) > width * COMMIT_DISTANCE_RATIO ||
+        Math.abs(detail.velocityX) > COMMIT_VELOCITY)
     if (!committed || !element) {
-      springBack(detail.deltaX)
+      springBack(offset)
       element = null
       return
     }
 
-    const direction: CalendarPageDirection = detail.deltaX < 0 ? 'next' : 'prev'
     element = null
     void slide(direction, () => onPage(direction), detail.deltaX)
   }
@@ -140,7 +158,7 @@ export function useCalendarSwipe({ target, surface, enabled, onPage }: CalendarS
       gestureName: 'calendar-swipe-paging',
       direction: 'x',
       threshold: 12,
-      canStart: () => enabled() && !busy,
+      canStart,
       onStart,
       onMove,
       onEnd,

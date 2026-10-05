@@ -330,6 +330,8 @@ export default {
     mobile: {
       view: 'View',
       jumpTo: 'Go to date',
+      loadError: 'Couldn’t load the calendar',
+      retry: 'Retry',
     },
     views: {
       month: 'Month',

@@ -330,6 +330,8 @@ export default {
     mobile: {
       view: 'Vue',
       jumpTo: 'Aller à la date',
+      loadError: 'Impossible de charger le calendrier',
+      retry: 'Réessayer',
     },
     views: {
       month: 'Mois',

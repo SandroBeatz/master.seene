@@ -109,7 +109,10 @@ const rootRef = ref<HTMLElement | null>(null)
 const gridRef = ref<HTMLElement | null>(null)
 const currentView = ref<CalendarViewType>(props.initialView)
 const isTimeGrid = computed(() => currentView.value !== 'dayGridMonth')
-let alignWeekOnNextRange = props.initialView === 'timeGridWeek'
+// Where a freshly shown week sits horizontally: today's column (or the first
+// day when today is elsewhere), or the last day after paging back into it.
+type WeekAlign = 'today' | 'end'
+let weekAlignOnNextRange: WeekAlign | null = props.initialView === 'timeGridWeek' ? 'today' : null
 // Re-focus the time grid (now / start of the workday) after opening a view or
 // jumping; plain prev/next paging keeps the vertical position like iOS.
 let focusOnNextRange = true
@@ -140,7 +143,9 @@ const displayedEvents = computed<EventInput[]>(() =>
 )
 
 // Options FullCalendar only reads when a view is built — changing them
-// re-creates the calendar instead of patching it.
+// re-creates the calendar instead of patching it. The re-created calendar
+// resumes on the view and date that were showing (e.g. preferences arriving
+// after the master already navigated).
 const renderKey = computed(() =>
   JSON.stringify({
     locale: fullCalendarLocale.value,
@@ -152,6 +157,18 @@ const renderKey = computed(() =>
 )
 
 const shownDate = computed(() => visibleWindow.value.start.slice(0, 10))
+const startView = ref(props.initialView)
+const startDate = ref(props.initialDate)
+watch(
+  renderKey,
+  () => {
+    startView.value = currentView.value
+    startDate.value = shownDate.value || props.initialDate
+    weekAlignOnNextRange = startView.value === 'timeGridWeek' ? 'today' : null
+    focusOnNextRange = true
+  },
+  { flush: 'sync' },
+)
 const todayDate = computed(() => getDateTimeInputValue(now.value, timeZone.value).date)
 const appointmentDates = computed(() => getAppointmentDates(events.value))
 const isDayView = computed(() => currentView.value === 'timeGridDay')
@@ -163,7 +180,7 @@ watch([hasAllDayEvents, isDayView], () => void nextTick(() => getCalendarApi()?.
 const { slide } = useCalendarSwipe({
   target: gridRef,
   surface: () => gridRef.value?.querySelector<HTMLElement>('.fc-view-harness') ?? null,
-  enabled: () => currentView.value !== 'timeGridWeek' && !actionAppointment.value,
+  pageable: pageableDirections,
   onPage: (direction) => (direction === 'next' ? next() : prev()),
 })
 
@@ -287,9 +304,10 @@ function handleDatesSet(info: DatesSetArg) {
   setVisibleRange(range)
   emit('range-change', range)
 
-  if (alignWeekOnNextRange) {
-    alignWeekOnNextRange = false
-    void nextTick(alignWeek)
+  if (weekAlignOnNextRange) {
+    const align = weekAlignOnNextRange
+    weekAlignOnNextRange = null
+    void nextTick(() => alignWeek(align))
   }
   if (focusOnNextRange) {
     focusOnNextRange = false
@@ -299,18 +317,35 @@ function handleDatesSet(info: DatesSetArg) {
   }
 }
 
-// A new week opens on its first day — or, inside the current week, on today,
-// the column the master actually wants.
-function alignWeek() {
+function getWeekScroller(): HTMLElement | null {
+  const scrollers = rootRef.value?.querySelectorAll<HTMLElement>('.fc-scroller-liquid-absolute')
+  return [...(scrollers ?? [])].find((el) => el.scrollWidth > el.clientWidth + 1) ?? null
+}
+
+function alignWeek(align: WeekAlign) {
   if (currentView.value !== 'timeGridWeek') return
-  const columns = rootRef.value?.querySelectorAll<HTMLElement>(
-    '.fc-timegrid-col:not(.fc-timegrid-axis)',
-  )
-  const first = columns?.[0]
-  const target = [...(columns ?? [])].find((column) => column.classList.contains('fc-day-today'))
-  const scroller = first?.closest<HTMLElement>('.fc-scroller')
-  if (!first || !scroller) return
-  scroller.scrollLeft = target ? target.offsetLeft - first.offsetLeft : 0
+  const scroller = getWeekScroller()
+  if (!scroller) return
+  if (align === 'end') {
+    scroller.scrollLeft = scroller.scrollWidth
+    return
+  }
+  const columns = [...scroller.querySelectorAll<HTMLElement>('.fc-timegrid-col')]
+  const today = columns.find((column) => column.classList.contains('fc-day-today'))
+  scroller.scrollLeft = today && columns[0] ? today.offsetLeft - columns[0].offsetLeft : 0
+}
+
+// Month and day page in both directions; the week only once its own sideways
+// scroll has hit an end (then pulling further turns the week).
+function pageableDirections() {
+  if (actionAppointment.value) return { prev: false, next: false }
+  if (currentView.value !== 'timeGridWeek') return { prev: true, next: true }
+  const scroller = getWeekScroller()
+  if (!scroller) return { prev: true, next: true }
+  return {
+    prev: scroller.scrollLeft <= 1,
+    next: scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1,
+  }
 }
 
 function nowLabel(): string {
@@ -370,8 +405,8 @@ const calendarOptions = computed<CalendarOptions>(() => {
     locale: fullCalendarLocale.value,
     timeZone: timeZone.value,
     firstDay: masterStore.calendarFirstDay,
-    initialView: props.initialView,
-    initialDate: props.initialDate,
+    initialView: startView.value,
+    initialDate: startDate.value,
     headerToolbar: false,
     height: '100%',
     expandRows: true,
@@ -424,12 +459,12 @@ const calendarOptions = computed<CalendarOptions>(() => {
 })
 
 function prev() {
-  alignWeekOnNextRange = currentView.value === 'timeGridWeek'
+  weekAlignOnNextRange = currentView.value === 'timeGridWeek' ? 'end' : null
   getCalendarApi()?.prev()
 }
 
 function next() {
-  alignWeekOnNextRange = currentView.value === 'timeGridWeek'
+  weekAlignOnNextRange = currentView.value === 'timeGridWeek' ? 'today' : null
   getCalendarApi()?.next()
 }
 
@@ -445,7 +480,7 @@ function animateEnter(transition: CalendarViewTransition) {
 }
 
 function today() {
-  alignWeekOnNextRange = currentView.value === 'timeGridWeek'
+  weekAlignOnNextRange = currentView.value === 'timeGridWeek' ? 'today' : null
   focusOnNextRange = true
   getCalendarApi()?.today()
   animateEnter('fade')
@@ -453,7 +488,7 @@ function today() {
 
 /** Switches view and/or date (`YYYY-MM-DD`); keeps the date when omitted. */
 function show(view: CalendarViewType, date?: string, transition: CalendarViewTransition = 'fade') {
-  alignWeekOnNextRange = view === 'timeGridWeek'
+  weekAlignOnNextRange = view === 'timeGridWeek' ? 'today' : null
   focusOnNextRange = true
   getCalendarApi()?.changeView(view, date)
   animateEnter(transition)

@@ -327,6 +327,8 @@ export default {
     mobile: {
       view: 'Вид',
       jumpTo: 'Перейти к дате',
+      loadError: 'Не удалось загрузить календарь',
+      retry: 'Повторить',
     },
     views: {
       month: 'Месяц',

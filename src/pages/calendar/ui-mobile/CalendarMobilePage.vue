@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   actionSheetController,
@@ -120,6 +120,24 @@ async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2200, color, position: 'top' })
   await toast.present()
 }
+
+// A failed load keeps whatever is cached on screen and offers a retry.
+watch(
+  () => calendar.value?.error,
+  async (error) => {
+    if (!error) return
+    const toast = await toastController.create({
+      message: t('calendar.mobile.loadError'),
+      duration: 4000,
+      color: 'danger',
+      position: 'top',
+      buttons: [
+        { text: t('calendar.mobile.retry'), handler: () => void calendar.value?.refetch() },
+      ],
+    })
+    await toast.present()
+  },
+)
 
 // Time off has no detail screen on mobile: a tap offers to remove it.
 async function onTimeBlockSelect(timeBlock: TimeBlock) {
