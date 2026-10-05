@@ -52,7 +52,6 @@ const sheetStyle = computed(() => {
   const height = 92 + props.items.length * 49
   return {
     '--height': `min(${height}px, 82vh)`,
-    '--border-radius': '20px 20px 0 0',
   }
 })
 

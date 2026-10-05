@@ -115,7 +115,6 @@ function select(kind: AnalyticsAnchoredKind) {
 <style scoped>
 .options-sheet {
   --height: auto;
-  --border-radius: 20px 20px 0 0;
 }
 
 .options-sheet ion-toolbar {

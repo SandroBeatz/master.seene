@@ -110,6 +110,24 @@
   --se-separator: var(--ion-background-color-step-200);
 }
 
+/*
+ * One rounded top for every bottom sheet and card modal. Set on the modal's
+ * `content` part rather than `--border-radius`: for sheets/cards iOS feeds that
+ * variable into per-corner longhands, so a two-corner shorthand ("20px 20px 0 0")
+ * is invalid there and silently renders square. Full-height modals that should
+ * still read as a sheet on Material (the create wizards) opt in with
+ * `.se-modal-rounded`.
+ */
+:root {
+  --se-modal-radius: 20px;
+}
+
+ion-modal.modal-sheet::part(content),
+ion-modal.modal-card::part(content),
+ion-modal.se-modal-rounded::part(content) {
+  border-radius: var(--se-modal-radius) var(--se-modal-radius) 0 0;
+}
+
 /* Page background applied globally: every page's content sits on --se-surface-page
    so elevated surfaces (cards, inset lists) read as raised app-wide. Override per
    page with `--background` on a specific ion-content when a screen shouldn't. */

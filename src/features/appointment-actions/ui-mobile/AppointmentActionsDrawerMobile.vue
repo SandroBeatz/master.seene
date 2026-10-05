@@ -39,7 +39,6 @@ const pendingAction = ref<MobileAppointmentMoreAction | null>(null)
 const actions = computed(() => getMobileAppointmentMoreActions(props.appointment.status))
 const drawerStyle = computed(() => ({
   '--height': `min(${132 + actions.value.length * 54}px, 70vh)`,
-  '--border-radius': '20px 20px 0 0',
 }))
 
 function actionLabel(action: MobileAppointmentMoreAction): string {

@@ -72,7 +72,7 @@ async function onCreated() {
   <ion-modal
     ref="selfModal"
     :is-open="isOpen"
-    class="appointment-wizard-mobile"
+    class="appointment-wizard-mobile se-modal-rounded"
     :presenting-element="presentingElement ?? undefined"
     :can-dismiss="canDismiss"
     @did-dismiss="emit('update:isOpen', false)"
@@ -89,12 +89,9 @@ async function onCreated() {
 </template>
 
 <style scoped>
-/* Rounded sheet top in every mode: iOS already presents a card, Material
-   renders a full-screen modal — inset it under the status bar instead. */
-.appointment-wizard-mobile {
-  --border-radius: 16px 16px 0 0;
-}
-
+/* Rounded sheet top in every mode (shared radius, see .se-modal-rounded in
+   app-mobile/styles/main.css): iOS already presents a card, Material renders a
+   full-screen modal — inset it under the status bar instead. */
 .appointment-wizard-mobile.md {
   --height: calc(100% - var(--ion-safe-area-top, 0px) - 12px);
 
