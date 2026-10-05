@@ -59,8 +59,21 @@ const props = withDefaults(
     hourCycle?: 'h12' | 'h23'
     /** Appointment being rescheduled — excluded from busy time. */
     excludeAppointmentId?: string | null
+    /**
+     * Whether busy / too-short starts can still be picked (after a confirm).
+     * Bookings allow it; a time off must never overlap one, so it passes false.
+     */
+    allowConflicts?: boolean
+    /** Keep the calendar + day summary but hide the slot grid (e.g. an all-day time off). */
+    hideSlots?: boolean
   }>(),
-  { firstDayOfWeek: 1, hourCycle: undefined, excludeAppointmentId: null },
+  {
+    firstDayOfWeek: 1,
+    hourCycle: undefined,
+    excludeAppointmentId: null,
+    allowConflicts: true,
+    hideSlots: false,
+  },
 )
 
 const emit = defineEmits<{
@@ -355,7 +368,7 @@ async function confirmConflict(): Promise<boolean> {
 }
 
 async function selectSlot(slot: DaySlot) {
-  if (slot.state !== 'free' && !(await confirmConflict())) return
+  if (slot.state !== 'free' && (!props.allowConflicts || !(await confirmConflict()))) return
   emit('update:slotMinutes', slot.minutes)
 }
 
@@ -574,8 +587,13 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
         </ul>
       </section>
 
+      <!-- Consumer controls that shape the grid (e.g. a time off's duration). -->
+      <slot name="before-slots" />
+
       <!-- Slots -->
-      <div v-if="!isDayLoaded && !isPastDay" class="slot-picker__grid" aria-hidden="true">
+      <template v-if="hideSlots" />
+
+      <div v-else-if="!isDayLoaded && !isPastDay" class="slot-picker__grid" aria-hidden="true">
         <ion-skeleton-text v-for="index in 8" :key="index" animated class="slot-picker__skeleton" />
       </div>
 
@@ -617,6 +635,7 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
               ]"
               :aria-pressed="slot.minutes === slotMinutes"
               :aria-label="slotAriaLabel(slot)"
+              :disabled="!allowConflicts && slot.state !== 'free'"
               :data-testid="`slot-picker-slot-${slot.minutes}`"
               @click="selectSlot(slot)"
             >
@@ -634,27 +653,29 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
         </div>
       </template>
 
-      <!-- Manual time escape hatch -->
-      <div class="slot-picker__manual">
-        <ion-button
-          fill="clear"
-          size="small"
-          class="slot-picker__manual-button"
-          @click="openManualTime"
-        >
-          <ion-icon slot="start" :icon="timeOutline" aria-hidden="true" />
-          {{ t('quickCreate.appointment.dateTime.manual') }}
-        </ion-button>
-        <span v-if="offGridSelection" class="slot-picker__manual-value">
-          {{ t('quickCreate.appointment.dateTime.selected') }}:
-          <strong>{{ offGridSelection }}</strong>
-        </span>
-      </div>
+      <!-- Manual time escape hatch; a consumer can swap in its own (e.g. a range). -->
+      <slot v-if="!hideSlots" name="manual">
+        <div class="slot-picker__manual">
+          <ion-button
+            fill="clear"
+            size="small"
+            class="slot-picker__manual-button"
+            @click="openManualTime"
+          >
+            <ion-icon slot="start" :icon="timeOutline" aria-hidden="true" />
+            {{ t('quickCreate.appointment.dateTime.manual') }}
+          </ion-button>
+          <span v-if="offGridSelection" class="slot-picker__manual-value">
+            {{ t('quickCreate.appointment.dateTime.selected') }}:
+            <strong>{{ offGridSelection }}</strong>
+          </span>
+        </div>
 
-      <p v-if="selectedHasConflict" class="slot-picker__conflict">
-        <ion-icon :icon="alertCircleOutline" aria-hidden="true" />
-        {{ t('quickCreate.appointment.dateTime.conflict') }}
-      </p>
+        <p v-if="selectedHasConflict" class="slot-picker__conflict">
+          <ion-icon :icon="alertCircleOutline" aria-hidden="true" />
+          {{ t('quickCreate.appointment.dateTime.conflict') }}
+        </p>
+      </slot>
     </template>
 
     <ion-modal
@@ -1100,6 +1121,12 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
   font-weight: 500;
 }
 
+/* Unpickable when conflicts aren't allowed (time off): already muted by its
+   state style, just drop it back a little further. */
+.slot-picker__slot:disabled {
+  opacity: 0.6;
+}
+
 .slot-picker__slot--selected {
   background: var(--ion-color-primary);
   border-color: var(--ion-color-primary);
@@ -1175,7 +1202,6 @@ const SLOT_LEGEND: DaySlotState[] = ['free', 'busy', 'short']
 /* --- Sheets --- */
 .slot-picker__sheet {
   --height: auto;
-  --border-radius: 20px 20px 0 0;
 }
 
 .slot-picker__sheet ion-toolbar {

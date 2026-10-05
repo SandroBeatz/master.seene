@@ -150,6 +150,11 @@ export function useAppointmentAvailability(options: AppointmentAvailabilityOptio
     }
   }
 
+  /** Bookings + time offs on `date` (no schedule breaks) — what a new time off must avoid. */
+  function dayBusy(date: string): Interval[] {
+    return isLoaded(date) ? busyFor(date) : []
+  }
+
   function dayTimeOffs(date: string): DayTimeOff[] {
     if (!isLoaded(date)) return []
     return (timeBlocksQuery.data.value ?? []).flatMap((block) => {
@@ -178,6 +183,7 @@ export function useAppointmentAvailability(options: AppointmentAvailabilityOptio
     dayState,
     daySlots,
     dayOccupancy,
+    dayBusy,
     dayTimeOffs,
     hasConflict,
   }
