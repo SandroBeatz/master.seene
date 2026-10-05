@@ -17,9 +17,7 @@ import {
   IonLabel,
   IonNote,
   IonIcon,
-  IonSpinner,
   alertController,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import { closeOutline } from 'ionicons/icons'
@@ -33,6 +31,7 @@ import { useMasterProfileQuery } from '@entities/master'
 import { useSessionStore } from '@entities/session'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { PhoneField } from '@shared/ui/phone-field/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
@@ -51,7 +50,6 @@ const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const { data: masterProfile } = useMasterProfileQuery(userId)
 const isEdit = computed(() => props.mode === 'edit')
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 interface FormState {
   firstName: string
@@ -357,10 +355,10 @@ async function onSubmit() {
           :aria-busy="isLoading"
           @click="onSubmit"
         >
-          <span :class="{ 'save-button-label--hidden': isLoading }">
+          <button-spinner v-if="isLoading" slot="start" />
+          <span>
             {{ isEdit ? $t('clients.form.submitEdit') : $t('clients.form.submitCreate') }}
           </span>
-          <ion-spinner v-if="isLoading" class="save-button-spinner" :name="spinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -431,14 +429,6 @@ ion-footer ion-toolbar {
   margin: 0;
   font-weight: 600;
   --border-radius: 12px;
-}
-
-.save-button-label--hidden {
-  visibility: hidden;
-}
-
-.save-button-spinner {
-  position: absolute;
 }
 
 .sr-only {

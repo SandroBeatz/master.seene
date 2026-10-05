@@ -17,7 +17,6 @@ import {
   IonLabel,
   IonSkeletonText,
   IonSpinner,
-  isPlatform,
   useIonRouter,
   alertController,
   toastController,
@@ -44,6 +43,7 @@ import { useSessionStore } from '@entities/session'
 import { useFormats } from '@shared/lib/formats'
 import { useNowMinute } from '@shared/lib/now'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -53,7 +53,6 @@ const formats = useFormats()
 const now = useNowMinute()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const removeClient = useRemoveClientMutation(userId)
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // Detail is derived from the shared clients list (already cached from the list
 // screen) — no extra fetch, just a lookup by the route param.
@@ -218,7 +217,7 @@ async function onDelete() {
             :aria-label="$t('clients.details.moreActions')"
             @click="openActions"
           >
-            <ion-spinner v-if="removeClient.isLoading.value" :name="spinnerName" />
+            <button-spinner v-if="removeClient.isLoading.value" slot="icon-only" />
             <ion-icon v-else slot="icon-only" :icon="ellipsisHorizontal" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
@@ -595,7 +594,6 @@ ion-header ion-toolbar {
 
 .client-actions-modal {
   --height: 238px;
-  --border-radius: 20px 20px 0 0;
 }
 
 .client-actions-modal ion-toolbar,

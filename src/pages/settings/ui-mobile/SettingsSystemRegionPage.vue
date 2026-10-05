@@ -15,8 +15,6 @@ import {
   IonLabel,
   IonIcon,
   IonSkeletonText,
-  IonSpinner,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import {
@@ -52,6 +50,7 @@ import { DATE_FORMATS } from '@shared/config/date-formats'
 import { useDirtyForm } from '@shared/lib/forms'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const { t } = useI18n()
 const sessionStore = useSessionStore()
@@ -59,7 +58,6 @@ const masterPreferencesStore = useMasterPreferencesStore()
 const localeStore = useLocaleStore()
 const appearance = useAppearanceStore()
 const formats = useFormats()
-const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const { data: preferences, isPending } = useMasterPreferencesQuery(userId)
@@ -565,10 +563,10 @@ function onDiscard() {
           :aria-busy="isSaving"
           @click="onSave"
         >
-          <span :class="{ 'save-button-label--hidden': isSaving }">
+          <button-spinner v-if="isSaving" slot="start" />
+          <span>
             {{ $t('common.saveChanges') }}
           </span>
-          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -676,16 +674,5 @@ ion-footer ion-toolbar {
 
 .save-button {
   position: relative;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

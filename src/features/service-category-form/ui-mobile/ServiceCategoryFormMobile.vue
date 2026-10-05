@@ -13,7 +13,6 @@ import {
   IonList,
   IonItem,
   IonInput,
-  IonSpinner,
   toastController,
 } from '@ionic/vue'
 import {
@@ -22,6 +21,7 @@ import {
   type ServiceCategory,
 } from '@entities/service-category'
 import { useSessionStore } from '@entities/session'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
@@ -80,9 +80,7 @@ function validate(): boolean {
 
 const createMutation = useCreateServiceCategoryMutation(userId)
 const updateMutation = useUpdateServiceCategoryMutation(userId)
-const isLoading = computed(
-  () => createMutation.isLoading.value || updateMutation.isLoading.value,
-)
+const isLoading = computed(() => createMutation.isLoading.value || updateMutation.isLoading.value)
 
 async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
@@ -137,8 +135,8 @@ async function onSubmit() {
         </ion-title>
         <ion-buttons slot="end">
           <ion-button strong :disabled="isLoading" @click="onSubmit">
-            <ion-spinner v-if="isLoading" name="crescent" />
-            <span v-else>
+            <button-spinner v-if="isLoading" slot="start" />
+            <span>
               {{
                 isEdit
                   ? $t('settings.serviceCategories.form.submitEdit')

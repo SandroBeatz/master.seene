@@ -17,7 +17,6 @@ import {
   IonToggle,
   IonSkeletonText,
   IonSpinner,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import {
@@ -32,6 +31,7 @@ import { useBookingSettings } from '@features/booking-settings-form/index.mobile
 import { useDirtyForm } from '@shared/lib/forms'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 // Native Ionic port of BookingSettingsForm. The editable state mapper and data
 // layer are shared with desktop; only the presentation is rebuilt using the
@@ -151,7 +151,6 @@ async function onToggleOnline(value: boolean) {
 }
 
 const canSave = computed(() => isDirty.value)
-const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 async function onSave() {
   if (!canSave.value) return
@@ -213,7 +212,7 @@ function onDiscard() {
             </h2>
           </ion-label>
           <div slot="end" class="toggle-control">
-            <ion-spinner v-if="isTogglingOnline" :name="saveSpinnerName" />
+            <ion-spinner v-if="isTogglingOnline" name="crescent" />
             <ion-toggle
               :checked="onlineEnabled"
               :disabled="isPending || isTogglingOnline"
@@ -305,10 +304,10 @@ function onDiscard() {
           :aria-busy="isSaving"
           @click="onSave"
         >
-          <span :class="{ 'save-button-label--hidden': isSaving }">
+          <button-spinner v-if="isSaving" slot="start" />
+          <span>
             {{ $t('common.saveChanges') }}
           </span>
-          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -406,16 +405,5 @@ ion-footer ion-toolbar {
 
 .save-button {
   position: relative;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

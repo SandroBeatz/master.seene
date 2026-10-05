@@ -16,8 +16,6 @@ import {
   IonNote,
   IonIcon,
   IonToggle,
-  IonSpinner,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import {
@@ -35,6 +33,7 @@ import { useWorkingHours } from '@features/working-hours-form/index.mobile'
 import { useDirtyForm } from '@shared/lib/forms'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { TimeField } from '@shared/ui/time-field/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 // Native Ionic port of the desktop WorkingHoursForm (features/working-hours-form).
 // Kept as a single page component — like SettingsProfilePage / SettingsContactsPage
@@ -81,7 +80,6 @@ watch(
 )
 
 const canSave = computed(() => isDirty.value && isValid.value)
-const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 function dayName(key: MasterScheduleDayKey): string {
   return t(`settings.workingHours.days.${key}`)
@@ -291,10 +289,10 @@ function onDiscard() {
           :aria-busy="isSaving"
           @click="onSave"
         >
-          <span :class="{ 'save-button-label--hidden': isSaving }">
+          <button-spinner v-if="isSaving" slot="start" />
+          <span>
             {{ $t('common.saveChanges') }}
           </span>
-          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -395,16 +393,5 @@ ion-footer ion-toolbar {
 
 .save-button {
   position: relative;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

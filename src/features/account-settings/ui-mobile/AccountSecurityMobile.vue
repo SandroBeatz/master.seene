@@ -16,15 +16,14 @@ import {
   IonLabel,
   IonNote,
   IonIcon,
-  IonSpinner,
   alertController,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import { closeOutline, keyOutline, logOutOutline, mailOutline } from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 defineProps<{
   presentingElement?: HTMLElement | null
@@ -35,7 +34,6 @@ const router = useRouter()
 const sessionStore = useSessionStore()
 
 const currentEmail = computed(() => sessionStore.session?.user.email ?? '')
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const emailOpen = ref(false)
 const email = ref('')
@@ -270,11 +268,9 @@ async function onSignOut() {
           :aria-busy="signOutLoading"
           @click="onSignOut"
         >
-          <ion-spinner v-if="signOutLoading" :name="spinnerName" />
-          <template v-else>
-            <ion-icon slot="start" :icon="logOutOutline" aria-hidden="true" />
-            {{ $t('settings.account.signOut.button') }}
-          </template>
+          <button-spinner v-if="signOutLoading" slot="start" />
+          <ion-icon v-else slot="start" :icon="logOutOutline" aria-hidden="true" />
+          {{ $t('settings.account.signOut.button') }}
         </ion-button>
       </div>
     </ion-item>
@@ -335,10 +331,8 @@ async function onSignOut() {
           :disabled="!emailValid || emailLoading"
           @click="submitEmail"
         >
-          <span :class="{ 'loading-label': emailLoading }">{{
-            $t('settings.account.email.submit')
-          }}</span>
-          <ion-spinner v-if="emailLoading" class="button-spinner" :name="spinnerName" />
+          <button-spinner v-if="emailLoading" slot="start" />
+          <span>{{ $t('settings.account.email.submit') }}</span>
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -420,10 +414,8 @@ async function onSignOut() {
           :disabled="!passwordsValid || passwordLoading"
           @click="submitPassword"
         >
-          <span :class="{ 'loading-label': passwordLoading }">{{
-            $t('settings.account.password.submit')
-          }}</span>
-          <ion-spinner v-if="passwordLoading" class="button-spinner" :name="spinnerName" />
+          <button-spinner v-if="passwordLoading" slot="start" />
+          <span>{{ $t('settings.account.password.submit') }}</span>
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -505,16 +497,5 @@ ion-footer ion-toolbar {
   min-height: 48px;
   margin: 0;
   --border-radius: 12px;
-}
-
-.loading-label {
-  opacity: 0;
-}
-
-.button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

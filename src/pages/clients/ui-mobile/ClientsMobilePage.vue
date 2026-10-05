@@ -26,6 +26,7 @@ import { useClientsQuery, useToggleFavoriteClientMutation, type Client } from '@
 import { ClientFormMobile } from '@features/client-form/index.mobile'
 import { useSessionStore } from '@entities/session'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 interface ClosableSlidingItem extends HTMLElement {
   close: () => Promise<void>
@@ -198,12 +199,7 @@ async function onSwipeBooking(event: Event) {
                 :disabled="isFavoriteUpdatePending"
                 @click.stop="onToggleFavorite(client)"
               >
-                <ion-spinner
-                  v-if="isFavoritePending(client.id)"
-                  slot="icon-only"
-                  class="favorite-spinner"
-                  name="crescent"
-                />
+                <button-spinner v-if="isFavoritePending(client.id)" slot="icon-only" />
                 <ion-icon
                   v-else
                   slot="icon-only"
@@ -365,11 +361,6 @@ ion-item-sliding:not(:last-child) {
 
 .favorite-btn {
   margin-inline-start: 8px;
-}
-
-.favorite-spinner {
-  width: 20px;
-  height: 20px;
 }
 
 ion-fab {

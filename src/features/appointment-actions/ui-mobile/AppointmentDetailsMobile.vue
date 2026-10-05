@@ -18,9 +18,7 @@ import {
   IonNote,
   IonPopover,
   IonSkeletonText,
-  IonSpinner,
   IonToolbar,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import {
@@ -67,6 +65,7 @@ import {
   type MobileAppointmentMenuAction,
 } from '../model/action-set'
 import AppointmentRescheduleMobile from './AppointmentRescheduleMobile.vue'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
@@ -99,7 +98,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const formats = useFormats()
 const now = useNowMinute()
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const STATUS_META: Record<EffectiveAppointmentStatus, { icon: string; color: string }> = {
   pending: { icon: timeOutline, color: 'warning' },
@@ -627,16 +625,15 @@ function runPrimary() {
             :aria-busy="primaryLoading"
             @click="runPrimary"
           >
-            <ion-spinner v-if="primaryLoading" :name="spinnerName" />
-            <template v-else>
-              <ion-icon
-                slot="start"
-                :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
-                aria-hidden="true"
-                class="ion-padding-end"
-              />
-              {{ footerLabel }}
-            </template>
+            <button-spinner v-if="primaryLoading" slot="start" />
+            <ion-icon
+              v-else
+              slot="start"
+              :icon="footerAction === 'confirm' ? checkmarkCircleOutline : checkmarkDoneOutline"
+              aria-hidden="true"
+              class="ion-padding-end"
+            />
+            {{ footerLabel }}
           </ion-button>
         </div>
       </ion-toolbar>

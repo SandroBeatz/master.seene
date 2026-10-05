@@ -16,8 +16,6 @@ import {
   IonLabel,
   IonNote,
   IonIcon,
-  IonSpinner,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import {
@@ -37,6 +35,7 @@ import { useDirtyForm } from '@shared/lib/forms'
 import { COUNTRIES } from '@shared/lib/countries'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 // Native Ionic port of the desktop ContactsForm (features/contacts-form). Kept
 // as a single page component — like SettingsProfilePage — because it's a one-off
@@ -147,7 +146,6 @@ const emailError = computed(() =>
 )
 
 const canSave = computed(() => isDirty.value && isEmailValid.value)
-const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // --- Actions ------------------------------------------------------------------
 function orNull(value: string): string | null {
@@ -220,7 +218,9 @@ function onDiscard() {
             color="primary"
             aria-hidden="true"
           />
-          <ion-label class="ion-text-wrap hint-text">{{ $t('settings.contacts.subtitle') }}</ion-label>
+          <ion-label class="ion-text-wrap hint-text">{{
+            $t('settings.contacts.subtitle')
+          }}</ion-label>
         </ion-item>
       </inset-list>
 
@@ -363,10 +363,10 @@ function onDiscard() {
           :aria-busy="isSaving"
           @click="onSave"
         >
-          <span :class="{ 'save-button-label--hidden': isSaving }">
+          <button-spinner v-if="isSaving" slot="start" />
+          <span>
             {{ $t('common.saveChanges') }}
           </span>
-          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -450,16 +450,5 @@ ion-footer ion-toolbar {
 
 .save-button {
   position: relative;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

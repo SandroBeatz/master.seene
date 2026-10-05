@@ -16,10 +16,8 @@ import {
   IonNote,
   IonRadio,
   IonRadioGroup,
-  IonSpinner,
   IonTitle,
   IonToolbar,
-  isPlatform,
 } from '@ionic/vue'
 import {
   cardOutline,
@@ -37,6 +35,7 @@ import type { CompleteSaleDto } from '@entities/sale'
 import { useFormats } from '@shared/lib/formats'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { useCheckout } from '../model/use-checkout'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
@@ -57,7 +56,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const formats = useFormats()
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 const selfModal = ref<{ $el: HTMLElement } | null>(null)
 const selfModalEl = computed(() => selfModal.value?.$el ?? null)
 const isServicePickerOpen = ref(false)
@@ -294,7 +292,7 @@ watch(
           :aria-busy="loading"
           @click="submit"
         >
-          <ion-spinner v-if="loading" slot="start" :name="spinnerName" />
+          <button-spinner v-if="loading" slot="start" />
           <ion-icon v-else slot="start" :icon="checkmarkDoneOutline" aria-hidden="true" />
           {{ t('checkout.confirm') }}
         </ion-button>

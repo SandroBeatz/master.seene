@@ -13,12 +13,10 @@ import {
   IonLabel,
   IonModal,
   IonNote,
-  IonSpinner,
   IonTextarea,
   IonTitle,
   IonToolbar,
   alertController,
-  isPlatform,
 } from '@ionic/vue'
 import {
   calendarOutline,
@@ -37,6 +35,7 @@ import { useFormats } from '@shared/lib/formats'
 import { minutesToTimeInput, timeInputToMinutes } from '@shared/lib/scheduling'
 import { getDateTimeInputValue, toUtcIsoFromZonedDateTime } from '@shared/lib/time-zone'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 interface EditState {
   clientId: string
@@ -67,7 +66,6 @@ const formats = useFormats()
 const sessionStore = useSessionStore()
 const masterPreferencesStore = useMasterPreferencesStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 const isClientPickerOpen = ref(false)
 const isServicePickerOpen = ref(false)
 const isSlotPickerOpen = ref(false)
@@ -346,7 +344,7 @@ async function save() {
           :aria-busy="isSubmitting"
           @click="save"
         >
-          <ion-spinner v-if="isSubmitting" slot="start" :name="spinnerName" />
+          <button-spinner v-if="isSubmitting" slot="start" />
           <ion-icon v-else slot="start" :icon="checkmarkOutline" aria-hidden="true" />
           {{ t('appointments.preview.save') }}
         </ion-button>

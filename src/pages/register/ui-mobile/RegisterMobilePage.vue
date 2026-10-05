@@ -10,19 +10,22 @@ import {
   IonInput,
   IonButton,
   IonText,
-  IonSpinner,
   toastController,
 } from '@ionic/vue'
 import { supabase } from '@shared/lib/supabase'
 import { signInWithGoogle } from '@entities/session'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const { t } = useI18n()
 const router = useRouter()
 
 const form = reactive({ name: '', email: '', password: '', confirmPassword: '' })
-const errors = reactive<{ name?: string; email?: string; password?: string; confirmPassword?: string }>(
-  {},
-)
+const errors = reactive<{
+  name?: string
+  email?: string
+  password?: string
+  confirmPassword?: string
+}>({})
 const passwordLoading = ref(false)
 const googleLoading = ref(false)
 
@@ -150,13 +153,9 @@ async function onGoogleSignUp() {
           </ion-list>
 
           <div class="mt-4 px-2">
-            <ion-button
-              type="submit"
-              expand="block"
-              :disabled="passwordLoading || googleLoading"
-            >
-              <ion-spinner v-if="passwordLoading" name="crescent" />
-              <span v-else>{{ $t('auth.register.signUp') }}</span>
+            <ion-button type="submit" expand="block" :disabled="passwordLoading || googleLoading">
+              <button-spinner v-if="passwordLoading" slot="start" />
+              <span>{{ $t('auth.register.signUp') }}</span>
             </ion-button>
 
             <ion-button
@@ -167,8 +166,8 @@ async function onGoogleSignUp() {
               :disabled="passwordLoading || googleLoading"
               @click="onGoogleSignUp"
             >
-              <ion-spinner v-if="googleLoading" name="crescent" />
-              <span v-else>{{ $t('auth.register.signUpGoogle') }}</span>
+              <button-spinner v-if="googleLoading" slot="start" />
+              <span>{{ $t('auth.register.signUpGoogle') }}</span>
             </ion-button>
           </div>
         </form>

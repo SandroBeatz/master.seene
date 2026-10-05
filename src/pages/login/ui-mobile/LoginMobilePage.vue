@@ -10,11 +10,11 @@ import {
   IonInput,
   IonButton,
   IonText,
-  IonSpinner,
   toastController,
 } from '@ionic/vue'
 import { supabase } from '@shared/lib/supabase'
 import { signInWithGoogle } from '@entities/session'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -114,13 +114,9 @@ async function onGoogleSignIn() {
           </ion-list>
 
           <div class="mt-4 px-2">
-            <ion-button
-              type="submit"
-              expand="block"
-              :disabled="passwordLoading || googleLoading"
-            >
-              <ion-spinner v-if="passwordLoading" name="crescent" />
-              <span v-else>{{ $t('auth.login.signIn') }}</span>
+            <ion-button type="submit" expand="block" :disabled="passwordLoading || googleLoading">
+              <button-spinner v-if="passwordLoading" slot="start" />
+              <span>{{ $t('auth.login.signIn') }}</span>
             </ion-button>
 
             <ion-button
@@ -131,8 +127,8 @@ async function onGoogleSignIn() {
               :disabled="passwordLoading || googleLoading"
               @click="onGoogleSignIn"
             >
-              <ion-spinner v-if="googleLoading" name="crescent" />
-              <span v-else>{{ $t('auth.login.signInGoogle') }}</span>
+              <button-spinner v-if="googleLoading" slot="start" />
+              <span>{{ $t('auth.login.signInGoogle') }}</span>
             </ion-button>
           </div>
         </form>

@@ -18,9 +18,7 @@ import {
   IonLabel,
   IonNote,
   IonIcon,
-  IonSpinner,
   alertController,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import { checkmark, chevronForwardOutline, closeOutline, trashOutline } from 'ionicons/icons'
@@ -37,6 +35,7 @@ import { useSessionStore } from '@entities/session'
 import { useFormats } from '@shared/lib/formats'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { ListPickerModal } from '@shared/ui/list-picker-modal/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
@@ -55,7 +54,6 @@ const sessionStore = useSessionStore()
 const userId = computed(() => sessionStore.session?.user.id ?? '')
 const formats = useFormats()
 const isEdit = computed(() => props.mode === 'edit')
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const { data: categories } = useServiceCategoriesQuery(userId)
 const createMutation = useCreateServiceMutation(userId)
@@ -391,7 +389,7 @@ async function onDelete() {
             :aria-label="$t('services.deleteAction')"
             @click="onDelete"
           >
-            <ion-spinner v-if="deleteMutation.isLoading.value" :name="spinnerName" />
+            <button-spinner v-if="deleteMutation.isLoading.value" slot="icon-only" />
             <ion-icon v-else slot="icon-only" :icon="trashOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
@@ -547,10 +545,10 @@ async function onDelete() {
           :aria-busy="isLoading"
           @click="onSubmit"
         >
-          <span :class="{ 'save-button-label--hidden': isLoading }">
+          <button-spinner v-if="isLoading" slot="start" />
+          <span>
             {{ isEdit ? $t('services.form.save') : $t('services.addService') }}
           </span>
-          <ion-spinner v-if="isLoading" class="save-button-spinner" :name="spinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -697,17 +695,6 @@ ion-footer ion-toolbar {
   min-height: 48px;
   margin: 0;
   --border-radius: 12px;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 
 .sr-only {

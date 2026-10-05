@@ -20,7 +20,6 @@ import {
   IonIcon,
   IonAvatar,
   IonSpinner,
-  isPlatform,
   actionSheetController,
   toastController,
   type ActionSheetButton,
@@ -54,6 +53,7 @@ import { useDirtyForm } from '@shared/lib/forms'
 import { bookingPageUrl } from '@shared/config'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { PhoneField } from '@shared/ui/phone-field/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 // Native Ionic port of the desktop ProfileForm (features/profile-form). Kept as
 // a single page component because it's a one-off screen driven by a toolbar
@@ -314,7 +314,6 @@ const isFormValid = computed(
 )
 
 const canSave = computed(() => isDirty.value && isFormValid.value)
-const saveSpinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 // --- Actions ------------------------------------------------------------------
 async function onSave() {
@@ -402,7 +401,7 @@ async function comingSoon() {
             :aria-label="$t('settings.profile.avatar.change')"
             @click="openAvatarMenu"
           >
-            <ion-spinner v-if="isAvatarBusy" :name="saveSpinnerName" />
+            <button-spinner v-if="isAvatarBusy" slot="icon-only" />
             <ion-icon v-else slot="icon-only" :icon="pencilOutline" aria-hidden="true" />
           </ion-button>
         </div>
@@ -552,10 +551,10 @@ async function comingSoon() {
           :aria-busy="isSaving"
           @click="onSave"
         >
-          <span :class="{ 'save-button-label--hidden': isSaving }">
+          <button-spinner v-if="isSaving" slot="start" />
+          <span>
             {{ $t('common.saveChanges') }}
           </span>
-          <ion-spinner v-if="isSaving" class="save-button-spinner" :name="saveSpinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -738,16 +737,5 @@ ion-footer ion-toolbar {
 
 .save-button {
   position: relative;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

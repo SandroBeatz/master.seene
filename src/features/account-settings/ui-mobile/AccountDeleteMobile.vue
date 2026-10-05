@@ -16,15 +16,14 @@ import {
   IonLabel,
   IonNote,
   IonIcon,
-  IonSpinner,
   alertController,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import { alertCircleOutline, closeOutline, trashOutline } from 'ionicons/icons'
 import { useSessionStore } from '@entities/session'
 import { supabase } from '@shared/lib/supabase'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 defineProps<{
   presentingElement?: HTMLElement | null
@@ -41,7 +40,6 @@ const typedUsername = ref('')
 const submitted = ref(false)
 const isLoading = ref(false)
 const allowDismiss = ref(false)
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const usernameMatches = computed(
   () => typedUsername.value.trim() === username.value && username.value.length > 0,
@@ -223,10 +221,10 @@ async function onConfirmDelete() {
           :disabled="isLoading"
           @click="onConfirmDelete"
         >
-          <span :class="{ 'loading-label': isLoading }">
+          <button-spinner v-if="isLoading" slot="start" />
+          <span>
             {{ $t('settings.account.delete.finalConfirmButton') }}
           </span>
-          <ion-spinner v-if="isLoading" class="button-spinner" :name="spinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -330,16 +328,5 @@ ion-footer ion-toolbar {
   min-height: 48px;
   margin: 0;
   --border-radius: 12px;
-}
-
-.loading-label {
-  opacity: 0;
-}
-
-.button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>

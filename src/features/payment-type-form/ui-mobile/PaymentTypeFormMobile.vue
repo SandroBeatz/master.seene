@@ -16,9 +16,7 @@ import {
   IonNote,
   IonToggle,
   IonIcon,
-  IonSpinner,
   alertController,
-  isPlatform,
   toastController,
 } from '@ionic/vue'
 import { checkmark, closeOutline, trashOutline, walletOutline } from 'ionicons/icons'
@@ -31,6 +29,7 @@ import {
 } from '@entities/payment-type'
 import { useSessionStore } from '@entities/session'
 import { InsetList } from '@shared/ui/inset-list/index.mobile'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const props = defineProps<{
   isOpen: boolean
@@ -128,7 +127,6 @@ const isLoading = computed(() => isSubmitting.value || deleteMutation.isLoading.
 const canSubmit = computed(
   () => isFormValid.value && (!isEdit.value || isDirty.value) && !isLoading.value,
 )
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2000, color, position: 'top' })
@@ -267,7 +265,7 @@ async function onDelete() {
             :aria-label="$t('settings.paymentTypes.deleteAction')"
             @click="onDelete"
           >
-            <ion-spinner v-if="deleteMutation.isLoading.value" :name="spinnerName" />
+            <button-spinner v-if="deleteMutation.isLoading.value" slot="icon-only" />
             <ion-icon v-else slot="icon-only" :icon="trashOutline" aria-hidden="true" />
           </ion-button>
         </ion-buttons>
@@ -351,14 +349,14 @@ async function onDelete() {
           :aria-busy="isLoading"
           @click="onSubmit"
         >
-          <span :class="{ 'save-button-label--hidden': isLoading }">
+          <button-spinner v-if="isLoading" slot="start" />
+          <span>
             {{
               isEdit
                 ? $t('settings.paymentTypes.form.submitEdit')
                 : $t('settings.paymentTypes.form.submitCreate')
             }}
           </span>
-          <ion-spinner v-if="isLoading" class="save-button-spinner" :name="spinnerName" />
         </ion-button>
       </ion-toolbar>
     </ion-footer>
@@ -494,17 +492,6 @@ ion-footer ion-toolbar {
   min-height: 48px;
   margin: 0;
   --border-radius: 12px;
-}
-
-.save-button-label--hidden {
-  opacity: 0;
-}
-
-.save-button-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 
 .sr-only {

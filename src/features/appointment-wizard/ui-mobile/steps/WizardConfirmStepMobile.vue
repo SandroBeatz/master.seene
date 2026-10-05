@@ -9,9 +9,7 @@ import {
   IonItem,
   IonLabel,
   IonNote,
-  IonSpinner,
   IonTextarea,
-  isPlatform,
 } from '@ionic/vue'
 import {
   calendarOutline,
@@ -26,12 +24,12 @@ import { InsetList } from '@shared/ui/inset-list/index.mobile'
 import { useAppointmentWizardMobile } from '../../model/wizard-mobile-context'
 import { ActionFooterMobile } from '@shared/ui/action-footer/index.mobile'
 import WizardStepHeaderMobile from '../WizardStepHeaderMobile.vue'
+import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const { t } = useI18n()
 const formats = useFormats()
 const wizard = useAppointmentWizardMobile()
 const { state } = wizard
-const spinnerName = isPlatform('ios') ? 'dots' : 'crescent'
 
 const dateLabel = computed(() => {
   const [year = 1970, month = 1, day = 1] = state.date.split('-').map(Number)
@@ -138,7 +136,7 @@ function onPriceInput(event: CustomEvent<{ value?: string | null }>) {
         :aria-busy="wizard.isCreating.value"
         @click="wizard.create"
       >
-        <ion-spinner v-if="wizard.isCreating.value" slot="start" :name="spinnerName" />
+        <button-spinner v-if="wizard.isCreating.value" slot="start" />
         <ion-icon v-else slot="start" :icon="checkmarkOutline" aria-hidden="true" />
         {{ t('quickCreate.appointment.create') }}
       </ion-button>
