@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon } from '@ionic/vue'
-import { calendarOutline } from 'ionicons/icons'
-
-// Placeholder tab — the native calendar is built later. Keeps the tab bar
-// complete so navigation feels real during the PoC.
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue'
+import { CalendarMobile } from '@widgets/calendar/index.mobile'
 </script>
 
 <template>
@@ -14,11 +11,14 @@ import { calendarOutline } from 'ionicons/icons'
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true">
-      <div class="flex min-h-full flex-col items-center justify-center px-6 text-center">
-        <ion-icon :icon="calendarOutline" class="mb-3 text-5xl text-gray-400" aria-hidden="true" />
-        <p class="text-base text-gray-500">{{ $t('common.comingSoon') }}</p>
-      </div>
+    <ion-content :scroll-y="false" class="calendar-content">
+      <calendar-mobile />
     </ion-content>
   </ion-page>
 </template>
+
+<style scoped>
+.calendar-content {
+  --background: var(--se-surface-card);
+}
+</style>

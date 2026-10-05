@@ -7,6 +7,7 @@ import {
   getAppointmentStatusTextColorClass,
   getEffectiveAppointmentStatus,
   isGroupAppointment,
+  isScheduleVisibleAppointment,
   type Appointment,
 } from '@entities/appointment'
 import { useNowMinute } from '@shared/lib/now'
@@ -19,7 +20,6 @@ import { getCalendarDateTimeString } from '@shared/lib/time-zone'
 import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
 import { buildTimelineLayout, type TimelineConstants } from '../../model/timeline-layout'
-import { isVisibleScheduleAppointment } from '../../model/schedule-appointments'
 import ScheduleAppointmentBlock from './ScheduleAppointmentBlock.vue'
 import ScheduleTimeOffBlock from './ScheduleTimeOffBlock.vue'
 
@@ -105,7 +105,7 @@ const subtitleDate = computed(() =>
   new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long' }).format(props.selectedDate),
 )
 
-const visibleAppointments = computed(() => props.appointments.filter(isVisibleScheduleAppointment))
+const visibleAppointments = computed(() => props.appointments.filter(isScheduleVisibleAppointment))
 
 // Time off (time blocks): all-day ones show as a banner, timed ones as grey
 // blocks inside the grid (fed into the layout so they position without overlap).

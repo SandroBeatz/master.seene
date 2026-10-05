@@ -35,6 +35,8 @@ vi.mock('@entities/appointment', () => ({
     return appointment.status
   },
   isGroupAppointment: (appointment: Appointment) => appointment.service_ids.length > 1,
+  isScheduleVisibleAppointment: (appointment: Appointment) =>
+    ['pending', 'confirmed', 'completed'].includes(appointment.status),
 }))
 
 vi.mock('@entities/client', () => ({

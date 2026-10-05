@@ -7,6 +7,7 @@ import {
   getAppointmentAccentColor,
   getEffectiveAppointmentStatus,
   isGroupAppointment,
+  isScheduleVisibleAppointment,
   useAppointmentsQuery,
   type Appointment,
 } from '@entities/appointment'
@@ -34,7 +35,6 @@ import {
   timeFromMinutes,
   workingHoursForDate,
 } from '../model/home-today-schedule'
-import { isVisibleScheduleAppointment } from '../model/schedule-appointments'
 import { buildTimelineLayout, type TimelineConstants } from '../model/timeline-layout'
 
 const emit = defineEmits<{
@@ -99,7 +99,7 @@ const clientById = computed(() => new Map(clients.value.map((client) => [client.
 const visibleAppointments = computed(() =>
   appointments.value.filter(
     (appointment) =>
-      isVisibleScheduleAppointment(appointment) &&
+      isScheduleVisibleAppointment(appointment) &&
       Boolean(appointmentMinuteInterval(appointment, todayRange.value.date, timeZone.value)),
   ),
 )
