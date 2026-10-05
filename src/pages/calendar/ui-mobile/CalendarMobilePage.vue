@@ -80,6 +80,7 @@ function onRangeChange(next: CalendarDateRange) {
 }
 
 function changeView(next: CalendarViewType) {
+  if (next === view.value && !drillOrigin.value) return
   drillOrigin.value = null
   storeMobileCalendarView(next)
   calendar.value?.show(next)
@@ -89,14 +90,14 @@ function changeView(next: CalendarViewType) {
 function openDay(date: string) {
   hapticImpact()
   drillOrigin.value = { view: view.value, date: anchorDate.value, label: header.value.title }
-  calendar.value?.show('timeGridDay', date)
+  calendar.value?.show('timeGridDay', date, 'zoom-in')
 }
 
 function goBack() {
   const origin = drillOrigin.value
   if (!origin) return
   drillOrigin.value = null
-  calendar.value?.show(origin.view, origin.date)
+  calendar.value?.show(origin.view, origin.date, 'zoom-out')
 }
 
 function goToday() {
@@ -173,7 +174,11 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
               <ion-icon :icon="chevronBack" aria-hidden="true" />
               <span>{{ drillOrigin.label }}</span>
             </button>
-            <span v-else class="calendar-header__caption">{{ header.caption }}</span>
+            <transition v-else name="calendar-title" mode="out-in">
+              <span :key="header.caption" class="calendar-header__caption">
+                {{ header.caption }}
+              </span>
+            </transition>
 
             <button
               type="button"
@@ -181,7 +186,9 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
               :aria-label="t('calendar.mobile.jumpTo')"
               @click="isJumpOpen = true"
             >
-              <h1>{{ header.title }}</h1>
+              <transition name="calendar-title" mode="out-in">
+                <h1 :key="header.title">{{ header.title }}</h1>
+              </transition>
               <ion-icon :icon="chevronDown" aria-hidden="true" />
             </button>
           </div>
@@ -366,6 +373,23 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
   --background: var(--se-surface-card);
 }
 
+.calendar-title-enter-active,
+.calendar-title-leave-active {
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.calendar-title-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.calendar-title-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 @keyframes calendar-header-fade-in {
   from {
     opacity: 0;
@@ -377,6 +401,11 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
   .calendar-header__back,
   .calendar-header__today {
     animation: none;
+  }
+
+  .calendar-title-enter-active,
+  .calendar-title-leave-active {
+    transition: none;
   }
 }
 </style>

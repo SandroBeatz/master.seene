@@ -48,6 +48,24 @@ import { useMobileCalendarEvents } from '../model/use-mobile-calendar-events'
 import CalendarWeekStripMobile from './CalendarWeekStripMobile.vue'
 import { useCalendarSwipe } from './use-calendar-swipe'
 
+/** How a view switch enters: drill into a day, back out of it, or a soft fade. */
+export type CalendarViewTransition = 'zoom-in' | 'zoom-out' | 'fade'
+
+const VIEW_ENTER_KEYFRAMES: Record<CalendarViewTransition, Keyframe[]> = {
+  'zoom-in': [
+    { opacity: 0, transform: 'scale(0.94)' },
+    { opacity: 1, transform: 'scale(1)' },
+  ],
+  'zoom-out': [
+    { opacity: 0, transform: 'scale(1.05)' },
+    { opacity: 1, transform: 'scale(1)' },
+  ],
+  fade: [
+    { opacity: 0, transform: 'translateY(6px)' },
+    { opacity: 1, transform: 'translateY(0)' },
+  ],
+}
+
 // Native-feeling FullCalendar for the Ionic build: month (service-coloured
 // stripes), week (fixed-width, 2D-scrolling day columns) and day (full width).
 // Time-grid cards are the same AppointmentBlockMobile the home schedule uses.
@@ -387,6 +405,9 @@ const calendarOptions = computed<CalendarOptions>(() => {
         dayHeaderFormat: { weekday: 'short' },
         // Fit stripes to the cell height and fold the rest into "+N".
         dayMaxEventRows: true,
+        // Cells are tap targets (→ day); a date-range drag would only fight
+        // the swipe paging gesture.
+        selectable: false,
       },
       timeGridWeek: { dayMinWidth: MOBILE_CALENDAR_WEEK_DAY_WIDTH_PX },
       timeGridDay: { dayHeaders: false },
@@ -412,17 +433,30 @@ function next() {
   getCalendarApi()?.next()
 }
 
+// FullCalendar swaps the view synchronously, so the new content is already in
+// place: play an enter animation on it (and the week strip) right away.
+function animateEnter(transition: CalendarViewTransition) {
+  const root = rootRef.value
+  if (!root || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  root.animate(VIEW_ENTER_KEYFRAMES[transition], {
+    duration: transition === 'fade' ? 220 : 280,
+    easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+  })
+}
+
 function today() {
   alignWeekOnNextRange = currentView.value === 'timeGridWeek'
   focusOnNextRange = true
   getCalendarApi()?.today()
+  animateEnter('fade')
 }
 
 /** Switches view and/or date (`YYYY-MM-DD`); keeps the date when omitted. */
-function show(view: CalendarViewType, date?: string) {
+function show(view: CalendarViewType, date?: string, transition: CalendarViewTransition = 'fade') {
   alignWeekOnNextRange = view === 'timeGridWeek'
   focusOnNextRange = true
   getCalendarApi()?.changeView(view, date)
+  animateEnter(transition)
 }
 
 defineExpose({ prev, next, today, show, refetch, isLoading, error })
