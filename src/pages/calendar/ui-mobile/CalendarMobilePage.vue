@@ -5,6 +5,8 @@ import {
   actionSheetController,
   IonButton,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonHeader,
   IonIcon,
   IonPage,
@@ -221,14 +223,6 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
               {{ t('calendar.controls.today') }}
             </ion-button>
             <calendar-view-menu-mobile :view="view" @select="changeView" />
-            <ion-button
-              class="calendar-header__add"
-              shape="round"
-              :aria-label="t('quickCreate.menu.title')"
-              @click="quickCreate?.openMenu()"
-            >
-              <ion-icon slot="icon-only" :icon="add" aria-hidden="true" />
-            </ion-button>
           </div>
         </div>
       </ion-toolbar>
@@ -250,6 +244,12 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
         @time-block-select="onTimeBlockSelect"
         @slot-hold="quickCreate?.openAppointment({ startAt: $event })"
       />
+
+      <ion-fab slot="fixed" vertical="bottom" horizontal="end" class="calendar-fab">
+        <ion-fab-button :aria-label="t('quickCreate.menu.title')" @click="quickCreate?.openMenu()">
+          <ion-icon :icon="add" aria-hidden="true" />
+        </ion-fab-button>
+      </ion-fab>
     </ion-content>
 
     <calendar-jump-sheet-mobile
@@ -363,15 +363,8 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
   animation: calendar-header-fade-in 220ms ease;
 }
 
-.calendar-header__add {
-  --padding-start: 0;
-  --padding-end: 0;
-  --box-shadow: none;
-
-  width: 32px;
-  height: 32px;
-  margin: 0;
-  font-size: 19px;
+.calendar-fab {
+  margin: 0 4px 4px 0;
 }
 
 .calendar-header__progress {
