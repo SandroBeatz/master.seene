@@ -120,9 +120,10 @@ export function getAppointmentDates(events: readonly EventInput[]): Set<string> 
 }
 
 /**
- * Query window for a visible range, widened to whole calendar months (in UTC
- * terms, with a day of slack each side for zone offsets). Paging days or
- * weeks inside a month then reuses one cached query instead of refetching.
+ * Query window for a visible range: whole calendar months plus one month on
+ * each side (in UTC terms, with a day of slack for zone offsets). Paging days
+ * or weeks reuses one cached query, and the neighbouring month is already in
+ * hand when the master swipes to it.
  */
 export function toMonthAlignedRange<T extends { from?: string; to?: string }>(range: T): T {
   if (!range.from || !range.to) return range
@@ -132,8 +133,8 @@ export function toMonthAlignedRange<T extends { from?: string; to?: string }>(ra
 
   return {
     ...range,
-    from: new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 0)).toISOString(),
-    to: new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() + 1, 2)).toISOString(),
+    from: new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() - 1, 0)).toISOString(),
+    to: new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() + 2, 2)).toISOString(),
   }
 }
 

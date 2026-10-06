@@ -14,7 +14,7 @@ import interactionPlugin, { type DateClickArg } from '@fullcalendar/interaction'
 import scrollGridPlugin from '@fullcalendar/scrollgrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import FullCalendar from '@fullcalendar/vue3'
-import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getEffectiveAppointmentStatus, type Appointment } from '@entities/appointment'
 import { AppointmentBlockMobile } from '@entities/appointment/index.mobile'
@@ -173,9 +173,21 @@ const todayDate = computed(() => getDateTimeInputValue(now.value, timeZone.value
 const appointmentDates = computed(() => getAppointmentDates(events.value))
 const isDayView = computed(() => currentView.value === 'timeGridDay')
 
-// The grid's box changes when the all-day row collapses or the day view's
-// week strip comes and goes — FullCalendar only re-measures on request.
-watch([hasAllDayEvents, isDayView], () => void nextTick(() => getCalendarApi()?.updateSize()))
+// FullCalendar measures its box once and afterwards only on window resize.
+// On a cold start the Ionic page can lay out after the calendar mounted (the
+// month then renders collapsed into "+N" rows), and the box also changes when
+// the week strip or the all-day row come and go — so follow the box itself.
+let lastGridSize = ''
+const gridResizeObserver = new ResizeObserver(([entry]) => {
+  const { width, height } = entry?.contentRect ?? { width: 0, height: 0 }
+  const size = `${Math.round(width)}x${Math.round(height)}`
+  if (!width || !height || size === lastGridSize) return
+  lastGridSize = size
+  getCalendarApi()?.updateSize()
+})
+onMounted(() => gridRef.value && gridResizeObserver.observe(gridRef.value))
+onBeforeUnmount(() => gridResizeObserver.disconnect())
+watch(hasAllDayEvents, () => void nextTick(() => getCalendarApi()?.updateSize()))
 
 const { slide } = useCalendarSwipe({
   target: gridRef,
@@ -326,11 +338,13 @@ function alignWeek(align: WeekAlign) {
   if (currentView.value !== 'timeGridWeek') return
   const scroller = getWeekScroller()
   if (!scroller) return
-  if (align === 'end') {
-    scroller.scrollLeft = scroller.scrollWidth
+  const columns = [...scroller.querySelectorAll<HTMLElement>('.fc-timegrid-col')]
+  const last = columns.at(-1)
+  if (align === 'end' && last) {
+    // Flush with the last day's right edge — its snap point.
+    scroller.scrollLeft = last.offsetLeft + last.offsetWidth - scroller.clientWidth
     return
   }
-  const columns = [...scroller.querySelectorAll<HTMLElement>('.fc-timegrid-col')]
   const today = columns.find((column) => column.classList.contains('fc-day-today'))
   scroller.scrollLeft = today && columns[0] ? today.offsetLeft - columns[0].offsetLeft : 0
 }
@@ -856,6 +870,11 @@ defineExpose({ prev, next, today, show, refetch, isLoading, error })
 
 .se-calendar--timeGridWeek :deep(.fc-timegrid-col:not(.fc-timegrid-axis)) {
   scroll-snap-align: start;
+}
+
+/* The last day settles flush right, so the week's end is reachable. */
+.se-calendar--timeGridWeek :deep(.fc-timegrid-col:not(.fc-timegrid-axis):last-child) {
+  scroll-snap-align: end;
 }
 
 /* Rows take exactly the scale's height: FullCalendar props empty cells open

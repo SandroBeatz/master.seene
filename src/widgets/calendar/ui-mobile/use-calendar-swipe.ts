@@ -6,37 +6,43 @@ export type CalendarPageDirection = 'prev' | 'next'
 interface CalendarSwipeOptions {
   /** Element that listens for the horizontal drag. */
   target: Ref<HTMLElement | null>
-  /** The calendar view surface that follows the finger and slides. */
+  /** The calendar view surface that leans with the finger and slides in. */
   surface: () => HTMLElement | null
   /**
    * Directions that may page right now, read when a drag begins. Month and day
    * allow both; the week only past the ends of its own sideways scroll.
    */
   pageable: () => Record<CalendarPageDirection, boolean>
-  /** Moves the calendar one period; runs between the slide-out and slide-in. */
+  /** Moves the calendar one period. */
   onPage: (direction: CalendarPageDirection) => void
 }
 
-const COMMIT_DISTANCE_RATIO = 0.22
-const COMMIT_VELOCITY = 0.35
-const SLIDE_RATIO = 0.3
+const COMMIT_DISTANCE_PX = 60
+const COMMIT_VELOCITY = 0.3
+/** The view only leans with the finger — it never uncovers an empty gap. */
+const DRAG_RESISTANCE = 0.3
+const DRAG_MAX_PX = 32
+const ENTER_OFFSET_PERCENT = 22
 const EASE_OUT = 'cubic-bezier(0.2, 0.8, 0.2, 1)'
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
+function translate(x: string) {
+  return `translate3d(${x}, 0, 0)`
+}
+
 /**
- * Horizontal swipe paging for the calendar with a native feel: the view
- * tracks the finger, a long or fast enough swipe slides it out, pages, and
- * slides the new period in from the other side; a short one springs back.
- * `slide(direction, change)` plays the same transition for taps (week strip).
+ * Horizontal swipe paging for the calendar. While dragging, the view leans
+ * toward the finger with resistance; a long or fast enough swipe switches the
+ * period at once and the new one glides in from the swipe side (FullCalendar
+ * renders it synchronously, so there is no blank frame); a short swipe springs
+ * back. `slide(direction, change)` plays the same entrance for taps.
  */
 export function useCalendarSwipe({ target, surface, pageable, onPage }: CalendarSwipeOptions) {
   let gesture: Gesture | undefined
   let element: HTMLElement | null = null
-  let width = 0
-  let busy = false
   let allowed: Record<CalendarPageDirection, boolean> = { prev: false, next: false }
 
   // A drag to the left pages forward, to the right back; a direction that may
@@ -45,79 +51,36 @@ export function useCalendarSwipe({ target, surface, pageable, onPage }: Calendar
     return deltaX < 0 ? 'next' : 'prev'
   }
 
-  function canStart() {
-    if (busy) return false
-    allowed = pageable()
-    return allowed.prev || allowed.next
+  function leanFor(deltaX: number): number {
+    if (!allowed[directionOf(deltaX)]) return 0
+    return Math.sign(deltaX) * Math.min(Math.abs(deltaX) * DRAG_RESISTANCE, DRAG_MAX_PX)
   }
 
-  function offsetFor(deltaX: number) {
-    return `translate3d(${deltaX}px, 0, 0)`
-  }
-
-  function track(deltaX: number) {
-    if (!element) return
-    element.style.transform = offsetFor(deltaX)
-    element.style.opacity = String(1 - Math.min(Math.abs(deltaX) / width, 1) * 0.35)
-  }
-
-  function reset(el: HTMLElement) {
-    el.style.transform = ''
-    el.style.opacity = ''
-  }
-
-  async function slide(direction: CalendarPageDirection, change: () => void, fromX = 0) {
+  function slide(direction: CalendarPageDirection, change: () => void) {
+    change()
+    // FullCalendar re-renders synchronously into the same surface element.
     const el = surface()
-    if (!el || busy || prefersReducedMotion()) {
-      change()
-      return
-    }
+    if (!el) return
+    el.style.transform = ''
+    if (prefersReducedMotion()) return
 
-    busy = true
-    const distance = (width || el.clientWidth) * SLIDE_RATIO
-    const sign = direction === 'next' ? -1 : 1
-    try {
-      await el.animate(
-        [
-          { transform: offsetFor(fromX), opacity: el.style.opacity || 1 },
-          { transform: offsetFor(sign * distance), opacity: 0 },
-        ],
-        { duration: 130, easing: 'ease-in', fill: 'forwards' },
-      ).finished
-      reset(el)
-      change()
-      // FullCalendar re-renders synchronously into the same surface element.
-      const next = surface() ?? el
-      await next.animate(
-        [
-          { transform: offsetFor(-sign * distance), opacity: 0 },
-          { transform: offsetFor(0), opacity: 1 },
-        ],
-        { duration: 240, easing: EASE_OUT },
-      ).finished
-      el.getAnimations().forEach((animation) => animation.cancel())
-    } finally {
-      busy = false
-    }
+    const from = direction === 'next' ? ENTER_OFFSET_PERCENT : -ENTER_OFFSET_PERCENT
+    el.animate(
+      [
+        { transform: translate(`${from}%`), opacity: 0.2 },
+        { transform: translate('0'), opacity: 1 },
+      ],
+      { duration: 260, easing: EASE_OUT },
+    )
   }
 
-  function springBack(fromX: number) {
-    const el = element
-    if (!el) return
-    el.animate([{ transform: offsetFor(fromX) }, { transform: offsetFor(0) }], {
+  function springBack(el: HTMLElement, fromX: number) {
+    el.style.transform = ''
+    if (!fromX || prefersReducedMotion()) return
+    el.animate([{ transform: translate(`${fromX}px`) }, { transform: translate('0') }], {
       duration: 220,
       easing: EASE_OUT,
     })
-    reset(el)
-  }
-
-  function onStart() {
-    element = surface()
-    width = target.value?.clientWidth ?? 0
-  }
-
-  function onMove(detail: GestureDetail) {
-    track(allowed[directionOf(detail.deltaX)] ? detail.deltaX : 0)
   }
 
   // The pointer-up of a drag still produces a click on whatever card is under
@@ -133,22 +96,32 @@ export function useCalendarSwipe({ target, surface, pageable, onPage }: Calendar
     setTimeout(() => el.removeEventListener('click', stop, { capture: true }), 400)
   }
 
+  function canStart() {
+    allowed = pageable()
+    return allowed.prev || allowed.next
+  }
+
+  function onStart() {
+    element = surface()
+  }
+
+  function onMove(detail: GestureDetail) {
+    if (element) element.style.transform = translate(`${leanFor(detail.deltaX)}px`)
+  }
+
   function onEnd(detail: GestureDetail) {
     if (Math.abs(detail.deltaX) > 4) suppressNextClick()
+    const el = element
+    element = null
+    if (!el) return
+
     const direction = directionOf(detail.deltaX)
-    const offset = allowed[direction] ? detail.deltaX : 0
     const committed =
       allowed[direction] &&
-      (Math.abs(detail.deltaX) > width * COMMIT_DISTANCE_RATIO ||
-        Math.abs(detail.velocityX) > COMMIT_VELOCITY)
-    if (!committed || !element) {
-      springBack(offset)
-      element = null
-      return
-    }
+      (Math.abs(detail.deltaX) > COMMIT_DISTANCE_PX || Math.abs(detail.velocityX) > COMMIT_VELOCITY)
 
-    element = null
-    void slide(direction, () => onPage(direction), detail.deltaX)
+    if (committed) slide(direction, () => onPage(direction))
+    else springBack(el, leanFor(detail.deltaX))
   }
 
   onMounted(() => {

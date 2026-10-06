@@ -266,7 +266,7 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
 <style scoped>
 .calendar-header ion-toolbar {
   --background: var(--se-surface-card);
-  --min-height: 64px;
+  --min-height: 52px;
   --padding-start: max(16px, var(--safe-area-left, 0px));
   --padding-end: max(10px, var(--safe-area-right, 0px));
   --padding-top: 4px;
@@ -290,11 +290,11 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
 
 .calendar-header__caption,
 .calendar-header__back {
-  height: 20px;
+  height: 17px;
   color: var(--ion-color-medium);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 17px;
 }
 
 .calendar-header__back {
@@ -311,7 +311,7 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
 }
 
 .calendar-header__back ion-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .calendar-header__title {
@@ -328,10 +328,10 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
 .calendar-header__title h1 {
   overflow: hidden;
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -339,7 +339,7 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
 .calendar-header__title ion-icon {
   flex: 0 0 auto;
   color: var(--ion-color-medium);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .calendar-header__actions {
@@ -355,9 +355,9 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
   --padding-start: 8px;
   --padding-end: 8px;
 
-  height: 34px;
+  height: 32px;
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
   text-transform: none;
   animation: calendar-header-fade-in 220ms ease;
@@ -368,10 +368,10 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
   --padding-end: 0;
   --box-shadow: none;
 
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
 }
 
 .calendar-header__progress {

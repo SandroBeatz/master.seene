@@ -117,7 +117,7 @@ describe('mobile calendar model', () => {
     ).toEqual(new Set(['2026-10-05']))
   })
 
-  it('aligns the query window to whole months so paging days reuses it', () => {
+  it('pads the query window to whole months around the visible range', () => {
     const monday = toMonthAlignedRange({
       from: '2026-10-05T00:00:00.000Z',
       to: '2026-10-06T00:00:00.000Z',
@@ -128,7 +128,7 @@ describe('mobile calendar model', () => {
     })
 
     expect(monday).toEqual(friday)
-    expect(monday).toEqual({ from: '2026-09-30T00:00:00.000Z', to: '2026-11-02T00:00:00.000Z' })
+    expect(monday).toEqual({ from: '2026-08-31T00:00:00.000Z', to: '2026-12-02T00:00:00.000Z' })
     expect(toMonthAlignedRange({ from: undefined, to: undefined })).toEqual({
       from: undefined,
       to: undefined,

@@ -89,14 +89,13 @@ function choose(view: CalendarViewType) {
 <style scoped>
 .view-menu__trigger {
   --color: var(--ion-text-color);
-  --padding-start: 10px;
-  --padding-end: 12px;
+  --padding-start: 6px;
+  --padding-end: 6px;
   --border-radius: 999px;
-  --background: var(--se-surface-muted);
 
-  height: 34px;
+  height: 32px;
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 600;
   text-transform: none;
 }
