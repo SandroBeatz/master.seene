@@ -308,6 +308,7 @@ export default {
       comment: 'Comment',
       commentPlaceholder: 'E.g. lunch, doctor’s appointment…',
       commentHint: 'Only you can see this comment',
+      save: 'Save',
     },
   },
 
@@ -1350,6 +1351,10 @@ export default {
   timeBlocks: {
     calendarTitle: 'Blocked time',
     allDayLabel: 'Time off: All day',
+    preview: {
+      noComment: 'No comment',
+      edit: 'Edit time off',
+    },
     form: {
       titleCreate: 'Block time',
       titleEdit: 'Edit blocked time',

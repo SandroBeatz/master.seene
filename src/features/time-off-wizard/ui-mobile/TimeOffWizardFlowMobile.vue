@@ -5,7 +5,11 @@ import { IonNav, toastController } from '@ionic/vue'
 import { useAppointmentAvailability } from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
 import { useSessionStore } from '@entities/session'
-import { useCreateTimeBlockMutation } from '@entities/time-block'
+import {
+  useCreateTimeBlockMutation,
+  useUpdateTimeBlockMutation,
+  type TimeBlock,
+} from '@entities/time-block'
 import { useFormats } from '@shared/lib/formats'
 import { minutesToTimeInput } from '@shared/lib/scheduling'
 import { getDateTimeInputValue } from '@shared/lib/time-zone'
@@ -18,10 +22,13 @@ import TimeOffWhenStepMobile from './steps/TimeOffWhenStepMobile.vue'
 import TimeOffReasonStepMobile from './steps/TimeOffReasonStepMobile.vue'
 
 // Mounted fresh on every modal presentation (IonModal renders its content only
-// while open), so a half-filled time off never leaks into the next one.
+// while open), so a half-filled time off never leaks into the next one. With a
+// `timeBlock` the same steps edit it, prefilled.
+const props = defineProps<{ timeBlock?: TimeBlock }>()
+
 const emit = defineEmits<{
   close: []
-  created: []
+  saved: [timeBlock: TimeBlock]
   'update:dirty': [value: boolean]
   'update:busy': [value: boolean]
 }>()
@@ -42,6 +49,7 @@ const wizard = createTimeOffWizard({
   date: getDateTimeInputValue(new Date(), timeZone.value).date,
   timeZone,
   dayBusy: (date) => availability.dayBusy(date),
+  timeBlock: props.timeBlock,
 })
 const { state } = wizard
 const availability = useAppointmentAvailability({
@@ -51,10 +59,15 @@ const availability = useAppointmentAvailability({
   stepMinutes,
   durationMinutes: computed(() => state.durationMinutes),
   anchorDate: computed(() => state.date),
+  excludeTimeBlockId: computed(() => props.timeBlock?.id ?? null),
 })
+const isEditing = Boolean(props.timeBlock)
 
 watch(
-  () => Boolean(state.allDay || state.startMinutes != null || state.notes.trim()),
+  () =>
+    isEditing
+      ? wizard.isChanged.value
+      : Boolean(state.allDay || state.startMinutes != null || state.notes.trim()),
   (dirty) => emit('update:dirty', dirty),
   { immediate: true },
 )
@@ -91,27 +104,33 @@ async function next() {
   }
 }
 
-// --- Create ---
+// --- Save ---
 const createMutation = useCreateTimeBlockMutation(userId)
-const isCreating = computed(() => createMutation.isLoading.value)
-watch(isCreating, (busy) => emit('update:busy', busy))
+const updateMutation = useUpdateTimeBlockMutation(userId)
+const isSaving = computed(() => createMutation.isLoading.value || updateMutation.isLoading.value)
+watch(isSaving, (busy) => emit('update:busy', busy))
 
 async function showToast(message: string, color: 'success' | 'danger') {
   const toast = await toastController.create({ message, duration: 2200, color, position: 'top' })
   await toast.present()
 }
 
-async function create() {
+async function submit() {
   const dto = wizard.isWhenValid.value ? wizard.toDto() : null
   if (!dto) {
     await showToast(t('quickCreate.timeOff.overlap'), 'danger')
     return
   }
   try {
-    await createMutation.mutateAsync(dto)
+    const saved = props.timeBlock
+      ? await updateMutation.mutateAsync({ ...dto, id: props.timeBlock.id })
+      : await createMutation.mutateAsync(dto)
     emit('update:dirty', false)
-    emit('created')
-    await showToast(t('timeBlocks.form.successCreate'), 'success')
+    emit('saved', saved)
+    await showToast(
+      t(props.timeBlock ? 'timeBlocks.form.successEdit' : 'timeBlocks.form.successCreate'),
+      'success',
+    )
   } catch {
     await showToast(t('timeBlocks.form.errorTitle'), 'danger')
   }
@@ -119,6 +138,7 @@ async function create() {
 
 const context: TimeOffWizardMobileContext = {
   wizard,
+  isEditing,
   scheduling: {
     userId,
     timeZone,
@@ -126,12 +146,13 @@ const context: TimeOffWizardMobileContext = {
     stepMinutes,
     firstDayOfWeek: computed(() => masterPreferencesStore.calendarFirstDay),
     hourCycle: computed(() => (masterPreferencesStore.timeFormat === 12 ? 'h12' : 'h23')),
+    excludeTimeBlockId: props.timeBlock?.id ?? null,
   },
   summary,
-  isCreating,
+  isSaving,
   next: () => void next(),
   close: () => emit('close'),
-  create,
+  submit,
 }
 
 provide(TIME_OFF_WIZARD_MOBILE_KEY, context)

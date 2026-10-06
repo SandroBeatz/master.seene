@@ -306,6 +306,7 @@ export default {
       comment: 'Комментарий',
       commentPlaceholder: 'Например: обед, визит к врачу…',
       commentHint: 'Комментарий видите только вы',
+      save: 'Сохранить',
     },
   },
 
@@ -1346,6 +1347,10 @@ export default {
   timeBlocks: {
     calendarTitle: 'Заблокированное время',
     allDayLabel: 'Перерыв: Весь день',
+    preview: {
+      noComment: 'Без комментария',
+      edit: 'Изменить перерыв',
+    },
     form: {
       titleCreate: 'Заблокировать время',
       titleEdit: 'Редактировать блокировку',

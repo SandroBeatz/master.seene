@@ -59,6 +59,8 @@ const props = withDefaults(
     hourCycle?: 'h12' | 'h23'
     /** Appointment being rescheduled — excluded from busy time. */
     excludeAppointmentId?: string | null
+    /** Time off being edited — excluded from busy time. */
+    excludeTimeBlockId?: string | null
     /**
      * Whether busy / too-short starts can still be picked (after a confirm).
      * Bookings allow it; a time off must never overlap one, so it passes false.
@@ -71,6 +73,7 @@ const props = withDefaults(
     firstDayOfWeek: 1,
     hourCycle: undefined,
     excludeAppointmentId: null,
+    excludeTimeBlockId: null,
     allowConflicts: true,
     hideSlots: false,
   },
@@ -106,6 +109,7 @@ const availability = useAppointmentAvailability({
   stepMinutes: toRef(props, 'stepMinutes'),
   durationMinutes: toRef(props, 'durationMinutes'),
   excludeAppointmentId: toRef(props, 'excludeAppointmentId'),
+  excludeTimeBlockId: toRef(props, 'excludeTimeBlockId'),
   anchorDate,
 })
 const today = availability.today

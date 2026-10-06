@@ -1,16 +1,36 @@
 import { ref } from 'vue'
 import { describe, expect, it } from 'vitest'
+import type { TimeBlock } from '@entities/time-block'
 import type { Interval } from '@shared/lib/scheduling'
-import { createTimeOffWizard, DEFAULT_TIME_OFF_DURATION } from '../time-off-wizard-mobile'
+import {
+  createTimeOffWizard,
+  DEFAULT_TIME_OFF_DURATION,
+  timeBlockToWizardPrefill,
+} from '../time-off-wizard-mobile'
 
 const DAY = '2026-10-06'
 
-function setup(busyByDay: Record<string, Interval[]> = {}) {
+function setup(busyByDay: Record<string, Interval[]> = {}, timeBlock?: TimeBlock) {
   return createTimeOffWizard({
     date: DAY,
     timeZone: ref('UTC'),
     dayBusy: (date) => busyByDay[date] ?? [],
+    timeBlock,
   })
+}
+
+function timeBlock(over: Partial<TimeBlock>): TimeBlock {
+  return {
+    id: 'tb1',
+    user_id: 'u1',
+    start_at: '2026-10-08T13:00:00.000Z',
+    end_at: '2026-10-08T14:30:00.000Z',
+    all_day: false,
+    notes: 'Обед',
+    created_at: '',
+    updated_at: '',
+    ...over,
+  }
 }
 
 describe('createTimeOffWizard', () => {
@@ -102,6 +122,68 @@ describe('createTimeOffWizard', () => {
       end_at: '2026-10-07T00:00:00.000Z',
       all_day: true,
       notes: null,
+    })
+  })
+
+  describe('editing an existing time off', () => {
+    it('prefills a timed time off in the master timezone', () => {
+      expect(timeBlockToWizardPrefill(timeBlock({}), 'Asia/Almaty')).toEqual({
+        state: {
+          date: '2026-10-08',
+          allDay: false,
+          startMinutes: 18 * 60,
+          durationMinutes: 90,
+          notes: 'Обед',
+        },
+        allDayDays: 1,
+      })
+    })
+
+    it('starts unchanged and valid, and reports edits', () => {
+      const wizard = setup({}, timeBlock({}))
+      expect(wizard.isChanged.value).toBe(false)
+      expect(wizard.isWhenValid.value).toBe(true)
+
+      wizard.setDuration(60)
+      expect(wizard.isChanged.value).toBe(true)
+      wizard.setDuration(90)
+      expect(wizard.isChanged.value).toBe(false)
+
+      wizard.state.notes = 'Врач'
+      expect(wizard.isChanged.value).toBe(true)
+    })
+
+    it('switches a timed time off to all day and back', () => {
+      const wizard = setup({}, timeBlock({ notes: null }))
+      wizard.setAllDay(true)
+      expect(wizard.toDto()).toEqual({
+        start_at: '2026-10-08T00:00:00.000Z',
+        end_at: '2026-10-09T00:00:00.000Z',
+        all_day: true,
+        notes: null,
+      })
+
+      wizard.setAllDay(false)
+      expect(wizard.isChanged.value).toBe(false)
+      expect(wizard.toDto()?.start_at).toBe('2026-10-08T13:00:00.000Z')
+    })
+
+    it('keeps the span of a multi-day all-day time off', () => {
+      const wizard = setup(
+        {},
+        timeBlock({
+          start_at: '2026-10-08T00:00:00.000Z',
+          end_at: '2026-10-11T00:00:00.000Z',
+          all_day: true,
+        }),
+      )
+      expect(wizard.state.allDay).toBe(true)
+      wizard.setDate('2026-10-12')
+      expect(wizard.toDto()).toMatchObject({
+        start_at: '2026-10-12T00:00:00.000Z',
+        end_at: '2026-10-15T00:00:00.000Z',
+        all_day: true,
+      })
     })
   })
 })

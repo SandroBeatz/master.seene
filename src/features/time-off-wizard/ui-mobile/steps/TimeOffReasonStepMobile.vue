@@ -10,7 +10,7 @@ import TimeOffStepHeaderMobile from '../TimeOffStepHeaderMobile.vue'
 import { ButtonSpinner } from '@shared/ui/button-spinner/index.mobile'
 
 const { t } = useI18n()
-const { wizard, summary, isCreating, create } = useTimeOffWizardMobile()
+const { wizard, isEditing, summary, isSaving, submit } = useTimeOffWizardMobile()
 const { state } = wizard
 </script>
 
@@ -52,10 +52,10 @@ const { state } = wizard
     <span>{{ t('quickCreate.timeOff.title') }}</span>
     <strong>{{ summary }}</strong>
     <template #action>
-      <ion-button :disabled="isCreating" @click="create">
-        <button-spinner v-if="isCreating" slot="start" />
+      <ion-button :disabled="isSaving || (isEditing && !wizard.isChanged.value)" @click="submit">
+        <button-spinner v-if="isSaving" slot="start" />
         <ion-icon v-else slot="start" :icon="checkmarkOutline" aria-hidden="true" />
-        {{ t('quickCreate.timeOff.create') }}
+        {{ isEditing ? t('quickCreate.timeOff.save') : t('quickCreate.timeOff.create') }}
       </ion-button>
     </template>
   </action-footer-mobile>

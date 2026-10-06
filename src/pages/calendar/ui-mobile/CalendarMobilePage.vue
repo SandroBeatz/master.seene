@@ -2,7 +2,6 @@
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  actionSheetController,
   IonButton,
   IonContent,
   IonFab,
@@ -20,8 +19,7 @@ import {
 import { add, chevronBack, chevronDown } from 'ionicons/icons'
 import type { Appointment } from '@entities/appointment'
 import { useMasterPreferencesStore } from '@entities/master'
-import { useSessionStore } from '@entities/session'
-import { useRemoveTimeBlockMutation, type TimeBlock } from '@entities/time-block'
+import type { TimeBlock } from '@entities/time-block'
 import type { MobileAppointmentQuickAction } from '@features/appointment-actions/index.mobile'
 import { AppointmentPreviewHostMobile } from '@widgets/appointment-preview-panel/index.mobile'
 import {
@@ -36,6 +34,7 @@ import {
   type CalendarViewType,
 } from '@widgets/calendar/index.mobile'
 import { QuickCreateMobile } from '@widgets/quick-create-action/index.mobile'
+import { TimeOffPreviewHostMobile } from '@widgets/time-off-preview-panel/index.mobile'
 import { hapticImpact } from '@shared/lib/native'
 import { useNowMinute } from '@shared/lib/now'
 import { getDateTimeInputValue } from '@shared/lib/time-zone'
@@ -50,13 +49,10 @@ interface DrillOrigin {
 
 const { t, locale } = useI18n()
 const masterStore = useMasterPreferencesStore()
-const sessionStore = useSessionStore()
-const removeTimeBlockMutation = useRemoveTimeBlockMutation(
-  computed(() => sessionStore.session?.user.id ?? ''),
-)
 const now = useNowMinute()
 const calendar = useTemplateRef('calendar')
 const preview = useTemplateRef('preview')
+const timeOffPreview = useTemplateRef('timeOffPreview')
 const quickCreate = useTemplateRef('quickCreate')
 
 const initialView = readStoredMobileCalendarView()
@@ -118,11 +114,6 @@ function handleQuickAction(appointment: Appointment, action: MobileAppointmentQu
   else void preview.value?.remove(appointment)
 }
 
-async function showToast(message: string, color: 'success' | 'danger') {
-  const toast = await toastController.create({ message, duration: 2200, color, position: 'top' })
-  await toast.present()
-}
-
 // A failed load keeps whatever is cached on screen and offers a retry.
 watch(
   () => calendar.value?.error,
@@ -141,26 +132,9 @@ watch(
   },
 )
 
-// Time off has no detail screen on mobile: a tap offers to remove it.
-async function onTimeBlockSelect(timeBlock: TimeBlock) {
+function onTimeBlockSelect(timeBlock: TimeBlock) {
   hapticImpact()
-  const sheet = await actionSheetController.create({
-    header: timeBlock.notes || t('timeBlocks.calendarTitle'),
-    buttons: [
-      { text: t('timeBlocks.form.delete'), role: 'destructive' },
-      { text: t('common.cancel'), role: 'cancel' },
-    ],
-  })
-  await sheet.present()
-  const { role } = await sheet.onDidDismiss()
-  if (role !== 'destructive') return
-
-  try {
-    await removeTimeBlockMutation.mutateAsync(timeBlock.id)
-    await showToast(t('timeBlocks.form.successDelete'), 'success')
-  } catch {
-    await showToast(t('timeBlocks.form.errorDelete'), 'danger')
-  }
+  void timeOffPreview.value?.openDetails(timeBlock)
 }
 
 // Coming back to the tab refreshes the period: bookings may have arrived
@@ -259,6 +233,7 @@ onIonViewWillLeave(() => document.removeEventListener('ionBackButton', onHardwar
       @select="jumpTo"
     />
     <appointment-preview-host-mobile ref="preview" />
+    <time-off-preview-host-mobile ref="timeOffPreview" />
     <quick-create-mobile ref="quickCreate" />
   </ion-page>
 </template>

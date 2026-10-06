@@ -2,19 +2,22 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IonModal, alertController } from '@ionic/vue'
+import type { TimeBlock } from '@entities/time-block'
 import TimeOffWizardFlowMobile from './TimeOffWizardFlowMobile.vue'
 
 // Self-contained "new time off" sheet. Its content is an ion-nav whose pages
 // are the two steps (when → reason), so each gets native push/back transitions
-// inside the modal — same shell as the appointment wizard.
+// inside the modal — same shell as the appointment wizard. Passing `timeBlock`
+// reuses the same steps to edit an existing time off.
 const props = defineProps<{
   isOpen: boolean
+  timeBlock?: TimeBlock
   presentingElement?: HTMLElement | null
 }>()
 
 const emit = defineEmits<{
   'update:isOpen': [value: boolean]
-  created: []
+  saved: [timeBlock: TimeBlock]
 }>()
 
 const { t } = useI18n()
@@ -58,9 +61,9 @@ async function close() {
   await selfModal.value?.$el.dismiss()
 }
 
-async function onCreated() {
+async function onSaved(timeBlock: TimeBlock) {
   allowDismiss.value = true
-  emit('created')
+  emit('saved', timeBlock)
   await close()
 }
 </script>
@@ -75,8 +78,9 @@ async function onCreated() {
     @did-dismiss="emit('update:isOpen', false)"
   >
     <time-off-wizard-flow-mobile
+      :time-block="timeBlock"
       @close="close"
-      @created="onCreated"
+      @saved="onSaved"
       @update:dirty="isDirty = $event"
       @update:busy="isBusy = $event"
     />

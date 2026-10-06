@@ -10,6 +10,8 @@ export type TimeOffStep = 1 | 2
  */
 export interface TimeOffWizardMobileContext {
   wizard: TimeOffWizard
+  /** Editing an existing time off (save) rather than creating one. */
+  isEditing: boolean
   /** Inputs for the date/slot picker. */
   scheduling: {
     userId: ComputedRef<string>
@@ -18,13 +20,15 @@ export interface TimeOffWizardMobileContext {
     stepMinutes: ComputedRef<number>
     firstDayOfWeek: ComputedRef<number>
     hourCycle: ComputedRef<'h12' | 'h23'>
+    /** The edited time off, so its own slot doesn't read as busy. */
+    excludeTimeBlockId: string | null
   }
   /** "Mon, 6 Oct · 13:00 – 14:00" / "Mon, 6 Oct · All day"; '' until picked. */
   summary: ComputedRef<string>
-  isCreating: ComputedRef<boolean>
+  isSaving: ComputedRef<boolean>
   next: () => void
   close: () => void
-  create: () => Promise<void>
+  submit: () => Promise<void>
 }
 
 export const TIME_OFF_WIZARD_MOBILE_KEY: InjectionKey<TimeOffWizardMobileContext> =

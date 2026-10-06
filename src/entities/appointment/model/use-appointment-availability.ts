@@ -31,6 +31,8 @@ export interface AppointmentAvailabilityOptions {
   anchorDate: Ref<string>
   /** Appointment being rescheduled — never counts as busy against itself. */
   excludeAppointmentId?: Ref<string | null | undefined>
+  /** Time off being edited — never counts as busy against itself. */
+  excludeTimeBlockId?: Ref<string | null | undefined>
 }
 
 export interface DayTimeOff {
@@ -91,6 +93,12 @@ export function useAppointmentAvailability(options: AppointmentAvailabilityOptio
     return excluded ? list.filter((appointment) => appointment.id !== excluded) : list
   })
 
+  const timeBlocks = computed(() => {
+    const excluded = options.excludeTimeBlockId?.value
+    const list = timeBlocksQuery.data.value ?? []
+    return excluded ? list.filter((block) => block.id !== excluded) : list
+  })
+
   function isLoaded(date: string): boolean {
     return isReady.value && date >= loadedDays.value.from && date < loadedDays.value.to
   }
@@ -101,7 +109,7 @@ export function useAppointmentAvailability(options: AppointmentAvailabilityOptio
       const interval = appointmentToBusyInterval(appointment, date, options.timeZone.value)
       if (interval) intervals.push(interval)
     }
-    for (const block of timeBlocksQuery.data.value ?? []) {
+    for (const block of timeBlocks.value) {
       const interval = timeBlockToBusyInterval(block, date, options.timeZone.value)
       if (interval) intervals.push(interval)
     }
@@ -157,7 +165,7 @@ export function useAppointmentAvailability(options: AppointmentAvailabilityOptio
 
   function dayTimeOffs(date: string): DayTimeOff[] {
     if (!isLoaded(date)) return []
-    return (timeBlocksQuery.data.value ?? []).flatMap((block) => {
+    return timeBlocks.value.flatMap((block) => {
       const interval = timeBlockToBusyInterval(block, date, options.timeZone.value)
       if (!interval) return []
       const allDay = interval[0] === 0 && interval[1] === MINUTES_IN_DAY

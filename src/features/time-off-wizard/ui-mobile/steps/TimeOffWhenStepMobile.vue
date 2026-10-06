@@ -110,6 +110,7 @@ const manualSelection = computed(() => {
       :duration-minutes="state.durationMinutes"
       :first-day-of-week="scheduling.firstDayOfWeek.value"
       :hour-cycle="scheduling.hourCycle.value"
+      :exclude-time-block-id="scheduling.excludeTimeBlockId"
       :allow-conflicts="false"
       :hide-slots="state.allDay"
       @update:date="wizard.setDate"

@@ -308,6 +308,7 @@ export default {
       comment: 'Commentaire',
       commentPlaceholder: 'Ex. : déjeuner, rendez-vous médical…',
       commentHint: 'Vous seul voyez ce commentaire',
+      save: 'Enregistrer',
     },
   },
 
@@ -1360,6 +1361,10 @@ export default {
   timeBlocks: {
     calendarTitle: 'Temps bloqué',
     allDayLabel: 'Indisponibilité : Toute la journée',
+    preview: {
+      noComment: 'Aucun commentaire',
+      edit: 'Modifier l’indisponibilité',
+    },
     form: {
       titleCreate: 'Bloquer du temps',
       titleEdit: 'Modifier le temps bloqué',
