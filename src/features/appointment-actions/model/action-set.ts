@@ -6,6 +6,9 @@ export type MobileAppointmentMenuAction = MobileAppointmentMoreAction | 'delete'
 
 export type MobileAppointmentFooterAction = 'confirm' | 'complete'
 
+/** Long-press menu on an appointment card (home schedule, calendar). */
+export type MobileAppointmentQuickAction = 'details' | 'reschedule' | 'edit' | 'delete'
+
 /**
  * Contextual actions used by the Ionic appointment action sheet.
  *

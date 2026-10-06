@@ -1,49 +1,28 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IonContent, IonFab, IonFabButton, IonIcon, IonPage } from '@ionic/vue'
 import { add } from 'ionicons/icons'
 import type { Appointment } from '@entities/appointment'
-import { AppointmentWizardMobile } from '@features/appointment-wizard/index.mobile'
-import { TimeOffWizardMobile } from '@features/time-off-wizard/index.mobile'
+import type { MobileAppointmentQuickAction } from '@features/appointment-actions/index.mobile'
+import { AppointmentPreviewHostMobile } from '@widgets/appointment-preview-panel/index.mobile'
 import {
   HomeActionsMobile,
   HomeHeaderMobile,
   HomeOverviewMobile,
   HomeScheduleMobile,
 } from '@widgets/home/index.mobile'
-import HomeCreateSheetMobile from './HomeCreateSheetMobile.vue'
-
-interface HomeActionsExpose {
-  openAppointment: (appointment: Appointment) => void
-  editAppointment: (appointment: Appointment) => void
-  deleteAppointment: (appointment: Appointment) => Promise<void>
-}
+import { QuickCreateMobile } from '@widgets/quick-create-action/index.mobile'
 
 const { t } = useI18n()
-const actions = ref<HomeActionsExpose | null>(null)
-const isCreateSheetOpen = ref(false)
-const isWizardOpen = ref(false)
-const isTimeOffOpen = ref(false)
-const presentingElement = ref<HTMLElement | null>(null)
+const preview = useTemplateRef('preview')
+const quickCreate = useTemplateRef('quickCreate')
 
-onMounted(() => {
-  presentingElement.value = document.querySelector('ion-router-outlet')
-})
-
-function onCreateSelect(kind: 'appointment' | 'timeOff') {
-  if (kind === 'appointment') isWizardOpen.value = true
-  else isTimeOffOpen.value = true
-}
-
-function openAppointment(appointment: Appointment) {
-  actions.value?.openAppointment(appointment)
-}
-
-function handleScheduleAction(appointment: Appointment, action: 'details' | 'edit' | 'delete') {
-  if (action === 'details') actions.value?.openAppointment(appointment)
-  else if (action === 'edit') actions.value?.editAppointment(appointment)
-  else void actions.value?.deleteAppointment(appointment)
+function handleQuickAction(appointment: Appointment, action: MobileAppointmentQuickAction) {
+  if (action === 'details') void preview.value?.openDetails(appointment)
+  else if (action === 'reschedule') void preview.value?.openReschedule(appointment)
+  else if (action === 'edit') void preview.value?.openEdit(appointment)
+  else void preview.value?.remove(appointment)
 }
 </script>
 
@@ -53,26 +32,24 @@ function handleScheduleAction(appointment: Appointment, action: 'details' | 'edi
     <ion-content :fullscreen="true">
       <main class="home-content">
         <home-overview-mobile />
-        <home-actions-mobile ref="actions" />
-        <home-schedule-mobile @select="openAppointment" @action="handleScheduleAction" />
+        <home-actions-mobile
+          :busy-ids="preview?.processingIds"
+          @open="preview?.openDetails($event)"
+          @primary="preview?.primary($event)"
+          @actions="preview?.openActions($event)"
+        />
+        <home-schedule-mobile @select="preview?.openDetails($event)" @action="handleQuickAction" />
       </main>
 
       <ion-fab slot="fixed" vertical="bottom" horizontal="end" class="home-fab">
-        <ion-fab-button :aria-label="t('quickCreate.menu.title')" @click="isCreateSheetOpen = true">
+        <ion-fab-button :aria-label="t('quickCreate.menu.title')" @click="quickCreate?.openMenu()">
           <ion-icon :icon="add" aria-hidden="true" />
         </ion-fab-button>
       </ion-fab>
     </ion-content>
 
-    <home-create-sheet-mobile v-model:is-open="isCreateSheetOpen" @select="onCreateSelect" />
-    <appointment-wizard-mobile
-      v-model:is-open="isWizardOpen"
-      :presenting-element="presentingElement"
-    />
-    <time-off-wizard-mobile
-      v-model:is-open="isTimeOffOpen"
-      :presenting-element="presentingElement"
-    />
+    <appointment-preview-host-mobile ref="preview" />
+    <quick-create-mobile ref="quickCreate" />
   </ion-page>
 </template>
 

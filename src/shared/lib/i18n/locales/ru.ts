@@ -111,7 +111,6 @@ export default {
       options: 'Параметры',
       loadError: 'Не удалось загрузить расписание',
       retry: 'Повторить',
-      details: 'Детали записи',
     },
     overview: {
       title: 'Обзор',
@@ -324,6 +323,12 @@ export default {
       previous: 'Предыдущий период',
       next: 'Следующий период',
       today: 'Сегодня',
+    },
+    mobile: {
+      view: 'Вид',
+      jumpTo: 'Перейти к дате',
+      loadError: 'Не удалось загрузить календарь',
+      retry: 'Повторить',
     },
     views: {
       month: 'Месяц',
@@ -1204,6 +1209,10 @@ export default {
     },
   },
   appointments: {
+    quickMenu: {
+      details: 'Детали записи',
+      reschedule: 'Перенести',
+    },
     status: {
       pending: 'Ожидает подтверждения',
       confirmed: 'Подтверждена',

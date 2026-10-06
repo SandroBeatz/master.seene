@@ -112,7 +112,6 @@ export default {
       options: 'Options',
       loadError: 'Impossible de charger le planning',
       retry: 'Réessayer',
-      details: 'Détails du rendez-vous',
     },
     overview: {
       title: "Vue d'ensemble",
@@ -327,6 +326,12 @@ export default {
       previous: 'Période précédente',
       next: 'Période suivante',
       today: "Aujourd'hui",
+    },
+    mobile: {
+      view: 'Vue',
+      jumpTo: 'Aller à la date',
+      loadError: 'Impossible de charger le calendrier',
+      retry: 'Réessayer',
     },
     views: {
       month: 'Mois',
@@ -1218,6 +1223,10 @@ export default {
     },
   },
   appointments: {
+    quickMenu: {
+      details: 'Détails du rendez-vous',
+      reschedule: 'Déplacer',
+    },
     status: {
       pending: 'En attente de confirmation',
       confirmed: 'Confirmé',

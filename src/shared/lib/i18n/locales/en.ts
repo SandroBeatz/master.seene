@@ -112,7 +112,6 @@ export default {
       options: 'Options',
       loadError: 'Couldn’t load the schedule',
       retry: 'Try again',
-      details: 'Appointment details',
     },
     overview: {
       title: 'Overview',
@@ -327,6 +326,12 @@ export default {
       previous: 'Previous period',
       next: 'Next period',
       today: 'Today',
+    },
+    mobile: {
+      view: 'View',
+      jumpTo: 'Go to date',
+      loadError: 'Couldn’t load the calendar',
+      retry: 'Retry',
     },
     views: {
       month: 'Month',
@@ -1208,6 +1213,10 @@ export default {
     },
   },
   appointments: {
+    quickMenu: {
+      details: 'Appointment details',
+      reschedule: 'Reschedule',
+    },
     status: {
       pending: 'Awaiting confirmation',
       confirmed: 'Confirmed',
