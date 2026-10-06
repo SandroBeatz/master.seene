@@ -29,6 +29,7 @@ function invalidateAppointmentQueries(cache: ReturnType<typeof useQueryCache>, u
     cache.invalidateQueries({ key: ['appointments', userId] }),
     cache.invalidateQueries({ key: ['appointments-actionable', userId] }),
     cache.invalidateQueries({ key: ['appointment-day-counts', userId] }),
+    cache.invalidateQueries({ key: ['analytics-v2'] }),
   ])
 }
 

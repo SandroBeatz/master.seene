@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Appointment } from '@entities/appointment'
+import { isScheduleVisibleAppointment, type Appointment } from '@entities/appointment'
 import type { Client } from '@entities/client'
 import type { Service } from '@entities/service'
 import type { TimeBlock } from '@entities/time-block'
 import { useFormats } from '@shared/lib/formats'
 import { Typography } from '@shared/ui'
-import { isVisibleScheduleAppointment } from '../../model/schedule-appointments'
 import ScheduleCalendar from './ScheduleCalendar.vue'
 import ScheduleTimeline from './ScheduleTimeline.vue'
 
@@ -31,7 +30,7 @@ const formats = useFormats()
 const leadingCalendarDate = ref(model.value)
 
 const visibleAppointmentsCount = computed(
-  () => props.appointments.filter(isVisibleScheduleAppointment).length,
+  () => props.appointments.filter(isScheduleVisibleAppointment).length,
 )
 
 const selectedDateLabel = computed(() => formats.dateDay(model.value))

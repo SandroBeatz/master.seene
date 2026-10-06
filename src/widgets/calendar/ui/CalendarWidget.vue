@@ -53,6 +53,7 @@ import {
   type CalendarViewType,
   type CalendarWidgetExpose,
 } from '../model/calendar-controls'
+import { toCalendarDateRange } from '../model/calendar-range'
 import {
   buildCalendarScheduleDisplay,
   isCalendarScheduleBreakSlot,
@@ -354,34 +355,7 @@ function handleDatesSet(info: DatesSetArg) {
     alignMobileWeek()
   }
 
-  emit('dates-set', {
-    from: toUtcIsoFromCalendarDateString(info.startStr, props.timeZone),
-    to: toUtcIsoFromCalendarDateString(info.endStr, props.timeZone),
-    currentFrom: toUtcIsoFromCalendarDateString(
-      getCalendarDateString(info.view.currentStart),
-      props.timeZone,
-    ),
-    currentTo: toUtcIsoFromCalendarDateString(
-      getCalendarDateString(info.view.currentEnd),
-      props.timeZone,
-    ),
-    title: info.view.title,
-    viewType: currentViewType.value,
-  })
-}
-
-function getCalendarDateString(date: Date): string {
-  const useUtcParts = props.timeZone !== DEFAULT_TIME_ZONE
-  const year = useUtcParts ? date.getUTCFullYear() : date.getFullYear()
-  const month = useUtcParts ? date.getUTCMonth() + 1 : date.getMonth() + 1
-  const day = useUtcParts ? date.getUTCDate() : date.getDate()
-  const hour = useUtcParts ? date.getUTCHours() : date.getHours()
-  const minute = useUtcParts ? date.getUTCMinutes() : date.getMinutes()
-  const second = useUtcParts ? date.getUTCSeconds() : date.getSeconds()
-
-  return `${year}-${padDatePart(month)}-${padDatePart(day)}T${padDatePart(hour)}:${padDatePart(
-    minute,
-  )}:${padDatePart(second)}`
+  emit('dates-set', toCalendarDateRange(info, props.timeZone))
 }
 
 function padDatePart(value: number): string {

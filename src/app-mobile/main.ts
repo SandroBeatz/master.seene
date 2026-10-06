@@ -1,0 +1,68 @@
+import { createApp } from 'vue'
+import { IonicVue } from '@ionic/vue'
+import VueTelInput from 'vue-tel-input'
+import 'vue-tel-input/vue-tel-input.css'
+
+/* Country flag sprites (CSS + on-demand SVGs) used by the shared PhoneField. */
+import 'flag-icons/css/flag-icons.min.css'
+
+/* Required Ionic core styles (documented order). */
+import '@ionic/vue/css/core.css'
+import '@ionic/vue/css/normalize.css'
+import '@ionic/vue/css/structure.css'
+import '@ionic/vue/css/typography.css'
+
+/* Optional Ionic utility styles. */
+import '@ionic/vue/css/padding.css'
+import '@ionic/vue/css/float-elements.css'
+import '@ionic/vue/css/text-alignment.css'
+import '@ionic/vue/css/text-transformation.css'
+import '@ionic/vue/css/flex-utils.css'
+import '@ionic/vue/css/display.css'
+
+/* Class-based dark palette: dark styles apply when `.ion-palette-dark` is on
+   <html>. The appearance store toggles that class (see @shared/lib/appearance). */
+import '@ionic/vue/css/palettes/dark.class.css'
+
+/* Tailwind + safe-area vars. Imported last so light-DOM utilities win. */
+import './styles/main.css'
+
+import AppMobile from './AppMobile.vue'
+import router from './router'
+import { installCore } from '@shared/lib/app-core'
+import { formatsPlugin } from '@shared/lib/formats'
+import { i18n } from '@shared/lib/i18n'
+import { useMasterPreferencesStore } from '@entities/master'
+import { useAppearanceStore } from '@shared/lib/appearance'
+
+const app = createApp(AppMobile)
+
+// Pinia (+ persistence), Colada and i18n — the exact same shared state/data
+// layer the desktop root installs.
+installCore(app)
+
+// IonicVue must be registered before the router so the Ionic components the
+// router outlet renders are available.
+app.use(IonicVue)
+app.use(router)
+
+// Phone field used by the client form — same international input the desktop
+// bundle registers, so mobile create/edit reuses one validated phone control.
+app.use(VueTelInput)
+
+// Localized date/price/duration formatting driven by the master's preferences —
+// same wiring as the desktop root so useFormats() works in mobile screens.
+app.use(formatsPlugin, {
+  getTimeFormat: () => useMasterPreferencesStore().timeFormat,
+  getCurrency: () => useMasterPreferencesStore().currency,
+  getDateFormat: () => useMasterPreferencesStore().dateFormat,
+  getLocale: () => i18n.global.locale.value,
+})
+
+// Apply the persisted theme + primary color before mount (pinia is active after
+// installCore) so the first painted frame already matches the user's choice.
+useAppearanceStore().init()
+
+router.isReady().then(() => {
+  app.mount('#app')
+})

@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import type { Ref } from 'vue'
-import { completeSale, getSaleByAppointmentId, updateSale } from '../api/sale.api'
-import type { CompleteSaleDto } from './types'
+import {
+  completeSale,
+  getSaleByAppointmentId,
+  updateSale,
+  updateSaleDetails,
+} from '../api/sale.api'
+import type { CompleteSaleDto, UpdateSaleDetailsDto } from './types'
 
 export const useSaleByAppointmentQuery = (appointmentId: Ref<string | undefined>) =>
   useQuery({
@@ -22,6 +27,21 @@ export const useUpdateSaleMutation = (userId: Ref<string>) => {
       Promise.all([
         cache.invalidateQueries({ key: ['sale-by-appointment', vars?.appointmentId ?? ''] }),
         cache.invalidateQueries({ key: ['appointments', userId.value] }),
+        cache.invalidateQueries({ key: ['analytics-v2'] }),
+      ]),
+  })
+}
+
+export const useUpdateSaleDetailsMutation = (userId: Ref<string>) => {
+  const cache = useQueryCache()
+  return useMutation({
+    mutation: (vars: { id: string; appointmentId: string; details: UpdateSaleDetailsDto }) =>
+      updateSaleDetails(vars.id, vars.details),
+    onSettled: (_data, _error, vars) =>
+      Promise.all([
+        cache.invalidateQueries({ key: ['sale-by-appointment', vars?.appointmentId ?? ''] }),
+        cache.invalidateQueries({ key: ['appointments', userId.value] }),
+        cache.invalidateQueries({ key: ['analytics-v2'] }),
       ]),
   })
 }
@@ -35,6 +55,7 @@ export const useCompleteSaleMutation = (userId: Ref<string>) => {
         cache.invalidateQueries({ key: ['appointments', userId.value] }),
         cache.invalidateQueries({ key: ['appointments-actionable', userId.value] }),
         cache.invalidateQueries({ key: ['appointment-day-counts', userId.value] }),
+        cache.invalidateQueries({ key: ['analytics-v2'] }),
       ]
 
       if (dto) {

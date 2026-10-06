@@ -46,3 +46,13 @@ export type { ServiceColorRef, EffectiveStatusInput } from './lib/appearance'
 export { collectDayBusyIntervals, timeBlockToBusyInterval } from './model/busy-intervals'
 export type { CollectBusyIntervalsInput } from './model/busy-intervals'
 export { lastVisitDate } from './lib/last-visit'
+export { isScheduleVisibleAppointment } from './lib/schedule-visibility'
+export { buildDaySlots } from './model/day-slots'
+export type { DaySlot, DaySlotState } from './model/day-slots'
+export { useAppointmentAvailability } from './model/use-appointment-availability'
+export type {
+  AppointmentAvailability,
+  AppointmentAvailabilityOptions,
+  DayOccupancy,
+  DayTimeOff,
+} from './model/use-appointment-availability'
